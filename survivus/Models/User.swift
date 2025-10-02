@@ -3,7 +3,6 @@ import Foundation
 struct UserProfile: Identifiable, Hashable, Codable {
     let id: String
     var displayName: String
-    var avatarAssetName: String
 }
 
 struct UserScoreBreakdown: Identifiable, Hashable, Codable {
