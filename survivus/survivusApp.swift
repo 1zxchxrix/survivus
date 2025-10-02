@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct survivusApp: App {
+struct SurvivusApp: App {
     @StateObject private var app = AppState()
 
     var body: some Scene {
