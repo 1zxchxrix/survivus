@@ -3,10 +3,12 @@ import SwiftUI
 struct WeeklyPickEditor: View {
     @EnvironmentObject var app: AppState
     let episode: Episode
+    @Binding var expandedPanel: PicksPanel?
     @State private var picks: WeeklyPicks
 
-    init(episode: Episode) {
+    init(episode: Episode, expandedPanel: Binding<PicksPanel?>) {
         self.episode = episode
+        _expandedPanel = expandedPanel
         _picks = State(initialValue: WeeklyPicks(userId: "", episodeId: episode.id))
     }
 
@@ -25,8 +27,7 @@ struct WeeklyPickEditor: View {
                 LockPill(text: "Locked for \(episode.title)")
             }
 
-            Group {
-                Text("Who Will Remain (\(remainCap))").font(.headline)
+            DisclosureGroup("Who Will Remain (\(remainCap))", isExpanded: binding(for: .remain)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -36,10 +37,10 @@ struct WeeklyPickEditor: View {
                     max: remainCap,
                     disabled: locked
                 )
+                .padding(.top, 4)
             }
 
-            Group {
-                Text("Who Will be Voted Out (\(votedOutCap))").font(.headline)
+            DisclosureGroup("Who Will be Voted Out (\(votedOutCap))", isExpanded: binding(for: .votedOut)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -49,10 +50,10 @@ struct WeeklyPickEditor: View {
                     max: votedOutCap,
                     disabled: locked
                 )
+                .padding(.top, 4)
             }
 
-            Group {
-                Text("Who Will Have Immunity (\(immunityCap))").font(.headline)
+            DisclosureGroup("Who Will Have Immunity (\(immunityCap))", isExpanded: binding(for: .immunity)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -62,6 +63,7 @@ struct WeeklyPickEditor: View {
                     max: immunityCap,
                     disabled: locked
                 )
+                .padding(.top, 4)
             }
 
             HStack {
@@ -77,5 +79,16 @@ struct WeeklyPickEditor: View {
 
     private func loadPicks(for userId: String) {
         picks = app.store.picks(for: userId, episodeId: episode.id)
+    }
+}
+
+extension WeeklyPickEditor {
+    private func binding(for panel: WeeklyPickPanel) -> Binding<Bool> {
+        Binding(
+            get: { expandedPanel == .weekly(panel) },
+            set: { newValue in
+                expandedPanel = newValue ? .weekly(panel) : nil
+            }
+        )
     }
 }
