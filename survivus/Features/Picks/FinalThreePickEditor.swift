@@ -2,18 +2,13 @@ import SwiftUI
 
 struct FinalThreePickEditor: View {
     @EnvironmentObject var app: AppState
+    @Binding var isExpanded: Bool
 
     var body: some View {
         let config = app.store.config
         let userId = app.currentUserId
         let afterMerge = config.episodes.contains(where: { $0.isMergeEpisode })
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Final Three Picks (3)").font(.headline)
-                if !afterMerge {
-                    Text("(Available after merge)").foregroundStyle(.secondary)
-                }
-            }
+        DisclosureGroup(isExpanded: $isExpanded) {
             LimitedMultiSelect(
                 all: config.contestants,
                 selection: Binding(
@@ -23,6 +18,16 @@ struct FinalThreePickEditor: View {
                 max: 3,
                 disabled: !afterMerge
             )
+            .padding(.top, 4)
+        } label: {
+            HStack {
+                Text("Final Three Picks (3)")
+                    .font(.headline)
+                if !afterMerge {
+                    Text("(Available after merge)")
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }
