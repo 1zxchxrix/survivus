@@ -18,6 +18,10 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
+    private var eliminatedContestantsForSelectedWeek: Set<String> {
+        eliminatedContestantIds(upTo: selectedWeekId)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -30,7 +34,8 @@ struct AllPicksView: View {
                             user: user,
                             seasonPicks: app.store.seasonPicks[user.id],
                             weeklyPicks: app.store.weeklyPicks[user.id]?[selectedWeekId],
-                            contestantsById: contestantsById
+                            contestantsById: contestantsById,
+                            eliminatedContestants: eliminatedContestantsForSelectedWeek
                         )
                     }
                 }
@@ -63,6 +68,7 @@ private struct UserPicksCard: View {
     let seasonPicks: SeasonPicks?
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
+    let eliminatedContestants: Set<String>
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -81,7 +87,8 @@ private struct UserPicksCard: View {
 
             PickSection(
                 title: "Mergers",
-                contestants: contestants(for: seasonPicks?.mergePicks ?? [])
+                contestants: contestants(for: seasonPicks?.mergePicks ?? []),
+                eliminatedContestantIds: eliminatedContestants
             )
 
             PickSection(
@@ -116,6 +123,7 @@ private struct UserPicksCard: View {
 private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
+    let eliminatedContestantIds: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -129,18 +137,21 @@ private struct PickSection: View {
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(contestants) { contestant in
+                        let isEliminated = eliminatedContestantIds.contains(contestant.id)
                         VStack(spacing: 8) {
                             Image(contestant.id)
                                 .resizable()
                                 .scaledToFill()
                                 .frame(width: 60, height: 60)
                                 .clipShape(Circle())
+                                .grayscale(isEliminated ? 1 : 0)
+                                .opacity(isEliminated ? 0.45 : 1)
                                 .accessibilityLabel(contestant.name)
 
                             Text(contestant.name)
                                 .font(.caption)
                                 .multilineTextAlignment(.center)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(isEliminated ? .tertiary : .secondary)
                         }
                     }
                 }
@@ -152,6 +163,13 @@ private struct PickSection: View {
 private struct WeekOption: Identifiable {
     let id: Int
     let title: String
+}
+
+private extension AllPicksView {
+    func eliminatedContestantIds(upTo weekId: Int) -> Set<String> {
+        let relevantResults = app.store.results.filter { $0.id <= weekId }
+        return Set(relevantResults.flatMap { $0.votedOut })
+    }
 }
 
 #Preview {
