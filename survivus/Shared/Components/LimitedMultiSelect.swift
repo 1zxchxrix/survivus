@@ -23,9 +23,14 @@ struct LimitedMultiSelect: View {
                         selection.insert(contestant.id)
                     }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 10) {
+                        ContestantAvatar(imageName: contestant.id, size: 32)
+                        Text(contestant.name)
+                            .lineLimit(1)
+                            .font(.subheadline)
+                        Spacer(minLength: 4)
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        Text(contestant.name).lineLimit(1)
+                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                     }
                     .padding(.vertical, 8)
                     .padding(.horizontal, 10)
