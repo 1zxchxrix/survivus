@@ -56,8 +56,12 @@ struct TableView: View {
                                 .clipShape(Circle())
                                 .accessibilityHidden(true)
                             Text(user.displayName)
+                                .font(.subheadline)
+                                .lineLimit(1)
                         } else {
                             Text(breakdown.userId)
+                                .font(.subheadline)
+                                .lineLimit(1)
                         }
                         Spacer()
                         Text("\(breakdown.weeksParticipated)").frame(width: 32)
