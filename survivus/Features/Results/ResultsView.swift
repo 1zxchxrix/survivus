@@ -3,6 +3,10 @@ import SwiftUI
 struct ResultsView: View {
     @EnvironmentObject var app: AppState
 
+    private var contestantsById: [String: Contestant] {
+        Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
+    }
+
     var body: some View {
         NavigationStack {
             List(app.store.config.episodes) { episode in
@@ -21,15 +25,13 @@ struct ResultsView: View {
                         Text(episode.airDate, style: .date).foregroundStyle(.secondary)
                     }
                     if let result {
-                        if !result.immunityWinners.isEmpty {
-                            Text("Immunity: " + result.immunityWinners.compactMap { id in
-                                app.store.config.contestants.first { $0.id == id }?.name
-                            }.joined(separator: ", "))
+                        let immunityContestants = contestants(for: result.immunityWinners)
+                        let votedOutContestants = contestants(for: result.votedOut)
+                        if !immunityContestants.isEmpty {
+                            ContestantResultRow(title: "Immunity", contestants: immunityContestants)
                         }
-                        if !result.votedOut.isEmpty {
-                            Text("Voted out: " + result.votedOut.compactMap { id in
-                                app.store.config.contestants.first { $0.id == id }?.name
-                            }.joined(separator: ", "))
+                        if !votedOutContestants.isEmpty {
+                            ContestantResultRow(title: "Voted out", contestants: votedOutContestants)
                         }
                     } else {
                         Text("No result yet").foregroundStyle(.secondary)
@@ -38,5 +40,26 @@ struct ResultsView: View {
             }
             .navigationTitle("Results")
         }
+    }
+
+    private func contestants(for ids: [String]) -> [Contestant] {
+        ids.compactMap { contestantsById[$0] }
+    }
+}
+
+private struct ContestantResultRow: View {
+    let title: String
+    let contestants: [Contestant]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            ForEach(contestants) { contestant in
+                ContestantNameLabel(contestant: contestant, avatarSize: 22, font: .subheadline)
+            }
+        }
+        .padding(.top, 2)
     }
 }
