@@ -10,7 +10,17 @@ private let mockContestantData: [(id: String, name: String)] = [
     ("q", "Q"),
     ("eva_erickson", "Eva Erickson"),
     ("mitch_guerra", "Mitch Guerra"),
-    ("erik_reichenbach", "Erik Reichenbach")
+    ("erik_reichenbach", "Erik Reichenbach"),
+    ("yul_kwon", "Yul Kwon"),
+    ("ozzy_lusth", "Ozzy Lusth"),
+    ("parvati_shallow", "Boston Rob"),
+    ("jonathan_penner", "Jonathan Penner"),
+    ("nate_gonzalez", "Nate Gonzalez"),
+    ("chicken_morris", "Chicken Morris"),
+    ("frosti_zernow", "Frosti Zernow"),
+    ("james_clement", "James Clement"),
+    ("denise_martin", "Denise Martin"),
+    ("amanda_kimmel", "Amanda Kimmel")
 ]
 
 extension SeasonConfig {
