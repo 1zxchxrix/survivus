@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
-    @State private var selectedWeekId: Int = 13
+    @State private var selectedWeekId: Int?
 
     private var weekOptions: [WeekOption] {
         var options = app.store.config.episodes.map { WeekOption(id: $0.id, title: $0.title) }
@@ -18,6 +18,31 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
+    private var defaultWeekId: Int {
+        if let latestWeekWithPicks = app.store.weeklyPicks.values
+            .flatMap({ $0.keys })
+            .max() {
+            return latestWeekWithPicks
+        }
+
+        if let latestEpisodeId = app.store.config.episodes.map({ $0.id }).max() {
+            return latestEpisodeId
+        }
+
+        return 13
+    }
+
+    private var resolvedWeekId: Int {
+        selectedWeekId ?? defaultWeekId
+    }
+
+    private var weekSelection: Binding<Int> {
+        Binding(
+            get: { resolvedWeekId },
+            set: { selectedWeekId = $0 }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -29,7 +54,7 @@ struct AllPicksView: View {
                         UserPicksCard(
                             user: user,
                             seasonPicks: app.store.seasonPicks[user.id],
-                            weeklyPicks: app.store.weeklyPicks[user.id]?[selectedWeekId],
+                            weeklyPicks: app.store.weeklyPicks[user.id]?[resolvedWeekId],
                             contestantsById: contestantsById
                         )
                     }
@@ -47,7 +72,7 @@ struct AllPicksView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
 
-            Picker("Week", selection: $selectedWeekId) {
+            Picker("Week", selection: weekSelection) {
                 ForEach(weekOptions) { option in
                     Text(option.title)
                         .tag(option.id)
