@@ -19,8 +19,8 @@ final class AppState: ObservableObject {
             UserProfile(id: "u4", displayName: "Liz", avatarAssetName: "liz")
         ]
         self.store = MemoryStore(config: config, results: results, users: users)
-        self.store.loadMockPicks()
         self.currentUserId = users.first!.id
+        self.store.loadMockPicks()
     }
 
     var scoring: ScoringEngine {

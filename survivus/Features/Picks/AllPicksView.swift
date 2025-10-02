@@ -123,7 +123,13 @@ private struct UserPicksCard: View {
 private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
-    let eliminatedContestantIds: Set<String> = []
+    let eliminatedContestantIds: Set<String>
+
+    init(title: String, contestants: [Contestant], eliminatedContestantIds: Set<String> = []) {
+        self.title = title
+        self.contestants = contestants
+        self.eliminatedContestantIds = eliminatedContestantIds
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
