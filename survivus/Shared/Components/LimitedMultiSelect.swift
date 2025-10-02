@@ -44,13 +44,13 @@ struct LimitedMultiSelect: View {
 }
 
 private struct LimitedMultiSelectPreview: View {
-    @State private var selection: Set<String> = ["parvati"]
+    @State private var selection: Set<String> = ["courtney_yates"]
     private let contestants: [Contestant] = [
-        Contestant(id: "parvati", name: "Parvati"),
-        Contestant(id: "sandra", name: "Sandra"),
-        Contestant(id: "tony", name: "Tony"),
-        Contestant(id: "denise", name: "Denise"),
-        Contestant(id: "adam", name: "Adam"),
+        Contestant(id: "courtney_yates", name: "Courtney Yates"),
+        Contestant(id: "todd_herzog", name: "Todd Herzog"),
+        Contestant(id: "boston_rob", name: "Boston Rob"),
+        Contestant(id: "russell_hantz", name: "Russell Hantz"),
+        Contestant(id: "john_cochran", name: "John Cochran"),
     ]
 
     var body: some View {
