@@ -47,7 +47,7 @@ struct TableView: View {
             List {
                 TableHeader()
                 ForEach(breakdowns) { breakdown in
-                    HStack(spacing: 12) {
+                    HStack(spacing: 8) {
                         if let user = usersById[breakdown.userId] {
                             Image(user.avatarAssetName)
                                 .resizable()
@@ -58,17 +58,30 @@ struct TableView: View {
                             Text(user.displayName)
                                 .font(.subheadline)
                                 .lineLimit(1)
+                                .layoutPriority(1)
                         } else {
                             Text(breakdown.userId)
                                 .font(.subheadline)
                                 .lineLimit(1)
+                                .layoutPriority(1)
                         }
                         Spacer()
-                        Text("\(breakdown.weeksParticipated)").frame(width: 32)
-                        Text("\(breakdown.votedOutPoints)").frame(width: 40)
-                        Text("\(breakdown.remainPoints)").frame(width: 40)
-                        Text("\(breakdown.immunityPoints)").frame(width: 40)
-                        Text("\(breakdown.total)").fontWeight(.semibold).frame(width: 50, alignment: .trailing)
+                        Text("\(breakdown.weeksParticipated)")
+                            .frame(width: 32)
+                            .multilineTextAlignment(.center)
+                        Text("\(breakdown.votedOutPoints)")
+                            .frame(width: 40)
+                            .multilineTextAlignment(.center)
+                        Text("\(breakdown.remainPoints)")
+                            .frame(width: 40)
+                            .multilineTextAlignment(.center)
+                        Text("\(breakdown.immunityPoints)")
+                            .frame(width: 40)
+                            .multilineTextAlignment(.center)
+                        Text("\(breakdown.total)")
+                            .fontWeight(.semibold)
+                            .frame(width: 50)
+                            .multilineTextAlignment(.center)
                     }
                 }
             }
@@ -86,7 +99,7 @@ struct TableHeader: View {
             Text("VO").frame(width: 40)
             Text("RM").frame(width: 40)
             Text("IM").frame(width: 40)
-            Text("Total").frame(width: 50, alignment: .trailing)
+            Text("Total").frame(width: 50)
         }
         .foregroundStyle(.secondary)
     }
