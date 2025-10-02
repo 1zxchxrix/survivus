@@ -3,10 +3,14 @@ import SwiftUI
 struct WeeklyPickEditor: View {
     @EnvironmentObject var app: AppState
     let episode: Episode
+    @Binding var expandedPanel: WeeklyPickPanel?
+    let collapseSeasonPanels: () -> Void
     @State private var picks: WeeklyPicks
 
-    init(episode: Episode) {
+    init(episode: Episode, expandedPanel: Binding<WeeklyPickPanel?>, collapseSeasonPanels: @escaping () -> Void) {
         self.episode = episode
+        self._expandedPanel = expandedPanel
+        self.collapseSeasonPanels = collapseSeasonPanels
         _picks = State(initialValue: WeeklyPicks(userId: "", episodeId: episode.id))
     }
 
@@ -25,8 +29,7 @@ struct WeeklyPickEditor: View {
                 LockPill(text: "Locked for \(episode.title)")
             }
 
-            Group {
-                Text("Who Will Remain (\(remainCap))").font(.headline)
+            DisclosureGroup(isExpanded: binding(for: .remain)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -36,10 +39,13 @@ struct WeeklyPickEditor: View {
                     max: remainCap,
                     disabled: locked
                 )
+                .padding(.top, 4)
+            } label: {
+                Text("Who Will Remain (\(remainCap))")
+                    .font(.headline)
             }
 
-            Group {
-                Text("Who Will be Voted Out (\(votedOutCap))").font(.headline)
+            DisclosureGroup(isExpanded: binding(for: .votedOut)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -49,10 +55,13 @@ struct WeeklyPickEditor: View {
                     max: votedOutCap,
                     disabled: locked
                 )
+                .padding(.top, 4)
+            } label: {
+                Text("Who Will be Voted Out (\(votedOutCap))")
+                    .font(.headline)
             }
 
-            Group {
-                Text("Who Will Have Immunity (\(immunityCap))").font(.headline)
+            DisclosureGroup(isExpanded: binding(for: .immunity)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -62,6 +71,10 @@ struct WeeklyPickEditor: View {
                     max: immunityCap,
                     disabled: locked
                 )
+                .padding(.top, 4)
+            } label: {
+                Text("Who Will Have Immunity (\(immunityCap))")
+                    .font(.headline)
             }
 
             HStack {
@@ -78,4 +91,24 @@ struct WeeklyPickEditor: View {
     private func loadPicks(for userId: String) {
         picks = app.store.picks(for: userId, episodeId: episode.id)
     }
+
+    private func binding(for panel: WeeklyPickPanel) -> Binding<Bool> {
+        Binding(
+            get: { expandedPanel == panel },
+            set: { newValue in
+                if newValue {
+                    collapseSeasonPanels()
+                    expandedPanel = panel
+                } else if expandedPanel == panel {
+                    expandedPanel = nil
+                }
+            }
+        )
+    }
+}
+
+enum WeeklyPickPanel: Hashable {
+    case remain
+    case votedOut
+    case immunity
 }

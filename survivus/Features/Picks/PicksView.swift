@@ -3,14 +3,16 @@ import SwiftUI
 struct PicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedEpisode: Episode?
+    @State private var expandedSeasonPick: SeasonPickPanel? = .merge
+    @State private var expandedWeeklyPick: WeeklyPickPanel?
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Season Picks") {
-                    MergePickEditor()
-                    FinalThreePickEditor()
-                    WinnerPickEditor()
+                    MergePickEditor(isExpanded: seasonBinding(for: .merge))
+                    FinalThreePickEditor(isExpanded: seasonBinding(for: .finalThree))
+                    WinnerPickEditor(isExpanded: seasonBinding(for: .winner))
                 }
 
                 Section("Weekly Picks") {
@@ -23,7 +25,11 @@ struct PicksView: View {
                         }
                     }
                     if let episode = app.store.config.episodes.first(where: { $0.id == (selectedEpisode?.id ?? app.store.config.episodes.first!.id) }) {
-                        WeeklyPickEditor(episode: episode)
+                        WeeklyPickEditor(
+                            episode: episode,
+                            expandedPanel: $expandedWeeklyPick,
+                            collapseSeasonPanels: { expandedSeasonPick = nil }
+                        )
                     }
                 }
             }
@@ -31,4 +37,25 @@ struct PicksView: View {
             .navigationTitle("Picks")
         }
     }
+
+    private func seasonBinding(for panel: SeasonPickPanel) -> Binding<Bool> {
+        Binding(
+            get: { expandedSeasonPick == panel },
+            set: { newValue in
+                if newValue {
+                    expandedWeeklyPick = nil
+                    expandedSeasonPick = panel
+                } else if expandedSeasonPick == panel {
+                    expandedSeasonPick = nil
+                }
+            }
+        )
+    }
+
+}
+
+private enum SeasonPickPanel: Hashable {
+    case merge
+    case finalThree
+    case winner
 }
