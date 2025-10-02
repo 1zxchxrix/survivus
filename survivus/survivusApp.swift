@@ -1,20 +1,22 @@
-//
-//  survivusApp.swift
-//  survivus
-//
-//  Created by Zacharia Salad on 10/1/25.
-//
-
 import SwiftUI
 
 @main
 struct survivusApp: App {
-    let persistenceController = PersistenceController.shared
+    @StateObject private var app = AppState()   // add this line
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            TabView {
+                ResultsView()
+                    .environmentObject(app)
+                    .tabItem { Label("Results", systemImage: "list.bullet.rectangle") }
+                PicksView()
+                    .environmentObject(app)
+                    .tabItem { Label("Picks", systemImage: "checkmark.square") }
+                TableView()
+                    .environmentObject(app)
+                    .tabItem { Label("Table", systemImage: "tablecells") }
+            }
         }
     }
 }
