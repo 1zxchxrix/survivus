@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct survivusApp: App {
-    @StateObject private var app = AppState()   // add this line
+    @StateObject private var app = AppState()
 
     var body: some Scene {
         WindowGroup {
