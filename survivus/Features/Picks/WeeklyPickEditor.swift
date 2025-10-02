@@ -1,14 +1,20 @@
 import SwiftUI
 
+enum WeeklyPickPanel: Hashable {
+    case remain
+    case votedOut
+    case immunity
+}
+
 struct WeeklyPickEditor: View {
     @EnvironmentObject var app: AppState
     let episode: Episode
-    @Binding var expandedPanel: PicksPanel?
+    let panel: WeeklyPickPanel
     @State private var picks: WeeklyPicks
 
-    init(episode: Episode, expandedPanel: Binding<PicksPanel?>) {
+    init(episode: Episode, panel: WeeklyPickPanel) {
         self.episode = episode
-        _expandedPanel = expandedPanel
+        self.panel = panel
         _picks = State(initialValue: WeeklyPicks(userId: "", episodeId: episode.id))
     }
 
@@ -17,70 +23,39 @@ struct WeeklyPickEditor: View {
         let userId = app.currentUserId
         let phase = app.scoring.phase(for: episode)
         let caps = (phase == .preMerge) ? config.weeklyPickCapsPreMerge : config.weeklyPickCapsPostMerge
+        let limit = selectionLimit(for: panel, caps: caps)
         let locked = picksLocked(for: episode)
-        let remainCap = caps.remain ?? 3
-        let votedOutCap = caps.votedOut ?? 3
-        let immunityCap = caps.immunity ?? 3
 
-        VStack(alignment: .leading, spacing: 16) {
-            if locked {
-                LockPill(text: "Locked for \(episode.title)")
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if locked {
+                    LockPill(text: "Locked for \(episode.title)")
+                } else {
+                    Text(instructionText(for: panel, limit: limit))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
 
-            DisclosureGroup(isExpanded: binding(for: .remain)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
-                        get: { picks.remain },
-                        set: { picks.remain = Set($0.prefix(remainCap)) }
+                        get: { selection(for: panel) },
+                        set: { newValue in updateSelection(newValue, limit: limit) }
                     ),
-                    max: remainCap,
+                    max: limit,
                     disabled: locked
                 )
-                .padding(.top, 4)
-            } label: {
-                Text("Who Will Remain (\(remainCap))")
-                    .font(.headline)
-            }
 
-            DisclosureGroup(isExpanded: binding(for: .votedOut)) {
-                LimitedMultiSelect(
-                    all: config.contestants,
-                    selection: Binding(
-                        get: { picks.votedOut },
-                        set: { picks.votedOut = Set($0.prefix(votedOutCap)) }
-                    ),
-                    max: votedOutCap,
-                    disabled: locked
-                )
-                .padding(.top, 4)
-            } label: {
-                Text("Who Will be Voted Out (\(votedOutCap))")
-                    .font(.headline)
+                HStack {
+                    Spacer()
+                    Button("Save Picks") { app.store.save(picks) }
+                        .disabled(locked)
+                }
             }
-
-            DisclosureGroup(isExpanded: binding(for: .immunity)) {
-                LimitedMultiSelect(
-                    all: config.contestants,
-                    selection: Binding(
-                        get: { picks.immunity },
-                        set: { picks.immunity = Set($0.prefix(immunityCap)) }
-                    ),
-                    max: immunityCap,
-                    disabled: locked
-                )
-                .padding(.top, 4)
-            } label: {
-                Text("Who Will Have Immunity (\(immunityCap))")
-                    .font(.headline)
-            }
-
-            HStack {
-                Spacer()
-                Button("Save Picks") { app.store.save(picks) }
-                    .disabled(locked)
-            }
+            .padding()
         }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle(navigationTitle(for: panel))
         .onAppear { loadPicks(for: userId) }
         .onChange(of: episode.id) { _ in loadPicks(for: userId) }
         .onChange(of: app.currentUserId) { newValue in loadPicks(for: newValue) }
@@ -89,15 +64,60 @@ struct WeeklyPickEditor: View {
     private func loadPicks(for userId: String) {
         picks = app.store.picks(for: userId, episodeId: episode.id)
     }
-}
 
-extension WeeklyPickEditor {
-    private func binding(for panel: WeeklyPickPanel) -> Binding<Bool> {
-        Binding(
-            get: { expandedPanel == .weekly(panel) },
-            set: { newValue in
-                expandedPanel = newValue ? .weekly(panel) : nil
-            }
-        )
+    private func selection(for panel: WeeklyPickPanel) -> Set<String> {
+        switch panel {
+        case .remain:
+            return picks.remain
+        case .votedOut:
+            return picks.votedOut
+        case .immunity:
+            return picks.immunity
+        }
+    }
+
+    private func updateSelection(_ newValue: Set<String>, limit: Int) {
+        let limited = Set(newValue.prefix(limit))
+        switch panel {
+        case .remain:
+            picks.remain = limited
+        case .votedOut:
+            picks.votedOut = limited
+        case .immunity:
+            picks.immunity = limited
+        }
+    }
+
+    private func selectionLimit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int {
+        switch panel {
+        case .remain:
+            return caps.remain ?? 3
+        case .votedOut:
+            return caps.votedOut ?? 3
+        case .immunity:
+            return caps.immunity ?? 3
+        }
+    }
+
+    private func navigationTitle(for panel: WeeklyPickPanel) -> String {
+        switch panel {
+        case .remain:
+            return "Who Will Remain"
+        case .votedOut:
+            return "Who Will be Voted Out"
+        case .immunity:
+            return "Who Will Have Immunity"
+        }
+    }
+
+    private func instructionText(for panel: WeeklyPickPanel, limit: Int) -> String {
+        switch panel {
+        case .remain:
+            return "Select up to \(limit) players you expect to stay safe this week."
+        case .votedOut:
+            return "Select up to \(limit) players you think will be voted out."
+        case .immunity:
+            return "Select up to \(limit) players you think will win immunity."
+        }
     }
 }
