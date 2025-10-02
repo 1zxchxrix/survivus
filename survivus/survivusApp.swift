@@ -10,12 +10,9 @@ struct SurvivusApp: App {
                 ResultsView()
                     .environmentObject(app)
                     .tabItem { Label("Results", systemImage: "list.bullet.rectangle") }
-                PicksView()
-                    .environmentObject(app)
-                    .tabItem { Label("Your Picks", systemImage: "checkmark.square") }
                 AllPicksView()
                     .environmentObject(app)
-                    .tabItem { Label("All Picks", systemImage: "person.3") }
+                    .tabItem { Label("Picks", systemImage: "checkmark.circle") }
                 TableView()
                     .environmentObject(app)
                     .tabItem { Label("Table", systemImage: "tablecells") }
