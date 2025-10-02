@@ -3,14 +3,15 @@ import SwiftUI
 struct PicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedEpisode: Episode?
+    @State private var expandedSeasonPick: SeasonPickPanel? = .merge
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Season Picks") {
-                    MergePickEditor()
-                    FinalThreePickEditor()
-                    WinnerPickEditor()
+                    MergePickEditor(isExpanded: binding(for: .merge))
+                    FinalThreePickEditor(isExpanded: binding(for: .finalThree))
+                    WinnerPickEditor(isExpanded: binding(for: .winner))
                 }
 
                 Section("Weekly Picks") {
@@ -31,4 +32,19 @@ struct PicksView: View {
             .navigationTitle("Picks")
         }
     }
+
+    private func binding(for panel: SeasonPickPanel) -> Binding<Bool> {
+        Binding(
+            get: { expandedSeasonPick == panel },
+            set: { newValue in
+                expandedSeasonPick = newValue ? panel : nil
+            }
+        )
+    }
+}
+
+private enum SeasonPickPanel: Hashable {
+    case merge
+    case finalThree
+    case winner
 }

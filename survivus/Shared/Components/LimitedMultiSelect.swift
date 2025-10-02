@@ -11,8 +11,10 @@ struct LimitedMultiSelect: View {
     let max: Int
     var disabled: Bool = false
 
+    private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
+
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], spacing: 8) {
+        LazyVGrid(columns: columns, spacing: 16) {
             ForEach(all) { contestant in
                 let isSelected = selection.contains(contestant.id)
                 Button {
@@ -23,22 +25,35 @@ struct LimitedMultiSelect: View {
                         selection.insert(contestant.id)
                     }
                 } label: {
-                    HStack(spacing: 10) {
-                        ContestantAvatar(imageName: contestant.id, size: 32)
+                    VStack(spacing: 12) {
+                        ContestantAvatar(imageName: contestant.id, size: 72)
                         Text(contestant.name)
-                            .lineLimit(1)
-                            .font(.subheadline)
-                        Spacer(minLength: 4)
-                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 10)
-                    .frame(maxWidth: .infinity)
-                    .background(isSelected ? Color.accentColor.opacity(0.15) : Color.secondary.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .frame(maxWidth: .infinity, minHeight: 160)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
+                    )
+                    .overlay(alignment: .topTrailing) {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.6))
+                            .padding(10)
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.15), lineWidth: isSelected ? 2 : 1)
+                    )
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
             }
         }
     }

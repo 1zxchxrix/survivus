@@ -2,16 +2,13 @@ import SwiftUI
 
 struct MergePickEditor: View {
     @EnvironmentObject var app: AppState
+    @Binding var isExpanded: Bool
 
     var body: some View {
         let config = app.store.config
         let userId = app.currentUserId
         let disabled = picksLocked(for: config.episodes.first)
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Who Will Make the Merge (3)").font(.headline)
-                if disabled { LockPill() }
-            }
+        DisclosureGroup(isExpanded: $isExpanded) {
             LimitedMultiSelect(
                 all: config.contestants,
                 selection: Binding(
@@ -21,6 +18,13 @@ struct MergePickEditor: View {
                 max: 3,
                 disabled: disabled
             )
+            .padding(.top, 4)
+        } label: {
+            HStack {
+                Text("Who Will Make the Merge (3)")
+                    .font(.headline)
+                if disabled { LockPill() }
+            }
         }
     }
 }
