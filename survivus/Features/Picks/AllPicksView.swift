@@ -18,10 +18,6 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
-    private var eliminatedContestantsForSelectedWeek: Set<String> {
-        eliminatedContestantIds(upTo: selectedWeekId)
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -34,8 +30,7 @@ struct AllPicksView: View {
                             user: user,
                             seasonPicks: app.store.seasonPicks[user.id],
                             weeklyPicks: app.store.weeklyPicks[user.id]?[selectedWeekId],
-                            contestantsById: contestantsById,
-                            eliminatedContestants: eliminatedContestantsForSelectedWeek
+                            contestantsById: contestantsById
                         )
                     }
                 }
@@ -68,7 +63,6 @@ private struct UserPicksCard: View {
     let seasonPicks: SeasonPicks?
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
-    let eliminatedContestants: Set<String>
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -87,23 +81,22 @@ private struct UserPicksCard: View {
 
             PickSection(
                 title: "Mergers",
-                contestants: contestants(for: seasonPicks?.mergePicks ?? []),
-                eliminatedContestantIds: eliminatedContestants
+                contestants: contestants(for: seasonPicks?.mergePicks ?? [], limit: 3)
             )
 
             PickSection(
                 title: "Immunity",
-                contestants: contestants(for: weeklyPicks?.immunity ?? [])
+                contestants: contestants(for: weeklyPicks?.immunity ?? [], limit: 3)
             )
 
             PickSection(
                 title: "Voted Out",
-                contestants: contestants(for: weeklyPicks?.votedOut ?? [])
+                contestants: contestants(for: weeklyPicks?.votedOut ?? [], limit: 3)
             )
 
             PickSection(
                 title: "Remain",
-                contestants: contestants(for: weeklyPicks?.remain ?? [])
+                contestants: contestants(for: weeklyPicks?.remain ?? [], limit: 3)
             )
         }
         .padding()
@@ -114,22 +107,19 @@ private struct UserPicksCard: View {
         )
     }
 
-    private func contestants(for ids: Set<String>) -> [Contestant] {
-        ids.compactMap { contestantsById[$0] }
+    private func contestants(for ids: Set<String>, limit: Int? = nil) -> [Contestant] {
+        let picks = ids.compactMap { contestantsById[$0] }
             .sorted { $0.name < $1.name }
+        if let limit {
+            return Array(picks.prefix(limit))
+        }
+        return picks
     }
 }
 
 private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
-    let eliminatedContestantIds: Set<String>
-
-    init(title: String, contestants: [Contestant], eliminatedContestantIds: Set<String> = []) {
-        self.title = title
-        self.contestants = contestants
-        self.eliminatedContestantIds = eliminatedContestantIds
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -143,21 +133,18 @@ private struct PickSection: View {
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(contestants) { contestant in
-                        let isEliminated = eliminatedContestantIds.contains(contestant.id)
                         VStack(spacing: 8) {
                             Image(contestant.id)
                                 .resizable()
                                 .scaledToFill()
                                 .frame(width: 60, height: 60)
                                 .clipShape(Circle())
-                                .grayscale(isEliminated ? 1 : 0)
-                                .opacity(isEliminated ? 0.45 : 1)
                                 .accessibilityLabel(contestant.name)
 
                             Text(contestant.name)
                                 .font(.caption)
                                 .multilineTextAlignment(.center)
-                                .foregroundStyle(isEliminated ? .tertiary : .secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -169,13 +156,6 @@ private struct PickSection: View {
 private struct WeekOption: Identifiable {
     let id: Int
     let title: String
-}
-
-private extension AllPicksView {
-    func eliminatedContestantIds(upTo weekId: Int) -> Set<String> {
-        let relevantResults = app.store.results.filter { $0.id <= weekId }
-        return Set(relevantResults.flatMap { $0.votedOut })
-    }
 }
 
 #Preview {
