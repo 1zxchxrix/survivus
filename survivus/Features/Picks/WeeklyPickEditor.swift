@@ -27,7 +27,7 @@ struct WeeklyPickEditor: View {
                 LockPill(text: "Locked for \(episode.title)")
             }
 
-            DisclosureGroup("Who Will Remain (\(remainCap))", isExpanded: binding(for: .remain)) {
+            DisclosureGroup(isExpanded: binding(for: .remain)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -38,9 +38,12 @@ struct WeeklyPickEditor: View {
                     disabled: locked
                 )
                 .padding(.top, 4)
+            } label: {
+                Text("Who Will Remain (\(remainCap))")
+                    .font(.headline)
             }
 
-            DisclosureGroup("Who Will be Voted Out (\(votedOutCap))", isExpanded: binding(for: .votedOut)) {
+            DisclosureGroup(isExpanded: binding(for: .votedOut)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -51,9 +54,12 @@ struct WeeklyPickEditor: View {
                     disabled: locked
                 )
                 .padding(.top, 4)
+            } label: {
+                Text("Who Will be Voted Out (\(votedOutCap))")
+                    .font(.headline)
             }
 
-            DisclosureGroup("Who Will Have Immunity (\(immunityCap))", isExpanded: binding(for: .immunity)) {
+            DisclosureGroup(isExpanded: binding(for: .immunity)) {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
@@ -64,6 +70,9 @@ struct WeeklyPickEditor: View {
                     disabled: locked
                 )
                 .padding(.top, 4)
+            } label: {
+                Text("Who Will Have Immunity (\(immunityCap))")
+                    .font(.headline)
             }
 
             HStack {

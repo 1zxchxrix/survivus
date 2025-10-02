@@ -9,7 +9,7 @@ struct ResultsView: View {
 
     var body: some View {
         NavigationStack {
-            List(app.store.config.episodes) { episode in
+            List(app.store.config.episodes.sorted(by: { $0.airDate > $1.airDate })) { episode in
                 let result = app.store.resultsByEpisode[episode.id]
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
