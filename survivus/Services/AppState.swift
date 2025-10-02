@@ -3,6 +3,9 @@ import Combine
 
 @MainActor
 final class AppState: ObservableObject {
+    // TODO: When a Core Data-backed persistence layer is introduced, inject a persistent store
+    // implementation here (likely created from a `PersistenceController`) instead of the
+    // in-memory mock `MemoryStore` so user progress survives app restarts.
     @Published var store: MemoryStore
     @Published var currentUserId: String
 
