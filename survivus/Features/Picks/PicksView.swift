@@ -3,7 +3,7 @@ import SwiftUI
 struct PicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedEpisode: Episode?
-    @State private var expandedSeasonPick: SeasonPickPanel? = .merge
+    @State private var expandedPanel: PicksPanel? = .season(.merge)
 
     var body: some View {
         NavigationStack {
@@ -24,7 +24,7 @@ struct PicksView: View {
                         }
                     }
                     if let episode = app.store.config.episodes.first(where: { $0.id == (selectedEpisode?.id ?? app.store.config.episodes.first!.id) }) {
-                        WeeklyPickEditor(episode: episode)
+                        WeeklyPickEditor(episode: episode, expandedPanel: $expandedPanel)
                     }
                 }
             }
@@ -34,17 +34,15 @@ struct PicksView: View {
     }
 
     private func binding(for panel: SeasonPickPanel) -> Binding<Bool> {
+        binding(for: .season(panel))
+    }
+
+    private func binding(for panel: PicksPanel) -> Binding<Bool> {
         Binding(
-            get: { expandedSeasonPick == panel },
+            get: { expandedPanel == panel },
             set: { newValue in
-                expandedSeasonPick = newValue ? panel : nil
+                expandedPanel = newValue ? panel : nil
             }
         )
     }
-}
-
-private enum SeasonPickPanel: Hashable {
-    case merge
-    case finalThree
-    case winner
 }
