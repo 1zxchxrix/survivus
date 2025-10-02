@@ -36,7 +36,7 @@ struct AllPicksView: View {
                 }
                 .padding()
             }
-            .navigationTitle("All Picks")
+            .navigationTitle("Picks")
         }
     }
 
