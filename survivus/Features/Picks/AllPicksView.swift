@@ -96,7 +96,11 @@ private struct UserPicksCard: View {
 
             PickSection(
                 title: "Remain",
-                contestants: contestants(for: weeklyPicks?.remain ?? [], limit: 3)
+                contestants: contestants(
+                    for: weeklyPicks?.remain ?? [],
+                    limit: 3,
+                    excluding: weeklyPicks?.votedOut ?? []
+                )
             )
         }
         .padding()
@@ -107,8 +111,13 @@ private struct UserPicksCard: View {
         )
     }
 
-    private func contestants(for ids: Set<String>, limit: Int? = nil) -> [Contestant] {
-        let picks = ids.compactMap { contestantsById[$0] }
+    private func contestants(
+        for ids: Set<String>,
+        limit: Int? = nil,
+        excluding excludedIds: Set<String> = []
+    ) -> [Contestant] {
+        let filteredIds = ids.subtracting(excludedIds)
+        let picks = filteredIds.compactMap { contestantsById[$0] }
             .sorted { $0.name < $1.name }
         if let limit {
             return Array(picks.prefix(limit))
