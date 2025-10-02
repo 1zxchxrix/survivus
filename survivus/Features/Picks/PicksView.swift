@@ -29,7 +29,7 @@ struct PicksView: View {
                 }
             }
             .onAppear { if selectedEpisode == nil { selectedEpisode = app.store.config.episodes.first } }
-            .navigationTitle("Picks")
+            .navigationTitle("Your Picks")
         }
     }
 
