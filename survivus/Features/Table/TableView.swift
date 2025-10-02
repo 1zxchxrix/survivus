@@ -7,6 +7,7 @@ struct TableView: View {
         let config = app.store.config
         let scoring = app.scoring
         let lastEpisodeWithResult = app.store.results.map { $0.id }.max() ?? 0
+        let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
             var votedOutPoints = 0
@@ -46,8 +47,18 @@ struct TableView: View {
             List {
                 TableHeader()
                 ForEach(breakdowns) { breakdown in
-                    HStack {
-                        Text(app.store.users.first(where: { $0.id == breakdown.userId })?.displayName ?? breakdown.userId)
+                    HStack(spacing: 12) {
+                        if let user = usersById[breakdown.userId] {
+                            Image(user.avatarAssetName)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                                .accessibilityHidden(true)
+                            Text(user.displayName)
+                        } else {
+                            Text(breakdown.userId)
+                        }
                         Spacer()
                         Text("\(breakdown.weeksParticipated)").frame(width: 32)
                         Text("\(breakdown.votedOutPoints)").frame(width: 40)
