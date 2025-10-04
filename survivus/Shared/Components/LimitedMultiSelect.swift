@@ -31,8 +31,9 @@ struct LimitedMultiSelect: View {
                 .filter { !$0.isEmpty }
         )
         LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(uniqueContestants) { contestant in
-                let isSelected = selection.contains(contestant.id)
+            ForEach(uniqueContestants, id: \.id) { contestant in
+                let selectionId = contestant.id
+                let isSelected = normalizedSelection.contains(selectionId)
                 Button {
                     guard !disabled else { return }
                     if isSelected {
