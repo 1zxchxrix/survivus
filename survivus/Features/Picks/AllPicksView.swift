@@ -92,24 +92,24 @@ struct AllPicksView: View {
         let isCurrentUser = user.id == app.currentUserId
 
         let mergeTap: (() -> Void)? = isCurrentUser ? {
-            navigationPath.append(.merge)
+            navigationPath.append(PicksDestination.merge)
         } : nil
 
         let immunityTap: (() -> Void)? = isCurrentUser ? {
             if let episode = selectedEpisode {
-                navigationPath.append(.weekly(panel: .immunity, episodeId: episode.id))
+                navigationPath.append(PicksDestination.weekly(panel: .immunity, episodeId: episode.id))
             }
         } : nil
 
         let votedOutTap: (() -> Void)? = isCurrentUser ? {
             if let episode = selectedEpisode {
-                navigationPath.append(.weekly(panel: .votedOut, episodeId: episode.id))
+                navigationPath.append(PicksDestination.weekly(panel: .votedOut, episodeId: episode.id))
             }
         } : nil
 
         let remainTap: (() -> Void)? = isCurrentUser ? {
             if let episode = selectedEpisode {
-                navigationPath.append(.weekly(panel: .remain, episodeId: episode.id))
+                navigationPath.append(PicksDestination.weekly(panel: .remain, episodeId: episode.id))
             }
         } : nil
 
@@ -138,7 +138,7 @@ private extension AllPicksView {
     func mergeAction(for user: UserProfile) -> (() -> Void)? {
         guard user.id == app.currentUserId else { return nil }
         return {
-            self.navigationPath.append(.merge)
+            self.navigationPath.append(PicksDestination.merge)
         }
     }
 
@@ -146,7 +146,7 @@ private extension AllPicksView {
         guard user.id == app.currentUserId else { return nil }
         return {
             if let episode = self.selectedEpisode {
-                self.navigationPath.append(.weekly(panel: panel, episodeId: episode.id))
+                self.navigationPath.append(PicksDestination.weekly(panel: panel, episodeId: episode.id))
             }
         }
     }
@@ -157,10 +157,30 @@ private struct UserPicksCard: View {
     let seasonPicks: SeasonPicks?
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
-    let onMergeTap: (() -> Void)? = nil
-    let onImmunityTap: (() -> Void)? = nil
-    let onVotedOutTap: (() -> Void)? = nil
-    let onRemainTap: (() -> Void)? = nil
+    let onMergeTap: (() -> Void)?
+    let onImmunityTap: (() -> Void)?
+    let onVotedOutTap: (() -> Void)?
+    let onRemainTap: (() -> Void)?
+
+    init(
+        user: UserProfile,
+        seasonPicks: SeasonPicks?,
+        weeklyPicks: WeeklyPicks?,
+        contestantsById: [String: Contestant],
+        onMergeTap: (() -> Void)? = nil,
+        onImmunityTap: (() -> Void)? = nil,
+        onVotedOutTap: (() -> Void)? = nil,
+        onRemainTap: (() -> Void)? = nil
+    ) {
+        self.user = user
+        self.seasonPicks = seasonPicks
+        self.weeklyPicks = weeklyPicks
+        self.contestantsById = contestantsById
+        self.onMergeTap = onMergeTap
+        self.onImmunityTap = onImmunityTap
+        self.onVotedOutTap = onVotedOutTap
+        self.onRemainTap = onRemainTap
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -227,30 +247,10 @@ private struct UserPicksCard: View {
         )
     }
 
-    private var mergeContestants: [Contestant] {
-        contestants(for: seasonPicks?.mergePicks ?? [], limit: 3)
-    }
-
-    private var immunityContestants: [Contestant] {
-        contestants(for: weeklyPicks?.immunity ?? [], limit: 3)
-    }
-
-    private var votedOutContestants: [Contestant] {
-        contestants(for: weeklyPicks?.votedOut ?? [], limit: 3)
-    }
-
-    private var remainContestants: [Contestant] {
-        contestants(
-            for: weeklyPicks?.remain ?? [],
-            limit: 3,
-            excluding: weeklyPicks?.votedOut ?? []
-        )
-    }
-
     private func contestants(
         for ids: Set<String>,
         limit: Int? = nil,
-        excluding excludedIds: Set<String> = []
+        excluding excludedIds: Set<String> = Set<String>()
     ) -> [Contestant] {
         let filteredIds = ids.subtracting(excludedIds)
         let picks = filteredIds.compactMap { contestantsById[$0] }
@@ -265,7 +265,13 @@ private struct UserPicksCard: View {
 private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
-    let onTap: (() -> Void)? = nil
+    let onTap: (() -> Void)?
+
+    init(title: String, contestants: [Contestant], onTap: (() -> Void)? = nil) {
+        self.title = title
+        self.contestants = contestants
+        self.onTap = onTap
+    }
 
     var body: some View {
         Group {
