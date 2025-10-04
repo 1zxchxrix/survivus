@@ -95,8 +95,10 @@ struct LimitedMultiSelect: View {
     }
 }
 
-#Preview("LimitedMultiSelect") {
-    LimitedMultiSelectPreview()
+struct LimitedMultiSelect_Previews: PreviewProvider {
+    static var previews: some View {
+        LimitedMultiSelectPreview()
+    }
 }
 
 private struct LimitedMultiSelectPreview: View {
