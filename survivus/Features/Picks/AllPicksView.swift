@@ -150,6 +150,15 @@ private struct UserPicksCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
         )
+        .overlay {
+            if isCurrentUser {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        Color(red: 0.07, green: 0.19, blue: 0.42),
+                        lineWidth: 3
+                    )
+            }
+        }
     }
 
     @ViewBuilder
