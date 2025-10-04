@@ -1,14 +1,8 @@
 import SwiftUI
 
-private enum PicksDestination: Hashable {
-    case merge
-    case weekly(panel: WeeklyPickPanel, episodeId: Int)
-}
-
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedWeekId: Int = 1
-    @State private var navigationPath = NavigationPath()
 
     private var weekOptions: [WeekOption] {
         app.store.config.episodes
@@ -26,7 +20,7 @@ struct AllPicksView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     weekPicker
@@ -39,7 +33,7 @@ struct AllPicksView: View {
                             weeklyPicks: weeklyPicks(for: user),
                             contestantsById: contestantsById,
                             isCurrentUser: user.id == app.currentUserId,
-                            selectedEpisodeId: selectedEpisode?.id
+                            selectedEpisode: selectedEpisode
                         )
                     }
                 }
@@ -51,18 +45,6 @@ struct AllPicksView: View {
                 }
             }
             .navigationTitle("Picks")
-        }
-        .navigationDestination(for: PicksDestination.self) { destination in
-            switch destination {
-            case .merge:
-                MergePickEditor()
-            case let .weekly(panel, episodeId):
-                if let episode = app.store.config.episodes.first(where: { $0.id == episodeId }) {
-                    WeeklyPickEditor(episode: episode, panel: panel)
-                } else {
-                    Text("Episode not found")
-                }
-            }
         }
     }
 
@@ -102,7 +84,7 @@ private struct UserPicksCard: View {
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
     let isCurrentUser: Bool
-    let selectedEpisodeId: Int?
+    let selectedEpisode: Episode?
 
     init(
         user: UserProfile,
@@ -110,14 +92,14 @@ private struct UserPicksCard: View {
         weeklyPicks: WeeklyPicks?,
         contestantsById: [String: Contestant],
         isCurrentUser: Bool,
-        selectedEpisodeId: Int?
+        selectedEpisode: Episode?
     ) {
         self.user = user
         self.seasonPicks = seasonPicks
         self.weeklyPicks = weeklyPicks
         self.contestantsById = contestantsById
         self.isCurrentUser = isCurrentUser
-        self.selectedEpisodeId = selectedEpisodeId
+        self.selectedEpisode = selectedEpisode
     }
 
     var body: some View {
@@ -168,9 +150,24 @@ private struct UserPicksCard: View {
 
     @ViewBuilder
     private func section(for panel: Panel, contestants: [Contestant]) -> some View {
-        if isCurrentUser, let destination = panel.destination(selectedEpisodeId: selectedEpisodeId) {
-            NavigationLink(value: destination) {
-                PickSection(title: panel.title, contestants: contestants, isInteractive: true)
+        if isCurrentUser {
+            switch panel {
+            case .merge:
+                NavigationLink {
+                    MergePickEditor()
+                } label: {
+                    PickSection(title: panel.title, contestants: contestants, isInteractive: true)
+                }
+            case .immunity, .votedOut, .remain:
+                if let episode = selectedEpisode, let weeklyPanel = panel.weeklyPanel {
+                    NavigationLink {
+                        WeeklyPickEditor(episode: episode, panel: weeklyPanel)
+                    } label: {
+                        PickSection(title: panel.title, contestants: contestants, isInteractive: true)
+                    }
+                } else {
+                    PickSection(title: panel.title, contestants: contestants)
+                }
             }
         } else {
             PickSection(title: panel.title, contestants: contestants)
@@ -196,19 +193,16 @@ private struct UserPicksCard: View {
             }
         }
 
-        func destination(selectedEpisodeId: Int?) -> PicksDestination? {
+        var weeklyPanel: WeeklyPickPanel? {
             switch self {
             case .merge:
-                return .merge
+                return nil
             case .immunity:
-                guard let episodeId = selectedEpisodeId else { return nil }
-                return .weekly(panel: .immunity, episodeId: episodeId)
+                return .immunity
             case .votedOut:
-                guard let episodeId = selectedEpisodeId else { return nil }
-                return .weekly(panel: .votedOut, episodeId: episodeId)
+                return .votedOut
             case .remain:
-                guard let episodeId = selectedEpisodeId else { return nil }
-                return .weekly(panel: .remain, episodeId: episodeId)
+                return .remain
             }
         }
     }
