@@ -11,7 +11,9 @@ struct LimitedMultiSelect: View {
     let max: Int
     var disabled: Bool = false
 
-    private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 16), count: 2)
+    private let columns: [GridItem] = [
+        GridItem(.adaptive(minimum: 96), spacing: 16, alignment: .top)
+    ]
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
@@ -25,35 +27,45 @@ struct LimitedMultiSelect: View {
                         selection.insert(contestant.id)
                     }
                 } label: {
-                    VStack(spacing: 12) {
-                        ContestantAvatar(imageName: contestant.id, size: 72)
+                    VStack(spacing: 8) {
+                        ZStack(alignment: .bottomTrailing) {
+                            ContestantAvatar(imageName: contestant.id, size: 72)
+                                .overlay(
+                                    Circle()
+                                        .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 3 : 1)
+                                )
+
+                            if isSelected {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(.systemBackground))
+                                        .frame(width: 26, height: 26)
+                                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(Color.accentColor)
+                                }
+                                .offset(x: 4, y: 4)
+                            }
+                        }
+
                         Text(contestant.name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+                            .font(.caption)
                             .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.85)
+                            .foregroundStyle(.primary)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 160)
-                    .padding(.vertical, 16)
-                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 4)
                     .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
-                    )
-                    .overlay(alignment: .topTrailing) {
-                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .font(.title3)
-                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.6))
-                            .padding(10)
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.15), lineWidth: isSelected ? 2 : 1)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
                     )
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
+                .opacity(disabled ? 0.6 : 1)
             }
         }
     }
