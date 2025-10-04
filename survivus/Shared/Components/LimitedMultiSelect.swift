@@ -50,10 +50,10 @@ struct LimitedMultiSelect: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
-                )
+//                .background(
+//                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+//                        .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
+//                )
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
