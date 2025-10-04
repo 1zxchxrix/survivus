@@ -9,8 +9,7 @@ struct ContestantAvatar: View {
     var size: CGFloat = 28
 
     var body: some View {
-        ZStack {
-            Circle().fill(Color.secondary.opacity(0.2))
+        Group {
             if let image = loadImage(named: imageName) {
                 image
                     .resizable()
@@ -25,8 +24,6 @@ struct ContestantAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 1))
-        .shadow(color: Color.black.opacity(0.08), radius: 1, y: 0.5)
         .accessibilityHidden(true)
     }
 
