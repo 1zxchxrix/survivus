@@ -15,9 +15,18 @@ struct LimitedMultiSelect: View {
         GridItem(.adaptive(minimum: 96), spacing: 16, alignment: .top)
     ]
 
+    private var uniqueContestants: [Contestant] {
+        var seen = Set<String>()
+        return all.filter { contestant in
+            guard !seen.contains(contestant.id) else { return false }
+            seen.insert(contestant.id)
+            return true
+        }
+    }
+
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(all) { contestant in
+            ForEach(uniqueContestants) { contestant in
                 let isSelected = selection.contains(contestant.id)
                 Button {
                     guard !disabled else { return }
