@@ -7,9 +7,15 @@ struct ResultsView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
+    private var displayedEpisodes: [Episode] {
+        app.store.config.episodes
+            .filter { $0.id <= 2 }
+            .sorted(by: { $0.airDate > $1.airDate })
+    }
+
     var body: some View {
         NavigationStack {
-            List(app.store.config.episodes.sorted(by: { $0.airDate > $1.airDate })) { episode in
+            List(displayedEpisodes) { episode in
                 let result = app.store.resultsByEpisode[episode.id]
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {

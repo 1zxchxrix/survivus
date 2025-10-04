@@ -2,16 +2,13 @@ import SwiftUI
 
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
-    @State private var selectedWeekId: Int = 13
+    @State private var selectedWeekId: Int = 1
 
     private var weekOptions: [WeekOption] {
-        var options = app.store.config.episodes.map { WeekOption(id: $0.id, title: $0.title) }
-        if let index = options.firstIndex(where: { $0.id == 13 }) {
-            options[index] = WeekOption(id: 13, title: "Week 13 (Current)")
-        } else {
-            options.append(WeekOption(id: 13, title: "Week 13 (Current)"))
-        }
-        return options.sorted { $0.id < $1.id }
+        app.store.config.episodes
+            .filter { $0.id <= 2 }
+            .map { WeekOption(id: $0.id, title: $0.title) }
+            .sorted { $0.id < $1.id }
     }
 
     private var contestantsById: [String: Contestant] {
@@ -35,6 +32,11 @@ struct AllPicksView: View {
                     }
                 }
                 .padding()
+            }
+            .onAppear {
+                if let firstWeek = weekOptions.first {
+                    selectedWeekId = firstWeek.id
+                }
             }
             .navigationTitle("Picks")
         }
