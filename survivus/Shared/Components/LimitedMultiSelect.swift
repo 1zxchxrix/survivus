@@ -102,9 +102,7 @@ struct LimitedMultiSelect: View {
             .contentShape(Rectangle())
             .opacity(disabled ? 0.6 : 1)
         }
-        }
     }
-}
 
 struct LimitedMultiSelect_Previews: PreviewProvider {
     static var previews: some View {
@@ -121,7 +119,7 @@ private struct LimitedMultiSelectPreview: View {
         Contestant(id: "russell_hantz", name: "Russell Hantz"),
         Contestant(id: "john_cochran", name: "John Cochran"),
     ]
-
+    
     var body: some View {
         LimitedMultiSelect(
             all: contestants,
@@ -130,3 +128,4 @@ private struct LimitedMultiSelectPreview: View {
         )
         .padding()
     }
+}
