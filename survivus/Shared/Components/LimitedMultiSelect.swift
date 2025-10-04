@@ -15,21 +15,51 @@ struct LimitedMultiSelect: View {
         GridItem(.adaptive(minimum: 96), spacing: 16, alignment: .top)
     ]
 
+    /// Normalizes the contestant list so the grid only renders unique, non-empty identifiers.
+    private var uniqueContestants: [DisplayContestant] {
+        var seenIds = Set<String>()
+        var normalized: [DisplayContestant] = []
+        normalized.reserveCapacity(all.count)
+
+        for contestant in all {
+            let trimmedId = contestant.id.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedId.isEmpty else { continue }
+            if seenIds.insert(trimmedId).inserted {
+                normalized.append(DisplayContestant(id: trimmedId, contestant: contestant))
+            }
+        }
+
+        return normalized.sorted { lhs, rhs in
+            lhs.contestant.name.localizedCaseInsensitiveCompare(rhs.contestant.name) == .orderedAscending
+        }
+    }
+
     var body: some View {
+        let normalizedSelection = Set(
+            selection
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
         LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(all) { contestant in
-                let isSelected = selection.contains(contestant.id)
+            ForEach(uniqueContestants) { entry in
+                let contestant = entry.contestant
+                let normalizedId = contestant.id.trimmingCharacters(in: .whitespacesAndNewlines)
+                let selectionId = normalizedId.isEmpty ? contestant.id : normalizedId
+                let isSelected = normalizedSelection.contains(selectionId)
                 Button {
                     guard !disabled else { return }
                     if isSelected {
-                        selection.remove(contestant.id)
-                    } else if selection.count < max {
-                        selection.insert(contestant.id)
+                        // Remove any persisted variants (e.g. with stray whitespace) so the
+                        // selection stays normalized to a single identifier per contestant.
+                        selection.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines) == selectionId }
+                    } else if normalizedSelection.count < max {
+                        selection.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines) == selectionId }
+                        selection.insert(selectionId)
                     }
                 } label: {
                     VStack(spacing: 8) {
                         ZStack(alignment: .bottomTrailing) {
-                            ContestantAvatar(imageName: contestant.id, size: 72)
+                            ContestantAvatar(imageName: selectionId, size: 72)
                                 .overlay(
                                     Circle()
                                         .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 3 : 1)
@@ -69,6 +99,11 @@ struct LimitedMultiSelect: View {
             }
         }
     }
+}
+
+private struct DisplayContestant: Identifiable {
+    let id: String
+    let contestant: Contestant
 }
 
 #Preview("LimitedMultiSelect") {
