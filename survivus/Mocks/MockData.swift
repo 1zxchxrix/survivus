@@ -13,7 +13,7 @@ private let mockContestantData: [(id: String, name: String)] = [
     ("erik_reichenbach", "Erik Reichenbach"),
     ("yul_kwon", "Yul Kwon"),
     ("ozzy_lusth", "Ozzy Lusth"),
-    ("parvati_shallow", "Boston Rob"),
+    ("parvati_shallow", "Parvati Shallow"),
     ("jonathan_penner", "Jonathan Penner"),
     ("nate_gonzalez", "Nate Gonzalez"),
     ("chicken_morris", "Chicken Morris"),
