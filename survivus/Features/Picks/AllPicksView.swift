@@ -35,27 +35,13 @@ struct AllPicksView: View {
                     ForEach(app.store.users) { user in
                         UserPicksCard(
                             user: user,
-                            seasonPicks: app.store.seasonPicks[user.id],
-                            weeklyPicks: app.store.weeklyPicks[user.id]?[selectedWeekId],
+                            seasonPicks: seasonPicks(for: user),
+                            weeklyPicks: weeklyPicks(for: user),
                             contestantsById: contestantsById,
-                            onMergeTap: user.id == app.currentUserId ? {
-                                navigationPath.append(.merge)
-                            } : nil,
-                            onImmunityTap: user.id == app.currentUserId ? {
-                                if let episode = selectedEpisode {
-                                    navigationPath.append(.weekly(panel: .immunity, episodeId: episode.id))
-                                }
-                            } : nil,
-                            onVotedOutTap: user.id == app.currentUserId ? {
-                                if let episode = selectedEpisode {
-                                    navigationPath.append(.weekly(panel: .votedOut, episodeId: episode.id))
-                                }
-                            } : nil,
-                            onRemainTap: user.id == app.currentUserId ? {
-                                if let episode = selectedEpisode {
-                                    navigationPath.append(.weekly(panel: .remain, episodeId: episode.id))
-                                }
-                            } : nil
+                            onMergeTap: mergeAction(for: user),
+                            onImmunityTap: weeklyAction(for: user, panel: .immunity),
+                            onVotedOutTap: weeklyAction(for: user, panel: .votedOut),
+                            onRemainTap: weeklyAction(for: user, panel: .remain)
                         )
                     }
                 }
@@ -100,6 +86,32 @@ struct AllPicksView: View {
     }
 }
 
+private extension AllPicksView {
+    func seasonPicks(for user: UserProfile) -> SeasonPicks? {
+        app.store.seasonPicks[user.id]
+    }
+
+    func weeklyPicks(for user: UserProfile) -> WeeklyPicks? {
+        app.store.weeklyPicks[user.id]?[selectedWeekId]
+    }
+
+    func mergeAction(for user: UserProfile) -> (() -> Void)? {
+        guard user.id == app.currentUserId else { return nil }
+        return {
+            self.navigationPath.append(.merge)
+        }
+    }
+
+    func weeklyAction(for user: UserProfile, panel: WeeklyPickPanel) -> (() -> Void)? {
+        guard user.id == app.currentUserId else { return nil }
+        return {
+            if let episode = self.selectedEpisode {
+                self.navigationPath.append(.weekly(panel: panel, episodeId: episode.id))
+            }
+        }
+    }
+}
+
 private struct UserPicksCard: View {
     let user: UserProfile
     let seasonPicks: SeasonPicks?
@@ -125,31 +137,45 @@ private struct UserPicksCard: View {
                     .fontWeight(.semibold)
             }
 
+            let mergeContestants = contestants(
+                for: seasonPicks?.mergePicks ?? Set<String>(),
+                limit: 3
+            )
+            let immunityContestants = contestants(
+                for: weeklyPicks?.immunity ?? Set<String>(),
+                limit: 3
+            )
+            let votedOutContestants = contestants(
+                for: weeklyPicks?.votedOut ?? Set<String>(),
+                limit: 3
+            )
+            let remainContestants = contestants(
+                for: weeklyPicks?.remain ?? Set<String>(),
+                limit: 3,
+                excluding: weeklyPicks?.votedOut ?? Set<String>()
+            )
+
             PickSection(
                 title: "Mergers",
-                contestants: contestants(for: seasonPicks?.mergePicks ?? [], limit: 3),
+                contestants: mergeContestants,
                 onTap: onMergeTap
             )
 
             PickSection(
                 title: "Immunity",
-                contestants: contestants(for: weeklyPicks?.immunity ?? [], limit: 3),
+                contestants: immunityContestants,
                 onTap: onImmunityTap
             )
 
             PickSection(
                 title: "Voted Out",
-                contestants: contestants(for: weeklyPicks?.votedOut ?? [], limit: 3),
+                contestants: votedOutContestants,
                 onTap: onVotedOutTap
             )
 
             PickSection(
                 title: "Remain",
-                contestants: contestants(
-                    for: weeklyPicks?.remain ?? [],
-                    limit: 3,
-                    excluding: weeklyPicks?.votedOut ?? []
-                ),
+                contestants: remainContestants,
                 onTap: onRemainTap
             )
         }
