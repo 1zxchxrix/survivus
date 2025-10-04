@@ -25,20 +25,28 @@ struct LimitedMultiSelect: View {
     }
 
     var body: some View {
+        let normalizedSelection = Set(
+            selection
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(uniqueContestants) { contestant in
                 let isSelected = selection.contains(contestant.id)
                 Button {
                     guard !disabled else { return }
                     if isSelected {
-                        selection.remove(contestant.id)
-                    } else if selection.count < max {
-                        selection.insert(contestant.id)
+                        // Remove any persisted variants (e.g. with stray whitespace) so the
+                        // selection stays normalized to a single identifier per contestant.
+                        selection.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines) == selectionId }
+                    } else if normalizedSelection.count < max {
+                        selection.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines) == selectionId }
+                        selection.insert(selectionId)
                     }
                 } label: {
                     VStack(spacing: 8) {
                         ZStack(alignment: .bottomTrailing) {
-                            ContestantAvatar(imageName: contestant.id, size: 72)
+                            ContestantAvatar(imageName: selectionId, size: 72)
                                 .overlay(
                                     Circle()
                                         .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 3 : 1)
@@ -78,6 +86,11 @@ struct LimitedMultiSelect: View {
             }
         }
     }
+}
+
+private struct DisplayContestant: Identifiable {
+    let id: String
+    let contestant: Contestant
 }
 
 #Preview("LimitedMultiSelect") {
