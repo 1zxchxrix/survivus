@@ -42,9 +42,17 @@ struct LimitedMultiSelect: View {
                     if isSelected {
                         // Remove any persisted variants (e.g. with stray whitespace) so the
                         // selection stays normalized to a single identifier per contestant.
-                        selection.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines) == selectionId }
+                        selection = Set(
+                            selection.filter { element in
+                                element.trimmingCharacters(in: .whitespacesAndNewlines) != selectionId
+                            }
+                        )
                     } else if normalizedSelection.count < max {
-                        selection.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines) == selectionId }
+                        selection = Set(
+                            selection.filter { element in
+                                element.trimmingCharacters(in: .whitespacesAndNewlines) != selectionId
+                            }
+                        )
                         selection.insert(selectionId)
                     }
                 } label: {
