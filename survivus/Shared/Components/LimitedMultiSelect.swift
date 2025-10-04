@@ -34,11 +34,7 @@ struct LimitedMultiSelect: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
-<<<<<<< Updated upstream
-            ForEach(uniqueContestants) { contestant in
-=======
-            ForEach(uniqueContestants, id: \<#Root#>.id) { contestant in
->>>>>>> Stashed changes
+            ForEach(uniqueContestants, id: \.id) { contestant in
                 let selectionId = contestant.id
                 let isSelected = normalizedSelection.contains(selectionId)
                 Button {
