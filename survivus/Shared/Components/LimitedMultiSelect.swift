@@ -36,59 +36,14 @@ struct LimitedMultiSelect: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(uniqueContestants, id: \.id) { contestant in
-                let selectionId = contestant.id
-                let isSelected = normalizedSelection.contains(selectionId)
                 Button {
-                    guard !disabled else { return }
-                    if isSelected {
-                        // Remove any persisted variants (e.g. with stray whitespace) so the
-                        // selection stays normalized to a single identifier per contestant.
-                        selection = Set(
-                            selection.filter { element in
-                                element.trimmingCharacters(in: .whitespacesAndNewlines) != selectionId
-                            }
-                        )
-                    } else if normalizedSelection.count < max {
-                        selection = Set(
-                            selection.filter { element in
-                                element.trimmingCharacters(in: .whitespacesAndNewlines) != selectionId
-                            }
-                        )
-                        selection.insert(selectionId)
-                    }
+                    toggleSelection(for: contestant.id)
                 } label: {
-                    VStack(spacing: 8) {
-                        ZStack(alignment: .bottomTrailing) {
-                            ContestantAvatar(imageName: selectionId, size: 72)
-                                .overlay(
-                                    Circle()
-                                        .stroke(
-                                            isSelected ? Color.accentColor : Color.secondary.opacity(0.25),
-                                            lineWidth: isSelected ? 3 : 1
-                                        )
-                                )
-
-                            if isSelected {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color(.systemBackground))
-                                        .frame(width: 26, height: 26)
-                                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(Color.accentColor)
-                                }
-                                .offset(x: 4, y: 4)
-                            }
-                            .offset(x: 4, y: 4)
-                        }
-                    }
-                    
-                    Text(contestant.name)
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.primary)
+                    selectionLabel(
+                        for: contestant.id,
+                        name: contestant.name,
+                        isSelected: isSelected(contestant.id)
+                    )
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
@@ -103,6 +58,72 @@ struct LimitedMultiSelect: View {
             .opacity(disabled ? 0.6 : 1)
         }
     }
+
+    private func isSelected(_ id: String) -> Bool {
+        normalizedSelection.contains(id)
+    }
+
+    private func toggleSelection(for id: String) {
+        guard !disabled else { return }
+
+        if isSelected(id) {
+            selection = selectionRemovingNormalizedMatches(of: id)
+        } else if normalizedSelection.count < max {
+            selection = selectionRemovingNormalizedMatches(of: id)
+            selection.insert(id)
+        }
+    }
+
+    private func selectionRemovingNormalizedMatches(of id: String) -> Set<String> {
+        Set(
+            selection.filter { element in
+                element.trimmingCharacters(in: .whitespacesAndNewlines) != id
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func selectionLabel(for id: String, name: String, isSelected: Bool) -> some View {
+        VStack(spacing: 8) {
+            ZStack(alignment: .bottomTrailing) {
+                ContestantAvatar(imageName: id, size: 72)
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                isSelected ? Color.accentColor : Color.secondary.opacity(0.25),
+                                lineWidth: isSelected ? 3 : 1
+                            )
+                    )
+
+                if isSelected {
+                    ZStack {
+                        Circle()
+                            .fill(Color(.systemBackground))
+                            .frame(width: 26, height: 26)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .offset(x: 4, y: 4)
+                }
+            }
+
+            Text(name)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
+        )
+    }
+}
 
 struct LimitedMultiSelect_Previews: PreviewProvider {
     static var previews: some View {
