@@ -6,6 +6,7 @@ import SwiftUI
 /// contestant identifiers. The view enforces the `max` limit and optionally allows
 /// disabling user interaction.
 struct LimitedMultiSelect: View {
+    typealias Body = some View
     let all: [Contestant]
     @Binding var selection: Set<String>
     let max: Int
