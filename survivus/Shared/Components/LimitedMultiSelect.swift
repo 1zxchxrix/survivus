@@ -35,13 +35,15 @@ struct LimitedMultiSelect: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(uniqueContestants, id: \.id) { contestant in
+                let currentlySelected = isSelected(contestant.id)
+
                 Button {
                     toggleSelection(for: contestant.id)
                 } label: {
                     selectionLabel(
                         for: contestant.id,
                         name: contestant.name,
-                        isCurrentlySelected: isSelected(contestant.id)
+                        isCurrentlySelected: currentlySelected
                     )
                 }
                 .buttonStyle(.plain)
