@@ -309,18 +309,16 @@ private struct PickSection: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(contestants) { contestant in
                         VStack(spacing: 8) {
-                            Image(contestant.id)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 60, height: 60)
-                                .clipShape(Circle())
-                                .accessibilityLabel(contestant.name)
+                            ContestantAvatar(imageName: contestant.id, size: 60)
 
                             Text(contestant.name)
                                 .font(.caption)
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(.secondary)
                         }
+                        .frame(maxWidth: .infinity)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(contestant.name)
                     }
                 }
             }
