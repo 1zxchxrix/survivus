@@ -15,22 +15,12 @@ struct LimitedMultiSelect: View {
         GridItem(.adaptive(minimum: 96), spacing: 16, alignment: .top)
     ]
 
-    /// Normalizes the contestant list so the grid only renders unique, non-empty identifiers.
-    private var uniqueContestants: [DisplayContestant] {
-        var seenIds = Set<String>()
-        var normalized: [DisplayContestant] = []
-        normalized.reserveCapacity(all.count)
-
-        for contestant in all {
-            let trimmedId = contestant.id.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedId.isEmpty else { continue }
-            if seenIds.insert(trimmedId).inserted {
-                normalized.append(DisplayContestant(id: trimmedId, contestant: contestant))
-            }
-        }
-
-        return normalized.sorted { lhs, rhs in
-            lhs.contestant.name.localizedCaseInsensitiveCompare(rhs.contestant.name) == .orderedAscending
+    private var uniqueContestants: [Contestant] {
+        var seen = Set<String>()
+        return all.filter { contestant in
+            guard !seen.contains(contestant.id) else { return false }
+            seen.insert(contestant.id)
+            return true
         }
     }
 
@@ -41,11 +31,8 @@ struct LimitedMultiSelect: View {
                 .filter { !$0.isEmpty }
         )
         LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(uniqueContestants) { entry in
-                let contestant = entry.contestant
-                let normalizedId = contestant.id.trimmingCharacters(in: .whitespacesAndNewlines)
-                let selectionId = normalizedId.isEmpty ? contestant.id : normalizedId
-                let isSelected = normalizedSelection.contains(selectionId)
+            ForEach(uniqueContestants) { contestant in
+                let isSelected = selection.contains(contestant.id)
                 Button {
                     guard !disabled else { return }
                     if isSelected {
