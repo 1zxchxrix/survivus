@@ -31,4 +31,11 @@ final class MemoryStore: ObservableObject {
         weeklyPicks[picks.userId, default: [:]][picks.episodeId] = picks
         objectWillChange.send()
     }
+
+    func updateSeasonPicks(for userId: String, update: (inout SeasonPicks) -> Void) {
+        var picks = seasonPicks[userId] ?? SeasonPicks(userId: userId)
+        update(&picks)
+        seasonPicks[userId] = picks
+        objectWillChange.send()
+    }
 }

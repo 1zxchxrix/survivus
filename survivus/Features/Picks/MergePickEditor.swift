@@ -24,7 +24,11 @@ struct MergePickEditor: View {
                     all: config.contestants,
                     selection: Binding(
                         get: { app.store.seasonPicks[userId]?.mergePicks ?? [] },
-                        set: { newValue in app.store.seasonPicks[userId]?.mergePicks = Set(newValue.prefix(maxSelection)) }
+                        set: { newValue in
+                            app.store.updateSeasonPicks(for: userId) { picks in
+                                picks.mergePicks = Set(newValue.prefix(maxSelection))
+                            }
+                        }
                     ),
                     max: maxSelection,
                     disabled: disabled

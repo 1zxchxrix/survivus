@@ -24,7 +24,11 @@ struct FinalThreePickEditor: View {
                     all: config.contestants,
                     selection: Binding(
                         get: { app.store.seasonPicks[userId]?.finalThreePicks ?? [] },
-                        set: { newValue in app.store.seasonPicks[userId]?.finalThreePicks = Set(newValue.prefix(maxSelection)) }
+                        set: { newValue in
+                            app.store.updateSeasonPicks(for: userId) { picks in
+                                picks.finalThreePicks = Set(newValue.prefix(maxSelection))
+                            }
+                        }
                     ),
                     max: maxSelection,
                     disabled: !afterMerge
