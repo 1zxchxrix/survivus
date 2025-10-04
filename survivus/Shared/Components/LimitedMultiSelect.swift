@@ -79,7 +79,7 @@ struct LimitedMultiSelect: View {
     @ViewBuilder
     private func selectionLabel(for id: String, name: String, isCurrentlySelected: Bool) -> some View {
         VStack(spacing: 8) {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack(alignment: .topTrailing) {
                 ContestantAvatar(imageName: id, size: 72)
                     .overlay(
                         Circle()
@@ -90,17 +90,17 @@ struct LimitedMultiSelect: View {
                     )
 
                 if isCurrentlySelected {
-                    ZStack {
-                        Circle()
-                            .fill(Color(.systemBackground))
-                            .frame(width: 26, height: 26)
-                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    .offset(x: 4, y: 4)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(Color.accentColor, Color.white)
+                        .background(
+                            Circle()
+                                .fill(Color(.systemBackground))
+                                .frame(width: 24, height: 24)
+                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                        )
+                        .offset(x: 6, y: -6)
                 }
             }
 
@@ -110,12 +110,6 @@ struct LimitedMultiSelect: View {
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isCurrentlySelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
-        )
     }
 }
 
