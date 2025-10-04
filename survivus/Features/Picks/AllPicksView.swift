@@ -83,6 +83,46 @@ struct AllPicksView: View {
             }
             .pickerStyle(.menu)
         }
+}
+
+    @ViewBuilder
+    private func userCard(for user: UserProfile) -> some View {
+        let seasonPicks = app.store.seasonPicks[user.id]
+        let weeklyPicks = app.store.weeklyPicks[user.id]?[selectedWeekId]
+        let isCurrentUser = user.id == app.currentUserId
+
+        let mergeTap: (() -> Void)? = isCurrentUser ? {
+            navigationPath.append(.merge)
+        } : nil
+
+        let immunityTap: (() -> Void)? = isCurrentUser ? {
+            if let episode = selectedEpisode {
+                navigationPath.append(.weekly(panel: .immunity, episodeId: episode.id))
+            }
+        } : nil
+
+        let votedOutTap: (() -> Void)? = isCurrentUser ? {
+            if let episode = selectedEpisode {
+                navigationPath.append(.weekly(panel: .votedOut, episodeId: episode.id))
+            }
+        } : nil
+
+        let remainTap: (() -> Void)? = isCurrentUser ? {
+            if let episode = selectedEpisode {
+                navigationPath.append(.weekly(panel: .remain, episodeId: episode.id))
+            }
+        } : nil
+
+        UserPicksCard(
+            user: user,
+            seasonPicks: seasonPicks,
+            weeklyPicks: weeklyPicks,
+            contestantsById: contestantsById,
+            onMergeTap: mergeTap,
+            onImmunityTap: immunityTap,
+            onVotedOutTap: votedOutTap,
+            onRemainTap: remainTap
+        )
     }
 }
 
@@ -184,6 +224,26 @@ private struct UserPicksCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    private var mergeContestants: [Contestant] {
+        contestants(for: seasonPicks?.mergePicks ?? [], limit: 3)
+    }
+
+    private var immunityContestants: [Contestant] {
+        contestants(for: weeklyPicks?.immunity ?? [], limit: 3)
+    }
+
+    private var votedOutContestants: [Contestant] {
+        contestants(for: weeklyPicks?.votedOut ?? [], limit: 3)
+    }
+
+    private var remainContestants: [Contestant] {
+        contestants(
+            for: weeklyPicks?.remain ?? [],
+            limit: 3,
+            excluding: weeklyPicks?.votedOut ?? []
         )
     }
 
