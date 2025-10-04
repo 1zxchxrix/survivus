@@ -27,12 +27,12 @@ extension SeasonConfig {
     static func mock() -> SeasonConfig {
         let contestants: [Contestant] = mockContestantData.map { .init(id: $0.id, name: $0.name) }
         let base = Date()
-        let episodes = (1...12).map { index -> Episode in
+        let episodes = (1...2).map { index -> Episode in
             Episode(
                 id: index,
                 airDate: Calendar.current.date(byAdding: .day, value: 7 * (index - 1), to: base)!,
                 title: "Week \(index)",
-                isMergeEpisode: index == 7
+                isMergeEpisode: false
             )
         }
         return SeasonConfig(seasonId: "S00", name: "Mock Season", contestants: contestants, episodes: episodes)
@@ -79,14 +79,14 @@ private let mockWeeklyPicksData: [String: [WeeklyPicks]] = [
     "u1": [
         WeeklyPicks(
             userId: "u1",
-            episodeId: 7,
+            episodeId: 1,
             remain: Set(["q", "eva_erickson", "tony_vlachos", "john_cochran"]),
             votedOut: Set(["todd_herzog"]),
             immunity: Set(["q"])
         ),
         WeeklyPicks(
             userId: "u1",
-            episodeId: 8,
+            episodeId: 2,
             remain: Set(["eva_erickson", "tony_vlachos", "john_cochran"]),
             votedOut: Set(["boston_rob"]),
             immunity: Set(["eva_erickson"])
@@ -95,14 +95,14 @@ private let mockWeeklyPicksData: [String: [WeeklyPicks]] = [
     "u2": [
         WeeklyPicks(
             userId: "u2",
-            episodeId: 7,
+            episodeId: 1,
             remain: Set(["parvati_shallow", "john_cochran", "ozzy_lusth"]),
             votedOut: Set(["russell_hantz"]),
             immunity: Set(["john_cochran"])
         ),
         WeeklyPicks(
             userId: "u2",
-            episodeId: 8,
+            episodeId: 2,
             remain: Set(["parvati_shallow", "john_cochran", "ozzy_lusth"]),
             votedOut: Set(["eva_erickson"]),
             immunity: Set(["ozzy_lusth"])
@@ -111,14 +111,14 @@ private let mockWeeklyPicksData: [String: [WeeklyPicks]] = [
     "u3": [
         WeeklyPicks(
             userId: "u3",
-            episodeId: 7,
+            episodeId: 1,
             remain: Set(["john_cochran", "ozzy_lusth", "denise_martin"]),
             votedOut: Set(["tony_vlachos"]),
             immunity: Set(["denise_martin"])
         ),
         WeeklyPicks(
             userId: "u3",
-            episodeId: 8,
+            episodeId: 2,
             remain: Set(["john_cochran", "denise_martin"]),
             votedOut: Set(["mitch_guerra"]),
             immunity: Set(["john_cochran"])
@@ -127,14 +127,14 @@ private let mockWeeklyPicksData: [String: [WeeklyPicks]] = [
     "u4": [
         WeeklyPicks(
             userId: "u4",
-            episodeId: 7,
+            episodeId: 1,
             remain: Set(["amanda_kimmel", "yul_kwon", "erik_reichenbach"]),
             votedOut: Set(["q"]),
             immunity: Set(["amanda_kimmel"])
         ),
         WeeklyPicks(
             userId: "u4",
-            episodeId: 8,
+            episodeId: 2,
             remain: Set(["amanda_kimmel", "yul_kwon", "erik_reichenbach"]),
             votedOut: Set(["erik_reichenbach"]),
             immunity: Set(["yul_kwon"])
