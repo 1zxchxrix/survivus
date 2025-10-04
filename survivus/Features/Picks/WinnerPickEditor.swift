@@ -12,7 +12,11 @@ struct WinnerPickEditor: View {
             Section {
                 Picker("Winner", selection: Binding(
                     get: { app.store.seasonPicks[userId]?.winnerPick ?? "" },
-                    set: { app.store.seasonPicks[userId]?.winnerPick = $0.isEmpty ? nil : $0 }
+                    set: { newValue in
+                        app.store.updateSeasonPicks(for: userId) { picks in
+                            picks.winnerPick = newValue.isEmpty ? nil : newValue
+                        }
+                    }
                 )) {
                     Text("—").tag("")
                     ForEach(app.store.config.contestants) { contestant in
