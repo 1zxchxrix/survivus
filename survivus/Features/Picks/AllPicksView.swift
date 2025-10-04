@@ -38,10 +38,8 @@ struct AllPicksView: View {
                             seasonPicks: seasonPicks(for: user),
                             weeklyPicks: weeklyPicks(for: user),
                             contestantsById: contestantsById,
-                            onMergeTap: mergeAction(for: user),
-                            onImmunityTap: weeklyAction(for: user, panel: .immunity),
-                            onVotedOutTap: weeklyAction(for: user, panel: .votedOut),
-                            onRemainTap: weeklyAction(for: user, panel: .remain)
+                            isCurrentUser: user.id == app.currentUserId,
+                            selectedEpisodeId: selectedEpisode?.id
                         )
                     }
                 }
@@ -85,45 +83,6 @@ struct AllPicksView: View {
         }
 }
 
-    @ViewBuilder
-    private func userCard(for user: UserProfile) -> some View {
-        let seasonPicks = app.store.seasonPicks[user.id]
-        let weeklyPicks = app.store.weeklyPicks[user.id]?[selectedWeekId]
-        let isCurrentUser = user.id == app.currentUserId
-
-        let mergeTap: (() -> Void)? = isCurrentUser ? {
-            navigationPath.append(PicksDestination.merge)
-        } : nil
-
-        let immunityTap: (() -> Void)? = isCurrentUser ? {
-            if let episode = selectedEpisode {
-                navigationPath.append(PicksDestination.weekly(panel: .immunity, episodeId: episode.id))
-            }
-        } : nil
-
-        let votedOutTap: (() -> Void)? = isCurrentUser ? {
-            if let episode = selectedEpisode {
-                navigationPath.append(PicksDestination.weekly(panel: .votedOut, episodeId: episode.id))
-            }
-        } : nil
-
-        let remainTap: (() -> Void)? = isCurrentUser ? {
-            if let episode = selectedEpisode {
-                navigationPath.append(PicksDestination.weekly(panel: .remain, episodeId: episode.id))
-            }
-        } : nil
-
-        UserPicksCard(
-            user: user,
-            seasonPicks: seasonPicks,
-            weeklyPicks: weeklyPicks,
-            contestantsById: contestantsById,
-            onMergeTap: mergeTap,
-            onImmunityTap: immunityTap,
-            onVotedOutTap: votedOutTap,
-            onRemainTap: remainTap
-        )
-    }
 }
 
 private extension AllPicksView {
@@ -135,21 +94,6 @@ private extension AllPicksView {
         app.store.weeklyPicks[user.id]?[selectedWeekId]
     }
 
-    func mergeAction(for user: UserProfile) -> (() -> Void)? {
-        guard user.id == app.currentUserId else { return nil }
-        return {
-            self.navigationPath.append(PicksDestination.merge)
-        }
-    }
-
-    func weeklyAction(for user: UserProfile, panel: WeeklyPickPanel) -> (() -> Void)? {
-        guard user.id == app.currentUserId else { return nil }
-        return {
-            if let episode = self.selectedEpisode {
-                self.navigationPath.append(PicksDestination.weekly(panel: panel, episodeId: episode.id))
-            }
-        }
-    }
 }
 
 private struct UserPicksCard: View {
@@ -157,29 +101,23 @@ private struct UserPicksCard: View {
     let seasonPicks: SeasonPicks?
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
-    let onMergeTap: (() -> Void)?
-    let onImmunityTap: (() -> Void)?
-    let onVotedOutTap: (() -> Void)?
-    let onRemainTap: (() -> Void)?
+    let isCurrentUser: Bool
+    let selectedEpisodeId: Int?
 
     init(
         user: UserProfile,
         seasonPicks: SeasonPicks?,
         weeklyPicks: WeeklyPicks?,
         contestantsById: [String: Contestant],
-        onMergeTap: (() -> Void)? = nil,
-        onImmunityTap: (() -> Void)? = nil,
-        onVotedOutTap: (() -> Void)? = nil,
-        onRemainTap: (() -> Void)? = nil
+        isCurrentUser: Bool,
+        selectedEpisodeId: Int?
     ) {
         self.user = user
         self.seasonPicks = seasonPicks
         self.weeklyPicks = weeklyPicks
         self.contestantsById = contestantsById
-        self.onMergeTap = onMergeTap
-        self.onImmunityTap = onImmunityTap
-        self.onVotedOutTap = onVotedOutTap
-        self.onRemainTap = onRemainTap
+        self.isCurrentUser = isCurrentUser
+        self.selectedEpisodeId = selectedEpisodeId
     }
 
     var body: some View {
@@ -215,29 +153,10 @@ private struct UserPicksCard: View {
                 excluding: weeklyPicks?.votedOut ?? Set<String>()
             )
 
-            PickSection(
-                title: "Mergers",
-                contestants: mergeContestants,
-                onTap: onMergeTap
-            )
-
-            PickSection(
-                title: "Immunity",
-                contestants: immunityContestants,
-                onTap: onImmunityTap
-            )
-
-            PickSection(
-                title: "Voted Out",
-                contestants: votedOutContestants,
-                onTap: onVotedOutTap
-            )
-
-            PickSection(
-                title: "Remain",
-                contestants: remainContestants,
-                onTap: onRemainTap
-            )
+            section(for: .merge, contestants: mergeContestants)
+            section(for: .immunity, contestants: immunityContestants)
+            section(for: .votedOut, contestants: votedOutContestants)
+            section(for: .remain, contestants: remainContestants)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -245,6 +164,53 @@ private struct UserPicksCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
         )
+    }
+
+    @ViewBuilder
+    private func section(for panel: Panel, contestants: [Contestant]) -> some View {
+        if isCurrentUser, let destination = panel.destination(selectedEpisodeId: selectedEpisodeId) {
+            NavigationLink(value: destination) {
+                PickSection(title: panel.title, contestants: contestants, isInteractive: true)
+            }
+        } else {
+            PickSection(title: panel.title, contestants: contestants)
+        }
+    }
+
+    private enum Panel {
+        case merge
+        case immunity
+        case votedOut
+        case remain
+
+        var title: String {
+            switch self {
+            case .merge:
+                return "Mergers"
+            case .immunity:
+                return "Immunity"
+            case .votedOut:
+                return "Voted Out"
+            case .remain:
+                return "Remain"
+            }
+        }
+
+        func destination(selectedEpisodeId: Int?) -> PicksDestination? {
+            switch self {
+            case .merge:
+                return .merge
+            case .immunity:
+                guard let episodeId = selectedEpisodeId else { return nil }
+                return .weekly(panel: .immunity, episodeId: episodeId)
+            case .votedOut:
+                guard let episodeId = selectedEpisodeId else { return nil }
+                return .weekly(panel: .votedOut, episodeId: episodeId)
+            case .remain:
+                guard let episodeId = selectedEpisodeId else { return nil }
+                return .weekly(panel: .remain, episodeId: episodeId)
+            }
+        }
     }
 
     private func contestants(
@@ -265,25 +231,16 @@ private struct UserPicksCard: View {
 private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
-    let onTap: (() -> Void)?
+    let isInteractive: Bool
 
-    init(title: String, contestants: [Contestant], onTap: (() -> Void)? = nil) {
+    init(title: String, contestants: [Contestant], isInteractive: Bool = false) {
         self.title = title
         self.contestants = contestants
-        self.onTap = onTap
+        self.isInteractive = isInteractive
     }
 
     var body: some View {
-        Group {
-            if let onTap {
-                Button(action: onTap) {
-                    content
-                }
-                .buttonStyle(.plain)
-            } else {
-                content
-            }
-        }
+        content
     }
 
     private var content: some View {
@@ -294,7 +251,7 @@ private struct PickSection: View {
 
                 Spacer()
 
-                if onTap != nil {
+                if isInteractive {
                     Image(systemName: "chevron.right")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
