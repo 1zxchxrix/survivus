@@ -104,7 +104,7 @@ struct LimitedMultiSelect: View {
                         .foregroundStyle(Color.accentColor, Color.white)
                         .background(
                             Circle()
-                                .fill(Color(.systemBackground))
+                                .fill(Color(.secondarySystemGroupedBackground))
                                 .frame(width: 24, height: 24)
                                 .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
                         )
