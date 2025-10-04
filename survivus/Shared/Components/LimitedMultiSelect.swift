@@ -24,12 +24,15 @@ struct LimitedMultiSelect: View {
         }
     }
 
-    var body: some View {
-        let normalizedSelection = Set(
+    private var normalizedSelection: Set<String> {
+        Set(
             selection
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
         )
+    }
+
+    var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(uniqueContestants) { contestant in
                 let selectionId = contestant.id
@@ -50,7 +53,10 @@ struct LimitedMultiSelect: View {
                             ContestantAvatar(imageName: selectionId, size: 72)
                                 .overlay(
                                     Circle()
-                                        .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 3 : 1)
+                                        .stroke(
+                                            isSelected ? Color.accentColor : Color.secondary.opacity(0.25),
+                                            lineWidth: isSelected ? 3 : 1
+                                        )
                                 )
 
                             if isSelected {
@@ -87,11 +93,6 @@ struct LimitedMultiSelect: View {
             }
         }
     }
-}
-
-private struct DisplayContestant: Identifiable {
-    let id: String
-    let contestant: Contestant
 }
 
 #Preview("LimitedMultiSelect") {
