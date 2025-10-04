@@ -3,10 +3,10 @@ import SwiftUI
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedWeekId: Int = 1
+    @State private var hasInitializedWeekSelection = false
 
     private var weekOptions: [WeekOption] {
         app.store.config.episodes
-            .filter { $0.id == 1 }
             .map { WeekOption(id: $0.id, title: $0.title) }
             .sorted { $0.id < $1.id }
     }
@@ -40,9 +40,13 @@ struct AllPicksView: View {
                 .padding()
             }
             .onAppear {
-                if let firstWeek = weekOptions.first {
-                    selectedWeekId = firstWeek.id
+                guard !hasInitializedWeekSelection else { return }
+
+                if let latestWeek = weekOptions.max(by: { $0.id < $1.id }) {
+                    selectedWeekId = latestWeek.id
                 }
+
+                hasInitializedWeekSelection = true
             }
             .navigationTitle("Picks")
         }
