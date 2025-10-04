@@ -6,7 +6,7 @@ struct AllPicksView: View {
 
     private var weekOptions: [WeekOption] {
         app.store.config.episodes
-            .filter { $0.id <= 2 }
+            .filter { $0.id == 1 }
             .map { WeekOption(id: $0.id, title: $0.title) }
             .sorted { $0.id < $1.id }
     }
