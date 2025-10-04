@@ -1,8 +1,14 @@
 import SwiftUI
 
+private enum PicksDestination: Hashable {
+    case merge
+    case weekly(panel: WeeklyPickPanel, episodeId: Int)
+}
+
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedWeekId: Int = 1
+    @State private var navigationPath = NavigationPath()
 
     private var weekOptions: [WeekOption] {
         app.store.config.episodes
@@ -15,20 +21,19 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
+    private var selectedEpisode: Episode? {
+        app.store.config.episodes.first(where: { $0.id == selectedWeekId })
+    }
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     weekPicker
                         .padding(.bottom, 8)
 
                     ForEach(app.store.users) { user in
-                        UserPicksCard(
-                            user: user,
-                            seasonPicks: app.store.seasonPicks[user.id],
-                            weeklyPicks: app.store.weeklyPicks[user.id]?[selectedWeekId],
-                            contestantsById: contestantsById
-                        )
+                        userCard(for: user)
                     }
                 }
                 .padding()
@@ -39,6 +44,18 @@ struct AllPicksView: View {
                 }
             }
             .navigationTitle("Picks")
+        }
+        .navigationDestination(for: PicksDestination.self) { destination in
+            switch destination {
+            case .merge:
+                MergePickEditor()
+            case let .weekly(panel, episodeId):
+                if let episode = app.store.config.episodes.first(where: { $0.id == episodeId }) {
+                    WeeklyPickEditor(episode: episode, panel: panel)
+                } else {
+                    Text("Episode not found")
+                }
+            }
         }
     }
 
@@ -57,6 +74,46 @@ struct AllPicksView: View {
             }
             .pickerStyle(.menu)
         }
+}
+
+    @ViewBuilder
+    private func userCard(for user: UserProfile) -> some View {
+        let seasonPicks = app.store.seasonPicks[user.id]
+        let weeklyPicks = app.store.weeklyPicks[user.id]?[selectedWeekId]
+        let isCurrentUser = user.id == app.currentUserId
+
+        let mergeTap: (() -> Void)? = isCurrentUser ? {
+            navigationPath.append(.merge)
+        } : nil
+
+        let immunityTap: (() -> Void)? = isCurrentUser ? {
+            if let episode = selectedEpisode {
+                navigationPath.append(.weekly(panel: .immunity, episodeId: episode.id))
+            }
+        } : nil
+
+        let votedOutTap: (() -> Void)? = isCurrentUser ? {
+            if let episode = selectedEpisode {
+                navigationPath.append(.weekly(panel: .votedOut, episodeId: episode.id))
+            }
+        } : nil
+
+        let remainTap: (() -> Void)? = isCurrentUser ? {
+            if let episode = selectedEpisode {
+                navigationPath.append(.weekly(panel: .remain, episodeId: episode.id))
+            }
+        } : nil
+
+        UserPicksCard(
+            user: user,
+            seasonPicks: seasonPicks,
+            weeklyPicks: weeklyPicks,
+            contestantsById: contestantsById,
+            onMergeTap: mergeTap,
+            onImmunityTap: immunityTap,
+            onVotedOutTap: votedOutTap,
+            onRemainTap: remainTap
+        )
     }
 }
 
@@ -65,6 +122,30 @@ private struct UserPicksCard: View {
     let seasonPicks: SeasonPicks?
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
+    let onMergeTap: (() -> Void)?
+    let onImmunityTap: (() -> Void)?
+    let onVotedOutTap: (() -> Void)?
+    let onRemainTap: (() -> Void)?
+
+    init(
+        user: UserProfile,
+        seasonPicks: SeasonPicks?,
+        weeklyPicks: WeeklyPicks?,
+        contestantsById: [String: Contestant],
+        onMergeTap: (() -> Void)? = nil,
+        onImmunityTap: (() -> Void)? = nil,
+        onVotedOutTap: (() -> Void)? = nil,
+        onRemainTap: (() -> Void)? = nil
+    ) {
+        self.user = user
+        self.seasonPicks = seasonPicks
+        self.weeklyPicks = weeklyPicks
+        self.contestantsById = contestantsById
+        self.onMergeTap = onMergeTap
+        self.onImmunityTap = onImmunityTap
+        self.onVotedOutTap = onVotedOutTap
+        self.onRemainTap = onRemainTap
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -83,26 +164,26 @@ private struct UserPicksCard: View {
 
             PickSection(
                 title: "Mergers",
-                contestants: contestants(for: seasonPicks?.mergePicks ?? [], limit: 3)
+                contestants: mergeContestants,
+                onTap: onMergeTap
             )
 
             PickSection(
                 title: "Immunity",
-                contestants: contestants(for: weeklyPicks?.immunity ?? [], limit: 3)
+                contestants: immunityContestants,
+                onTap: onImmunityTap
             )
 
             PickSection(
                 title: "Voted Out",
-                contestants: contestants(for: weeklyPicks?.votedOut ?? [], limit: 3)
+                contestants: votedOutContestants,
+                onTap: onVotedOutTap
             )
 
             PickSection(
                 title: "Remain",
-                contestants: contestants(
-                    for: weeklyPicks?.remain ?? [],
-                    limit: 3,
-                    excluding: weeklyPicks?.votedOut ?? []
-                )
+                contestants: remainContestants,
+                onTap: onRemainTap
             )
         }
         .padding()
@@ -110,6 +191,26 @@ private struct UserPicksCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    private var mergeContestants: [Contestant] {
+        contestants(for: seasonPicks?.mergePicks ?? [], limit: 3)
+    }
+
+    private var immunityContestants: [Contestant] {
+        contestants(for: weeklyPicks?.immunity ?? [], limit: 3)
+    }
+
+    private var votedOutContestants: [Contestant] {
+        contestants(for: weeklyPicks?.votedOut ?? [], limit: 3)
+    }
+
+    private var remainContestants: [Contestant] {
+        contestants(
+            for: weeklyPicks?.remain ?? [],
+            limit: 3,
+            excluding: weeklyPicks?.votedOut ?? []
         )
     }
 
@@ -131,8 +232,32 @@ private struct UserPicksCard: View {
 private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
+    let onTap: (() -> Void)?
+
+    init(
+        title: String,
+        contestants: [Contestant],
+        onTap: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.contestants = contestants
+        self.onTap = onTap
+    }
 
     var body: some View {
+        Group {
+            if let onTap = onTap {
+                Button(action: onTap) {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
@@ -161,6 +286,8 @@ private struct PickSection: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 
