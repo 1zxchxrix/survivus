@@ -41,7 +41,7 @@ struct LimitedMultiSelect: View {
                     selectionLabel(
                         for: contestant.id,
                         name: contestant.name,
-                        isSelected: isSelected(contestant.id)
+                        isCurrentlySelected: isSelected(contestant.id)
                     )
                 }
                 .buttonStyle(.plain)
@@ -75,19 +75,19 @@ struct LimitedMultiSelect: View {
     }
 
     @ViewBuilder
-    private func selectionLabel(for id: String, name: String, isSelected: Bool) -> some View {
+    private func selectionLabel(for id: String, name: String, isCurrentlySelected: Bool) -> some View {
         VStack(spacing: 8) {
             ZStack(alignment: .bottomTrailing) {
                 ContestantAvatar(imageName: id, size: 72)
                     .overlay(
                         Circle()
                             .stroke(
-                                isSelected ? Color.accentColor : Color.secondary.opacity(0.25),
-                                lineWidth: isSelected ? 3 : 1
+                                isCurrentlySelected ? Color.accentColor : Color.secondary.opacity(0.25),
+                                lineWidth: isCurrentlySelected ? 3 : 1
                             )
                     )
 
-                if isSelected {
+                if isCurrentlySelected {
                     ZStack {
                         Circle()
                             .fill(Color(.systemBackground))
@@ -112,7 +112,7 @@ struct LimitedMultiSelect: View {
         .padding(.horizontal, 4)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
+                .fill(isCurrentlySelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemBackground))
         )
     }
 }
