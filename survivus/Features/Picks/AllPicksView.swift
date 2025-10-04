@@ -288,8 +288,18 @@ private struct PickSection: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
+            HStack(alignment: .center) {
+                Text(title)
+                    .font(.headline)
+
+                Spacer()
+
+                if onTap != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             if contestants.isEmpty {
                 Text("No picks yet")
