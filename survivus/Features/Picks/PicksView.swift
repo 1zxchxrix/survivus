@@ -68,12 +68,25 @@ struct PicksView: View {
 
     private var weeklySection: some View {
         Section("Weekly Picks") {
-            Picker("Episode", selection: Binding(
-                get: { selectedEpisode?.id ?? app.store.config.episodes.first?.id ?? 1 },
-                set: { newId in selectedEpisode = app.store.config.episodes.first(where: { $0.id == newId }) }
-            )) {
-                ForEach(app.store.config.episodes) { episode in
-                    Text(episode.title).tag(episode.id)
+            HStack(alignment: .firstTextBaseline) {
+                Picker("Episode", selection: Binding(
+                    get: { selectedEpisode?.id ?? app.store.config.episodes.first?.id ?? 1 },
+                    set: { newId in selectedEpisode = app.store.config.episodes.first(where: { $0.id == newId }) }
+                )) {
+                    ForEach(app.store.config.episodes) { episode in
+                        Text(episode.title).tag(episode.id)
+                    }
+                }
+
+                Spacer()
+
+                NavigationLink {
+                    AdminRoomView()
+                } label: {
+                    Image(systemName: "door.left.hand.open")
+                        .imageScale(.large)
+                        .padding(.leading, 8)
+                        .accessibilityLabel("Admin Room")
                 }
             }
 
