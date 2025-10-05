@@ -58,14 +58,27 @@ struct AllPicksView: View {
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
-
-            Picker("Week", selection: $selectedWeekId) {
-                ForEach(weekOptions) { option in
-                    Text(option.title)
-                        .tag(option.id)
+            
+            HStack(alignment: .firstTextBaseline) {
+                Picker("Week", selection: $selectedWeekId) {
+                    ForEach(weekOptions) { option in
+                        Text(option.title)
+                            .tag(option.id)
+                    }
+                }.pickerStyle(.menu)
+                
+                Spacer()
+                
+                NavigationLink {
+                    AdminRoomView()
+                } label: {
+                    Image(systemName: "door.left.hand.open")
+                        .imageScale(.large)
+                        .padding(.trailing, 10)
+                        .accessibilityLabel("Admin Room")
                 }
             }
-            .pickerStyle(.menu)
+            
         }
 }
 
