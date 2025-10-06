@@ -47,7 +47,7 @@ private struct CreatePhaseSheet: View {
     @State private var phaseName = ""
     @State private var category = ""
     @State private var totalPicks = 1
-    @State private var pointsPerCorrectPick = 0
+    @State private var pointsPerCorrectPick: Int? = nil
     @State private var lockCategory = false
 
     var body: some View {
