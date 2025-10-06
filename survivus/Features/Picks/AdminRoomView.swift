@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct AdminRoomView: View {
+    @EnvironmentObject var app: AppState
     @State private var phases: [AdminPhase] = []
     @State private var currentPhase: AdminPhase?
     @State private var isPresentingCreatePhase = false
     @State private var isPresentingSelectPhase = false
     @State private var phaseBeingEdited: AdminPhase?
+    @State private var phaseForInsertingResults: AdminPhase?
 
     var body: some View {
         Form {
@@ -17,7 +19,12 @@ struct AdminRoomView: View {
             }
 
             Section("Week") {
-                Button("Insert Results") {}
+                Button("Insert Results") {
+                    if let phase = currentPhase, !phase.categories.isEmpty {
+                        phaseForInsertingResults = phase
+                    }
+                }
+                .disabled(!canInsertResults)
                 Button("Modify Previous Results") {}
                 Button("Start New Week") {}
             }
@@ -73,12 +80,23 @@ struct AdminRoomView: View {
             .presentationDetents([.fraction(0.8)])
             .presentationCornerRadius(28)
         }
+        .sheet(item: $phaseForInsertingResults) { phase in
+            InsertResultsSheet(phase: phase, contestants: app.store.config.contestants)
+        }
     }
 }
 
 #Preview {
     NavigationStack {
         AdminRoomView()
+            .environmentObject(AppState())
+    }
+}
+
+private extension AdminRoomView {
+    var canInsertResults: Bool {
+        guard let phase = currentPhase else { return false }
+        return !phase.categories.isEmpty
     }
 }
 
@@ -246,6 +264,124 @@ private struct SelectPhaseSheet: View {
     }
 }
 
+private struct InsertResultsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let phase: AdminPhase
+    let contestants: [Contestant]
+
+    @State private var selections: [AdminPhase.Category.ID: Set<String>]
+
+    init(phase: AdminPhase, contestants: [Contestant]) {
+        self.phase = phase
+        self.contestants = contestants
+        _selections = State(
+            initialValue: Dictionary(
+                uniqueKeysWithValues: phase.categories.map { ($0.id, Set<String>()) }
+            )
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if phase.categories.isEmpty {
+                    ContentUnavailableView(
+                        "No categories",
+                        systemImage: "list.bullet.rectangle",
+                        description: Text("Add categories to this phase to insert results.")
+                    )
+                } else if contestants.isEmpty {
+                    ContentUnavailableView(
+                        "No contestants",
+                        systemImage: "person.2",
+                        description: Text("Contestants must be configured before inserting results.")
+                    )
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text(phase.name)
+                                .font(.headline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            ForEach(phase.categories) { category in
+                                categoryCard(for: category)
+                            }
+                        }
+                        .padding()
+                    }
+                    .background(Color(.systemGroupedBackground))
+                }
+            }
+            .navigationTitle("Insert Results")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { dismiss() }
+                        .disabled(phase.categories.isEmpty || contestants.isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.fraction(0.85)])
+        .presentationCornerRadius(28)
+    }
+
+    @ViewBuilder
+    private func categoryCard(for category: AdminPhase.Category) -> some View {
+        let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = displayName.isEmpty ? "Untitled Category" : displayName
+        let limit = max(category.totalPicks, 1)
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                if category.isLocked {
+                    LockPill(text: "Locked")
+                }
+            }
+
+            Text("Select up to \(limit) contestant\(limit == 1 ? "" : "s").")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            LimitedMultiSelect(
+                all: contestants,
+                selection: binding(for: category),
+                max: limit,
+                disabled: category.isLocked
+            )
+
+            if let points = category.pointsPerCorrectPick {
+                Text("Worth \(points) point\(points == 1 ? "" : "s") per correct pick.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    private func binding(for category: AdminPhase.Category) -> Binding<Set<String>> {
+        Binding(
+            get: { selections[category.id] ?? Set<String>() },
+            set: { selections[category.id] = $0 }
+        )
+    }
+}
+
+#Preview("Insert Results Sheet") {
+    InsertResultsSheet(phase: .preview, contestants: AppState().store.config.contestants)
+}
+
 private struct PhaseRow: View {
     let phase: AdminPhase
     let isActive: Bool
@@ -340,6 +476,20 @@ private struct AdminPhase: Identifiable, Equatable {
         self.id = id
         self.name = name
         self.categories = categories
+    }
+}
+
+private extension AdminPhase {
+    static var preview: AdminPhase {
+        AdminPhase(
+            name: "Week 1",
+            categories: [
+                .init(name: "Immunity", totalPicks: 1, pointsPerCorrectPick: 2, isLocked: false),
+                .init(name: "Voted Out", totalPicks: 2, pointsPerCorrectPick: 3, isLocked: false),
+                .init(name: "Reward Challenge", totalPicks: 3, pointsPerCorrectPick: nil, isLocked: false),
+                .init(name: "Locked Category", totalPicks: 1, pointsPerCorrectPick: nil, isLocked: true)
+            ]
+        )
     }
 }
 
