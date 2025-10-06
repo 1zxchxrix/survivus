@@ -29,7 +29,8 @@ struct AdminRoomView: View {
         .navigationTitle("Admin Room")
         .sheet(isPresented: $isPresentingCreatePhase) {
             CreatePhaseSheet()
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.8)])
+                .presentationCornerRadius(28)
         }
     }
 }
@@ -88,9 +89,13 @@ private struct CreatePhaseSheet: View {
                 } label: {
                     Text("Save")
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
                 }
                 .buttonStyle(.borderedProminent)
-                .padding()
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
                 .background(Color(.systemGroupedBackground))
             }
         }
