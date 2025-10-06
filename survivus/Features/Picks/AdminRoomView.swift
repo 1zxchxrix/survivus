@@ -87,7 +87,8 @@ private struct CreatePhaseSheet: View {
 
     @State private var phaseName: String
     @State private var categories: [CategoryDraft]
-    @State private var isPresentingAddCategory = false
+    @State private var isPresentingCategoryEditor = false
+    @State private var categoryBeingEdited: CategoryDraft?
 
     private let phase: AdminPhase?
     var onSave: (AdminPhase) -> Void
@@ -109,43 +110,63 @@ private struct CreatePhaseSheet: View {
                 if !categories.isEmpty {
                     Section("Categories") {
                         ForEach(categories) { category in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(category.name.isEmpty ? "Untitled Category" : category.name)
-                                    .font(.headline)
+                            Button {
+                                categoryBeingEdited = category
+                                isPresentingCategoryEditor = true
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(category.name.isEmpty ? "Untitled Category" : category.name)
+                                        .font(.headline)
 
-                                HStack {
-                                    Text("Total picks: \(category.totalPicks)")
-                                    if let points = category.pointsPerCorrectPick {
-                                        Text("Points per correct pick: \(points)")
+                                    HStack {
+                                        Text("Total picks: \(category.totalPicks)")
+                                        if let points = category.pointsPerCorrectPick {
+                                            Text("Points per correct pick: \(points)")
+                                        }
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+
+                                    if category.isLocked {
+                                        Text("Locked")
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-
-                                if category.isLocked {
-                                    Text("Locked")
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    categories.removeAll { $0.id == category.id }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
-                            .padding(.vertical, 4)
                         }
                     }
                 }
 
                 Section {
                     Button {
-                        isPresentingAddCategory = true
+                        categoryBeingEdited = nil
+                        isPresentingCategoryEditor = true
                     } label: {
                         Label("Add category", systemImage: "plus.circle.fill")
                     }
                 }
             }
-            .navigationTitle("Create Phase")
+            .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $isPresentingAddCategory) {
-                AddCategorySheet { category in
-                    categories.append(category)
+            .sheet(isPresented: $isPresentingCategoryEditor, onDismiss: {
+                categoryBeingEdited = nil
+            }) {
+                CategoryEditorSheet(category: categoryBeingEdited) { category in
+                    if let index = categories.firstIndex(where: { $0.id == category.id }) {
+                        categories[index] = category
+                    } else {
+                        categories.append(category)
+                    }
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -322,15 +343,25 @@ private struct AdminPhase: Identifiable, Equatable {
     }
 }
 
-private struct AddCategorySheet: View {
+private struct CategoryEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var categoryName = ""
-    @State private var totalPicks = 1
-    @State private var pointsPerCorrectPick: Int? = nil
-    @State private var lockCategory = false
+    @State private var categoryName: String
+    @State private var totalPicks: Int
+    @State private var pointsPerCorrectPick: Int?
+    @State private var lockCategory: Bool
 
-    var onAdd: (CategoryDraft) -> Void
+    private let category: CategoryDraft?
+    var onSave: (CategoryDraft) -> Void
+
+    init(category: CategoryDraft? = nil, onSave: @escaping (CategoryDraft) -> Void) {
+        self.category = category
+        self.onSave = onSave
+        _categoryName = State(initialValue: category?.name ?? "")
+        _totalPicks = State(initialValue: category?.totalPicks ?? 1)
+        _pointsPerCorrectPick = State(initialValue: category?.pointsPerCorrectPick)
+        _lockCategory = State(initialValue: category?.isLocked ?? false)
+    }
 
     var body: some View {
         NavigationStack {
@@ -362,13 +393,16 @@ private struct AddCategorySheet: View {
                     Toggle("Lock category", isOn: $lockCategory)
                 }
             }
-            .navigationTitle("Add Category")
+            .navigationTitle(category == nil ? "Add Category" : "Modify Category")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
                 Button {
-                    onAdd(
+                    let trimmedName = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let nameToSave = trimmedName.isEmpty ? "Untitled Category" : trimmedName
+                    onSave(
                         CategoryDraft(
-                            name: categoryName,
+                            id: category?.id ?? UUID(),
+                            name: nameToSave,
                             totalPicks: totalPicks,
                             pointsPerCorrectPick: pointsPerCorrectPick,
                             isLocked: lockCategory
@@ -376,7 +410,7 @@ private struct AddCategorySheet: View {
                     )
                     dismiss()
                 } label: {
-                    Text("Add category")
+                    Text(category == nil ? "Add category" : "Save changes")
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
