@@ -45,17 +45,92 @@ private struct CreatePhaseSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var phaseName = ""
-    @State private var category = ""
-    @State private var totalPicks = 1
-    @State private var pointsPerCorrectPick: Int? = nil
-    @State private var lockCategory = false
+    @State private var categories: [CategoryDraft] = []
+    @State private var isPresentingAddCategory = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Details") {
                     TextField("Phase name", text: $phaseName)
-                    TextField("Category", text: $category)
+                }
+
+                if !categories.isEmpty {
+                    Section("Categories") {
+                        ForEach(categories) { category in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(category.name.isEmpty ? "Untitled Category" : category.name)
+                                    .font(.headline)
+
+                                HStack {
+                                    Text("Total picks: \(category.totalPicks)")
+                                    if let points = category.pointsPerCorrectPick {
+                                        Text("Points per correct pick: \(points)")
+                                    }
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                                if category.isLocked {
+                                    Text("Locked")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+
+                Section {
+                    Button {
+                        isPresentingAddCategory = true
+                    } label: {
+                        Label("Add category", systemImage: "plus.circle.fill")
+                    }
+                }
+            }
+            .navigationTitle("Create Phase")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $isPresentingAddCategory) {
+                AddCategorySheet { category in
+                    categories.append(category)
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Save")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+                .background(Color(.systemGroupedBackground))
+            }
+        }
+    }
+}
+
+private struct AddCategorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var categoryName = ""
+    @State private var totalPicks = 1
+    @State private var pointsPerCorrectPick: Int? = nil
+    @State private var lockCategory = false
+
+    var onAdd: (CategoryDraft) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Category") {
+                    TextField("Category", text: $categoryName)
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Total picks")
@@ -81,13 +156,21 @@ private struct CreatePhaseSheet: View {
                     Toggle("Lock category after initial pick", isOn: $lockCategory)
                 }
             }
-            .navigationTitle("Create Phase")
+            .navigationTitle("Add Category")
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
                 Button {
+                    onAdd(
+                        CategoryDraft(
+                            name: categoryName,
+                            totalPicks: totalPicks,
+                            pointsPerCorrectPick: pointsPerCorrectPick,
+                            isLocked: lockCategory
+                        )
+                    )
                     dismiss()
                 } label: {
-                    Text("Save")
+                    Text("Add category")
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -100,4 +183,12 @@ private struct CreatePhaseSheet: View {
             }
         }
     }
+}
+
+private struct CategoryDraft: Identifiable {
+    let id = UUID()
+    var name: String
+    var totalPicks: Int
+    var pointsPerCorrectPick: Int?
+    var isLocked: Bool
 }
