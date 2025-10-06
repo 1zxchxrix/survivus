@@ -78,7 +78,7 @@ private struct CreatePhaseSheet: View {
                 }
 
                 Section {
-                    Toggle("Lock category", isOn: $lockCategory)
+                    Toggle("Lock category after initial pick", isOn: $lockCategory)
                 }
             }
             .navigationTitle("Create Phase")
@@ -95,7 +95,7 @@ private struct CreatePhaseSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .padding(.horizontal)
                 .padding(.top, 12)
-                .padding(.bottom, 24)
+                .padding(.bottom, 30)
                 .background(Color(.systemGroupedBackground))
             }
         }
