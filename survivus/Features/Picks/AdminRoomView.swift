@@ -244,7 +244,7 @@ private struct PhaseRow: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(Color.accentColor.opacity(0.15))
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(Color.accentColor)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
