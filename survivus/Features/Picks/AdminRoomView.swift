@@ -155,7 +155,7 @@ private struct CreatePhaseSheet: View {
                     let newPhase = AdminPhase(
                         id: phase?.id ?? UUID(),
                         name: phaseNameToSave,
-                        categories: categories.map(AdminPhase.Category.init)
+                        categories: categories.map { AdminPhase.Category($0) }
                     )
                     onSave(newPhase)
                     dismiss()
