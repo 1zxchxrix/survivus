@@ -196,49 +196,16 @@ private struct SelectPhaseSheet: View {
                 } else {
                     List {
                         ForEach(phases) { phase in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text(phase.name)
-                                        .font(.headline)
-
-                                    if phase.id == currentPhaseID {
-                                        Text("Active")
-                                            .font(.caption)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(Color.accentColor.opacity(0.15))
-                                            .foregroundStyle(.accent)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    }
-                                }
-
-                                if !phase.categories.isEmpty {
-                                    Text("Categories: \(phase.categories.count)")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                HStack(spacing: 12) {
-                                    Button("Activate") {
-                                        onActivate(phase)
-                                        dismiss()
-                                    }
-                                    .buttonStyle(.borderedProminent)
-
-                                    Button("Modify") {
-                                        onModify(phase)
-                                    }
-                                    .buttonStyle(.bordered)
-
-                                    Button(role: .destructive) {
-                                        onDelete(phase)
-                                    } label: {
-                                        Text("Delete")
-                                    }
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                            .padding(.vertical, 8)
+                            PhaseRow(
+                                phase: phase,
+                                isActive: phase.id == currentPhaseID,
+                                onActivate: {
+                                    onActivate($0)
+                                    dismiss()
+                                },
+                                onModify: onModify,
+                                onDelete: onDelete
+                            )
                         }
                     }
                     .listStyle(.insetGrouped)
@@ -255,6 +222,59 @@ private struct SelectPhaseSheet: View {
         }
         .presentationDetents([.fraction(0.8)])
         .presentationCornerRadius(28)
+    }
+}
+
+private struct PhaseRow: View {
+    let phase: AdminPhase
+    let isActive: Bool
+    let onActivate: (AdminPhase) -> Void
+    let onModify: (AdminPhase) -> Void
+    let onDelete: (AdminPhase) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(phase.name)
+                    .font(.headline)
+
+                if isActive {
+                    Text("Active")
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.15))
+                        .foregroundStyle(.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+
+            if !phase.categories.isEmpty {
+                Text("Categories: \(phase.categories.count)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 12) {
+                Button("Activate") {
+                    onActivate(phase)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Modify") {
+                    onModify(phase)
+                }
+                .buttonStyle(.bordered)
+
+                Button(role: .destructive) {
+                    onDelete(phase)
+                } label: {
+                    Text("Delete")
+                }
+            }
+            .buttonStyle(.borderless)
+        }
+        .padding(.vertical, 8)
     }
 }
 
