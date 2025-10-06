@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct AdminRoomView: View {
-    @State private var phases: [Phase] = []
-    @State private var currentPhase: Phase?
+    @State private var phases: [AdminPhase] = []
+    @State private var currentPhase: AdminPhase?
     @State private var isPresentingCreatePhase = false
     @State private var isPresentingSelectPhase = false
-    @State private var phaseBeingEdited: Phase?
+    @State private var phaseBeingEdited: AdminPhase?
 
     var body: some View {
         Form {
@@ -89,10 +89,10 @@ private struct CreatePhaseSheet: View {
     @State private var categories: [CategoryDraft]
     @State private var isPresentingAddCategory = false
 
-    private let phase: Phase?
-    var onSave: (Phase) -> Void
+    private let phase: AdminPhase?
+    var onSave: (AdminPhase) -> Void
 
-    init(phase: Phase? = nil, onSave: @escaping (Phase) -> Void) {
+    init(phase: AdminPhase? = nil, onSave: @escaping (AdminPhase) -> Void) {
         self.phase = phase
         self.onSave = onSave
         _phaseName = State(initialValue: phase?.name ?? "")
@@ -152,10 +152,10 @@ private struct CreatePhaseSheet: View {
                 Button {
                     let trimmedName = phaseName.trimmingCharacters(in: .whitespacesAndNewlines)
                     let phaseNameToSave = trimmedName.isEmpty ? "Untitled Phase" : trimmedName
-                    let newPhase = Phase(
+                    let newPhase = AdminPhase(
                         id: phase?.id ?? UUID(),
                         name: phaseNameToSave,
-                        categories: categories.map(Phase.Category.init)
+                        categories: categories.map(AdminPhase.Category.init)
                     )
                     onSave(newPhase)
                     dismiss()
@@ -178,11 +178,11 @@ private struct CreatePhaseSheet: View {
 private struct SelectPhaseSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let phases: [Phase]
-    let currentPhaseID: Phase.ID?
-    let onActivate: (Phase) -> Void
-    let onModify: (Phase) -> Void
-    let onDelete: (Phase) -> Void
+    let phases: [AdminPhase]
+    let currentPhaseID: AdminPhase.ID?
+    let onActivate: (AdminPhase) -> Void
+    let onModify: (AdminPhase) -> Void
+    let onDelete: (AdminPhase) -> Void
 
     var body: some View {
         NavigationStack {
@@ -258,7 +258,7 @@ private struct SelectPhaseSheet: View {
     }
 }
 
-private struct Phase: Identifiable, Equatable {
+private struct AdminPhase: Identifiable, Equatable {
     struct Category: Identifiable, Equatable {
         let id: UUID
         var name: String
@@ -392,7 +392,7 @@ private struct CategoryDraft: Identifiable {
         self.isLocked = isLocked
     }
 
-    init(from category: Phase.Category) {
+    init(from category: AdminPhase.Category) {
         self.init(
             id: category.id,
             name: category.name,
@@ -403,7 +403,7 @@ private struct CategoryDraft: Identifiable {
     }
 }
 
-private extension Phase.Category {
+private extension AdminPhase.Category {
     init(_ draft: CategoryDraft) {
         self.init(
             id: draft.id,
