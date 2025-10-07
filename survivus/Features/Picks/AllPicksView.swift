@@ -5,12 +5,32 @@ struct AllPicksView: View {
     @State private var selectedWeek: WeekSelection = .none
 
     private var weekOptions: [WeekOption] {
+        let weeklyEpisodeIds = app.store.weeklyPicks.values.flatMap { $0.keys }
+        let availableEpisodeIds = Set(weeklyEpisodeIds)
+
+        guard !availableEpisodeIds.isEmpty else {
+            return [WeekOption(selection: .none, title: "None")]
+        }
+
         let now = Date()
-        let episodeOptions = app.store.config.episodes
-            .filter { $0.airDate <= now }
-            .sorted { $0.id < $1.id }
-            .map { WeekOption(selection: .week($0.id), title: $0.title) }
+        let episodesById = Dictionary(uniqueKeysWithValues: app.store.config.episodes.map { ($0.id, $0) })
+        let episodeOptions = availableEpisodeIds
+            .sorted()
+            .compactMap { episodeId -> WeekOption? in
+                guard let episode = episodesById[episodeId] else {
+                    return WeekOption(selection: .week(episodeId), title: "Week \(episodeId)")
+                }
+
+                guard episode.airDate <= now else { return nil }
+
+                return WeekOption(selection: .week(episode.id), title: episode.title)
+            }
+
         return [WeekOption(selection: .none, title: "None")] + episodeOptions
+    }
+
+    private var availableWeekSelections: Set<WeekSelection> {
+        Set(weekOptions.map(\.selection))
     }
 
     private var contestantsById: [String: Contestant] {
@@ -43,6 +63,11 @@ struct AllPicksView: View {
                 .padding()
             }
             .navigationTitle("Picks")
+        }
+        .onChange(of: availableWeekSelections) { selections in
+            if !selections.contains(selectedWeek) {
+                selectedWeek = .none
+            }
         }
     }
 
