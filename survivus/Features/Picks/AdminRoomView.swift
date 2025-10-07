@@ -252,26 +252,8 @@ private struct CreatePhaseSheet: View {
                                 categoryBeingEdited = category
                                 isPresentingCategoryEditor = true
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(category.name.isEmpty ? "Untitled Category" : category.name)
-                                        .font(.headline)
-
-                                    HStack {
-                                        Text("Total picks: \(category.totalPicks)")
-                                        if let points = category.pointsPerCorrectPick {
-                                            Text("Points per correct pick: \(points)")
-                                        }
-                                    }
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-
-                                    if category.isLocked {
-                                        Text("Locked")
-                                            .font(.footnote)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .padding(.vertical, 4)
+                                CategoryRow(category: category)
+                                    .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -329,6 +311,110 @@ private struct CreatePhaseSheet: View {
                 .padding(.top, 12)
                 .padding(.bottom, 24)
                 .background(Color(.systemGroupedBackground))
+            }
+        }
+    }
+}
+
+private struct CategoryRow: View {
+    let category: CategoryDraft
+
+    private var displayName: String {
+        let trimmedName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedName.isEmpty ? "Untitled Category" : trimmedName
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(displayName)
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Total picks: \(category.totalPicks)")
+
+                if let points = category.pointsPerCorrectPick {
+                    Text("Points per correct pick: \(points)")
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            if category.isLocked {
+                Text("Locked")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct CategoryEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var draft: CategoryDraft
+    @State private var usesPoints: Bool
+
+    var onSave: (CategoryDraft) -> Void
+
+    init(category: CategoryDraft?, onSave: @escaping (CategoryDraft) -> Void) {
+        let initialDraft = category ?? CategoryDraft()
+        _draft = State(initialValue: initialDraft)
+        _usesPoints = State(initialValue: initialDraft.pointsPerCorrectPick != nil)
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Details") {
+                    TextField("Category name", text: $draft.name)
+
+                    Stepper(value: $draft.totalPicks, in: 1...10) {
+                        Text("Total picks: \(draft.totalPicks)")
+                    }
+
+                    Toggle("Assign points per correct pick", isOn: $usesPoints)
+                        .onChange(of: usesPoints) { newValue in
+                            if newValue {
+                                draft.pointsPerCorrectPick = draft.pointsPerCorrectPick ?? 1
+                            } else {
+                                draft.pointsPerCorrectPick = nil
+                            }
+                        }
+
+                    if usesPoints {
+                        Stepper(value: Binding(
+                            get: { draft.pointsPerCorrectPick ?? 1 },
+                            set: { draft.pointsPerCorrectPick = $0 }
+                        ), in: 1...50) {
+                            Text("Points per correct pick: \(draft.pointsPerCorrectPick ?? 1)")
+                        }
+                    }
+
+                    Toggle("Lock category", isOn: $draft.isLocked)
+                }
+            }
+            .navigationTitle(draft.name.isEmpty ? "Add Category" : "Edit Category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        var categoryToSave = draft
+                        let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmedName.isEmpty {
+                            categoryToSave.name = "Untitled Category"
+                        } else {
+                            categoryToSave.name = trimmedName
+                        }
+
+                        onSave(categoryToSave)
+                        dismiss()
+                    }
+                }
             }
         }
     }
