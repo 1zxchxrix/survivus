@@ -15,6 +15,8 @@ struct LimitedMultiSelect: View {
     private let columns: [GridItem] = [
         GridItem(.adaptive(minimum: 96), spacing: 16, alignment: .top)
     ]
+
+    @State private var selectionOrder: [String] = []
     
     private var uniqueContestants: [Contestant] {
         var seen = Set<String>()
@@ -37,6 +39,7 @@ struct LimitedMultiSelect: View {
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(uniqueContestants, id: \.id) { contestant in
                 let currentlySelected = isSelected(contestant.id)
+                let currentRank = selectionRank(for: contestant.id)
 
                 Button {
                     toggleSelection(for: contestant.id)
@@ -44,7 +47,8 @@ struct LimitedMultiSelect: View {
                     selectionLabel(
                         for: contestant.id,
                         name: contestant.name,
-                        isCurrentlySelected: currentlySelected
+                        isCurrentlySelected: currentlySelected,
+                        selectionRank: currentRank
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -59,6 +63,10 @@ struct LimitedMultiSelect: View {
             .contentShape(Rectangle())
             .opacity(disabled ? 0.6 : 1)
         }
+        .onAppear { syncSelectionOrder(with: normalizedSelection) }
+        .onChange(of: normalizedSelectionSorted) { _ in
+            syncSelectionOrder(with: normalizedSelection)
+        }
     }
 
     private func isSelected(_ id: String) -> Bool {
@@ -70,9 +78,12 @@ struct LimitedMultiSelect: View {
 
         if isSelected(id) {
             selection = selectionRemovingNormalizedMatches(of: id)
+            selectionOrder.removeAll { $0 == id }
         } else if normalizedSelection.count < max {
             selection = selectionRemovingNormalizedMatches(of: id)
             selection.insert(id)
+            selectionOrder.removeAll { $0 == id }
+            selectionOrder.append(id)
         }
     }
 
@@ -84,8 +95,29 @@ struct LimitedMultiSelect: View {
         )
     }
 
+    private var normalizedSelectionSorted: [String] {
+        normalizedSelection.sorted()
+    }
+
+    private func syncSelectionOrder(with selection: Set<String>) {
+        var updatedOrder = selectionOrder.filter { selection.contains($0) }
+        let orderedIds = uniqueContestants.map(\.id).filter { selection.contains($0) }
+        for id in orderedIds where !updatedOrder.contains(id) {
+            updatedOrder.append(id)
+        }
+
+        if updatedOrder != selectionOrder {
+            selectionOrder = updatedOrder
+        }
+    }
+
+    private func selectionRank(for id: String) -> Int? {
+        guard let index = selectionOrder.firstIndex(of: id) else { return nil }
+        return index + 1
+    }
+
     @ViewBuilder
-    private func selectionLabel(for id: String, name: String, isCurrentlySelected: Bool) -> some View {
+    private func selectionLabel(for id: String, name: String, isCurrentlySelected: Bool, selectionRank: Int?) -> some View {
         VStack(spacing: 8) {
             ZStack(alignment: .topTrailing) {
                 ContestantAvatar(imageName: id, size: 72)
@@ -97,17 +129,8 @@ struct LimitedMultiSelect: View {
                             )
                     )
 
-                if isCurrentlySelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(Color.accentColor, Color.white)
-                        .background(
-                            Circle()
-                                .fill(Color(.secondarySystemGroupedBackground))
-                                .frame(width: 24, height: 24)
-                                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                        )
+                if let rank = selectionRank {
+                    selectionBadge(for: rank)
                         .offset(x: 6, y: -6)
                 }
             }
@@ -118,6 +141,23 @@ struct LimitedMultiSelect: View {
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func selectionBadge(for rank: Int) -> some View {
+        ZStack {
+            Circle()
+                .fill(Color(.secondarySystemGroupedBackground))
+                .frame(width: 24, height: 24)
+                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 24, height: 24)
+
+            Text("\(rank)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.white)
+        }
     }
 }
 
