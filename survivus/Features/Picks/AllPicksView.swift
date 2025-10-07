@@ -51,6 +51,10 @@ struct AllPicksView: View {
         app.activePhase
     }
 
+    private var activePhaseName: String {
+        activePhase?.name ?? "Phase"
+    }
+
     private var selectedEpisode: Episode? {
         guard case let .week(episodeId) = selectedWeek else { return nil }
         return episode(for: episodeId)
@@ -119,13 +123,13 @@ struct AllPicksView: View {
 
     private var weekPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Week")
+            Text(activePhaseName)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
-            
+
             HStack(alignment: .firstTextBaseline) {
-                Picker("Week", selection: $selectedWeek) {
+                Picker(activePhaseName, selection: $selectedWeek) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
                             .tag(option.selection)
