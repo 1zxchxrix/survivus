@@ -8,8 +8,9 @@ struct ResultsView: View {
     }
 
     private var displayedEpisodes: [Episode] {
-        app.store.config.episodes
-            .filter { $0.id <= 2 }
+        let episodeIdsWithResults = Set(app.store.results.map { $0.id })
+        return app.store.config.episodes
+            .filter { episodeIdsWithResults.contains($0.id) }
             .sorted(by: { $0.airDate > $1.airDate })
     }
 

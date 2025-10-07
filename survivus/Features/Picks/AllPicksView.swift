@@ -2,13 +2,13 @@ import SwiftUI
 
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
-    @State private var selectedWeekId: Int = 1
-    @State private var hasInitializedWeekSelection = false
+    @State private var selectedWeek: WeekSelection = .none
 
     private var weekOptions: [WeekOption] {
-        app.store.config.episodes
-            .map { WeekOption(id: $0.id, title: $0.title) }
+        let episodeOptions = app.store.config.episodes
             .sorted { $0.id < $1.id }
+            .map { WeekOption(selection: .week($0.id), title: $0.title) }
+        return [WeekOption(selection: .none, title: "None")] + episodeOptions
     }
 
     private var contestantsById: [String: Contestant] {
@@ -16,7 +16,8 @@ struct AllPicksView: View {
     }
 
     private var selectedEpisode: Episode? {
-        app.store.config.episodes.first(where: { $0.id == selectedWeekId })
+        guard case let .week(episodeId) = selectedWeek else { return nil }
+        return app.store.config.episodes.first(where: { $0.id == episodeId })
     }
 
     var body: some View {
@@ -38,15 +39,6 @@ struct AllPicksView: View {
                     }
                 }
                 .padding()
-            }
-            .onAppear {
-                guard !hasInitializedWeekSelection else { return }
-
-                if let latestWeek = weekOptions.max(by: { $0.id < $1.id }) {
-                    selectedWeekId = latestWeek.id
-                }
-
-                hasInitializedWeekSelection = true
             }
             .navigationTitle("Picks")
         }
@@ -90,7 +82,8 @@ private extension AllPicksView {
     }
 
     func weeklyPicks(for user: UserProfile) -> WeeklyPicks? {
-        app.store.weeklyPicks[user.id]?[selectedWeekId]
+        guard case let .week(episodeId) = selectedWeek else { return nil }
+        return app.store.weeklyPicks[user.id]?[episodeId]
     }
 
 }
@@ -305,9 +298,16 @@ private struct PickSection: View {
     }
 }
 
+private enum WeekSelection: Hashable {
+    case none
+    case week(Int)
+}
+
 private struct WeekOption: Identifiable {
-    let id: Int
+    let selection: WeekSelection
     let title: String
+
+    var id: WeekSelection { selection }
 }
 
 #Preview {
