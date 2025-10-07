@@ -2,14 +2,12 @@ import SwiftUI
 
 struct AdminRoomView: View {
     @EnvironmentObject var app: AppState
-    @State private var phases: [AdminPhase] = AdminPhase.preconfiguredPhases
-    @State private var currentPhase: AdminPhase? = AdminPhase.preconfiguredPhases.first
     @State private var isPresentingCreatePhase = false
     @State private var isPresentingSelectPhase = false
     @State private var isPresentingStartWeek = false
-    @State private var phaseBeingEdited: AdminPhase?
-    @State private var phaseForInsertingResults: AdminPhase?
-    @State private var selectedPhaseForNewWeekID: AdminPhase.ID?
+    @State private var phaseBeingEdited: PickPhase?
+    @State private var phaseForInsertingResults: PickPhase?
+    @State private var selectedPhaseForNewWeekID: PickPhase.ID?
 
     var body: some View {
         Form {
@@ -63,7 +61,7 @@ struct AdminRoomView: View {
                 phases: phases,
                 currentPhaseID: currentPhase?.id,
                 onActivate: { phase in
-                    currentPhase = phase
+                    app.activePhaseId = phase.id
                     isPresentingSelectPhase = false
                 },
                 onModify: { phase in
@@ -72,9 +70,9 @@ struct AdminRoomView: View {
                     isPresentingCreatePhase = true
                 },
                 onDelete: { phase in
-                    phases.removeAll { $0.id == phase.id }
-                    if currentPhase?.id == phase.id {
-                        currentPhase = nil
+                    app.phases.removeAll { $0.id == phase.id }
+                    if app.activePhaseId == phase.id {
+                        app.activePhaseId = app.phases.first?.id
                     }
                 }
             )
@@ -83,16 +81,16 @@ struct AdminRoomView: View {
             phaseBeingEdited = nil
         }) {
             CreatePhaseSheet(phase: phaseBeingEdited) { phase in
-                if let index = phases.firstIndex(where: { $0.id == phase.id }) {
-                    phases[index] = phase
+                if let index = app.phases.firstIndex(where: { $0.id == phase.id }) {
+                    app.phases[index] = phase
                 } else {
-                    phases.append(phase)
+                    app.phases.append(phase)
                 }
 
-                if currentPhase?.id == phase.id {
-                    currentPhase = phase
-                } else if currentPhase == nil {
-                    currentPhase = phase
+                if app.activePhaseId == phase.id {
+                    app.activePhaseId = phase.id
+                } else if app.activePhaseId == nil {
+                    app.activePhaseId = phase.id
                 }
             }
             .presentationDetents([.fraction(0.8)])
@@ -112,6 +110,12 @@ struct AdminRoomView: View {
 }
 
 private extension AdminRoomView {
+    var phases: [PickPhase] { app.phases }
+
+    var currentPhase: PickPhase? {
+        app.activePhase
+    }
+
     var currentWeekTitle: String {
         guard let weekId = app.store.results.map(\.id).max() else {
             return "None"
@@ -145,23 +149,23 @@ private extension AdminRoomView {
         return !latestResult.immunityWinners.isEmpty || !latestResult.votedOut.isEmpty
     }
 
-    func startNewWeek(activating phase: AdminPhase) {
+    func startNewWeek(activating phase: PickPhase) {
         let nextWeekId = (app.store.results.map(\.id).max() ?? 0) + 1
         let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
         app.store.results.append(newResult)
-        currentPhase = phase
+        app.activePhaseId = phase.id
     }
 }
 
 private struct StartWeekSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let phases: [AdminPhase]
-    let onStart: (AdminPhase) -> Void
+    let phases: [PickPhase]
+    let onStart: (PickPhase) -> Void
 
-    @State private var selectedPhaseID: AdminPhase.ID?
+    @State private var selectedPhaseID: PickPhase.ID?
 
-    init(phases: [AdminPhase], selectedPhaseID: AdminPhase.ID?, onStart: @escaping (AdminPhase) -> Void) {
+    init(phases: [PickPhase], selectedPhaseID: PickPhase.ID?, onStart: @escaping (PickPhase) -> Void) {
         self.phases = phases
         self.onStart = onStart
         _selectedPhaseID = State(initialValue: selectedPhaseID ?? phases.first?.id)
@@ -224,10 +228,10 @@ private struct CreatePhaseSheet: View {
     @State private var isPresentingCategoryEditor = false
     @State private var categoryBeingEdited: CategoryDraft?
 
-    private let phase: AdminPhase?
-    var onSave: (AdminPhase) -> Void
+    private let phase: PickPhase?
+    var onSave: (PickPhase) -> Void
 
-    init(phase: AdminPhase? = nil, onSave: @escaping (AdminPhase) -> Void) {
+    init(phase: PickPhase? = nil, onSave: @escaping (PickPhase) -> Void) {
         self.phase = phase
         self.onSave = onSave
         _phaseName = State(initialValue: phase?.name ?? "")
@@ -307,10 +311,10 @@ private struct CreatePhaseSheet: View {
                 Button {
                     let trimmedName = phaseName.trimmingCharacters(in: .whitespacesAndNewlines)
                     let phaseNameToSave = trimmedName.isEmpty ? "Untitled Phase" : trimmedName
-                    let newPhase = AdminPhase(
+                    let newPhase = PickPhase(
                         id: phase?.id ?? UUID(),
                         name: phaseNameToSave,
-                        categories: categories.map { AdminPhase.Category($0) }
+                        categories: categories.map { PickPhase.Category($0) }
                     )
                     onSave(newPhase)
                     dismiss()
@@ -333,11 +337,11 @@ private struct CreatePhaseSheet: View {
 private struct SelectPhaseSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let phases: [AdminPhase]
-    let currentPhaseID: AdminPhase.ID?
-    let onActivate: (AdminPhase) -> Void
-    let onModify: (AdminPhase) -> Void
-    let onDelete: (AdminPhase) -> Void
+    let phases: [PickPhase]
+    let currentPhaseID: PickPhase.ID?
+    let onActivate: (PickPhase) -> Void
+    let onModify: (PickPhase) -> Void
+    let onDelete: (PickPhase) -> Void
 
     var body: some View {
         NavigationStack {
@@ -383,12 +387,12 @@ private struct SelectPhaseSheet: View {
 private struct InsertResultsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    let phase: AdminPhase
+    let phase: PickPhase
     let contestants: [Contestant]
 
-    @State private var selections: [AdminPhase.Category.ID: Set<String>]
+    @State private var selections: [PickPhase.Category.ID: Set<String>]
 
-    init(phase: AdminPhase, contestants: [Contestant]) {
+    init(phase: PickPhase, contestants: [Contestant]) {
         self.phase = phase
         self.contestants = contestants
         _selections = State(
@@ -445,7 +449,7 @@ private struct InsertResultsSheet: View {
     }
 
     @ViewBuilder
-    private func categoryCard(for category: AdminPhase.Category) -> some View {
+    private func categoryCard(for category: PickPhase.Category) -> some View {
         let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = displayName.isEmpty ? "Untitled Category" : displayName
         let limit = max(category.totalPicks, 1)
@@ -486,7 +490,7 @@ private struct InsertResultsSheet: View {
         )
     }
 
-    private func binding(for category: AdminPhase.Category) -> Binding<Set<String>> {
+    private func binding(for category: PickPhase.Category) -> Binding<Set<String>> {
         Binding(
             get: { selections[category.id] ?? Set<String>() },
             set: { selections[category.id] = $0 }
@@ -499,11 +503,11 @@ private struct InsertResultsSheet: View {
 }
 
 private struct PhaseRow: View {
-    let phase: AdminPhase
+    let phase: PickPhase
     let isActive: Bool
-    let onActivate: (AdminPhase) -> Void
-    let onModify: (AdminPhase) -> Void
-    let onDelete: (AdminPhase) -> Void
+    let onActivate: (PickPhase) -> Void
+    let onModify: (PickPhase) -> Void
+    let onDelete: (PickPhase) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -551,213 +555,3 @@ private struct PhaseRow: View {
     }
 }
 
-private struct AdminPhase: Identifiable, Equatable {
-    struct Category: Identifiable, Equatable {
-        let id: UUID
-        var name: String
-        var totalPicks: Int
-        var pointsPerCorrectPick: Int?
-        var isLocked: Bool
-
-        init(
-            id: UUID = UUID(),
-            name: String,
-            totalPicks: Int,
-            pointsPerCorrectPick: Int?,
-            isLocked: Bool
-        ) {
-            self.id = id
-            self.name = name
-            self.totalPicks = totalPicks
-            self.pointsPerCorrectPick = pointsPerCorrectPick
-            self.isLocked = isLocked
-        }
-
-        init(from draft: CategoryDraft) {
-            self.init(
-                id: draft.id,
-                name: draft.name,
-                totalPicks: draft.totalPicks,
-                pointsPerCorrectPick: draft.pointsPerCorrectPick,
-                isLocked: draft.isLocked
-            )
-        }
-    }
-
-    let id: UUID
-    var name: String
-    var categories: [Category]
-
-    init(id: UUID = UUID(), name: String, categories: [Category]) {
-        self.id = id
-        self.name = name
-        self.categories = categories
-    }
-}
-
-private extension AdminPhase {
-    static let preconfiguredPhases: [AdminPhase] = [
-        AdminPhase(
-            name: "Pre-merge",
-            categories: [
-                .init(name: "Mergers", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: true),
-                .init(name: "Immunity", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false),
-                .init(name: "Voted out", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false)
-            ]
-        ),
-        AdminPhase(
-            name: "Post-merge",
-            categories: [
-                .init(name: "Immunity", totalPicks: 2, pointsPerCorrectPick: 5, isLocked: false),
-                .init(name: "Voted out", totalPicks: 2, pointsPerCorrectPick: 5, isLocked: false)
-            ]
-        ),
-        AdminPhase(
-            name: "Finals",
-            categories: [
-                .init(name: "Carried", totalPicks: 1, pointsPerCorrectPick: 10, isLocked: false),
-                .init(name: "Fire", totalPicks: 2, pointsPerCorrectPick: 10, isLocked: false),
-                .init(name: "Fire winner", totalPicks: 1, pointsPerCorrectPick: 15, isLocked: false),
-                .init(name: "Sole Survivor", totalPicks: 1, pointsPerCorrectPick: 25, isLocked: false)
-            ]
-        )
-    ]
-
-    static var preview: AdminPhase {
-        AdminPhase(
-            name: "Week 1",
-            categories: [
-                .init(name: "Immunity", totalPicks: 1, pointsPerCorrectPick: 2, isLocked: false),
-                .init(name: "Voted Out", totalPicks: 2, pointsPerCorrectPick: 3, isLocked: false),
-                .init(name: "Reward Challenge", totalPicks: 3, pointsPerCorrectPick: nil, isLocked: false),
-                .init(name: "Locked Category", totalPicks: 1, pointsPerCorrectPick: nil, isLocked: true)
-            ]
-        )
-    }
-}
-
-private struct CategoryEditorSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var categoryName: String
-    @State private var totalPicks: Int
-    @State private var pointsPerCorrectPick: Int?
-    @State private var lockCategory: Bool
-
-    private let category: CategoryDraft?
-    var onSave: (CategoryDraft) -> Void
-
-    init(category: CategoryDraft? = nil, onSave: @escaping (CategoryDraft) -> Void) {
-        self.category = category
-        self.onSave = onSave
-        _categoryName = State(initialValue: category?.name ?? "")
-        _totalPicks = State(initialValue: category?.totalPicks ?? 1)
-        _pointsPerCorrectPick = State(initialValue: category?.pointsPerCorrectPick)
-        _lockCategory = State(initialValue: category?.isLocked ?? false)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Category") {
-                    TextField("Category", text: $categoryName)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Total picks")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Picker("Total picks", selection: $totalPicks) {
-                            ForEach(1...5, id: \.self) { value in
-                                Text("\(value)")
-                                    .tag(value)
-                            }
-                        }
-                        .pickerStyle(.wheel)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, minHeight: 120, maxHeight: 150)
-                    }
-
-                    TextField("Points per correct pick", value: $pointsPerCorrectPick, format: .number)
-                        .keyboardType(.numberPad)
-                }
-
-                Section {
-                    Toggle("Lock category after initial pick", isOn: $lockCategory)
-                }
-            }
-            .navigationTitle(category == nil ? "Add Category" : "Modify Category")
-            .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    let trimmedName = categoryName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let nameToSave = trimmedName.isEmpty ? "Untitled Category" : trimmedName
-                    onSave(
-                        CategoryDraft(
-                            id: category?.id ?? UUID(),
-                            name: nameToSave,
-                            totalPicks: totalPicks,
-                            pointsPerCorrectPick: pointsPerCorrectPick,
-                            isLocked: lockCategory
-                        )
-                    )
-                    dismiss()
-                } label: {
-                    Text(category == nil ? "Add category" : "Save changes")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .padding(.horizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 30)
-                .background(Color(.systemGroupedBackground))
-            }
-        }
-    }
-}
-
-private struct CategoryDraft: Identifiable {
-    let id: UUID
-    var name: String
-    var totalPicks: Int
-    var pointsPerCorrectPick: Int?
-    var isLocked: Bool
-
-    init(
-        id: UUID = UUID(),
-        name: String,
-        totalPicks: Int,
-        pointsPerCorrectPick: Int?,
-        isLocked: Bool
-    ) {
-        self.id = id
-        self.name = name
-        self.totalPicks = totalPicks
-        self.pointsPerCorrectPick = pointsPerCorrectPick
-        self.isLocked = isLocked
-    }
-
-    init(from category: AdminPhase.Category) {
-        self.init(
-            id: category.id,
-            name: category.name,
-            totalPicks: category.totalPicks,
-            pointsPerCorrectPick: category.pointsPerCorrectPick,
-            isLocked: category.isLocked
-        )
-    }
-}
-
-private extension AdminPhase.Category {
-    init(_ draft: CategoryDraft) {
-        self.init(
-            id: draft.id,
-            name: draft.name,
-            totalPicks: draft.totalPicks,
-            pointsPerCorrectPick: draft.pointsPerCorrectPick,
-            isLocked: draft.isLocked
-        )
-    }
-}

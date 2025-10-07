@@ -36,6 +36,10 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
+    private var activePhaseCategories: [PickPhase.Category] {
+        app.activePhase?.categories ?? []
+    }
+
     private var hasConfiguredPickData: Bool {
         let hasSeasonPicks = !app.store.seasonPicks.isEmpty
         let hasWeeklyPicks = app.store.weeklyPicks.values.contains { !$0.isEmpty }
@@ -62,7 +66,8 @@ struct AllPicksView: View {
                                 weeklyPicks: weeklyPicks(for: user),
                                 contestantsById: contestantsById,
                                 isCurrentUser: user.id == app.currentUserId,
-                                selectedEpisode: selectedEpisode
+                                selectedEpisode: selectedEpisode,
+                                categories: activePhaseCategories
                             )
                         }
                     } else {
@@ -174,6 +179,7 @@ private struct UserPicksCard: View {
     let contestantsById: [String: Contestant]
     let isCurrentUser: Bool
     let selectedEpisode: Episode?
+    let categories: [PickPhase.Category]
 
     init(
         user: UserProfile,
@@ -181,7 +187,8 @@ private struct UserPicksCard: View {
         weeklyPicks: WeeklyPicks?,
         contestantsById: [String: Contestant],
         isCurrentUser: Bool,
-        selectedEpisode: Episode?
+        selectedEpisode: Episode?,
+        categories: [PickPhase.Category]
     ) {
         self.user = user
         self.seasonPicks = seasonPicks
@@ -189,6 +196,7 @@ private struct UserPicksCard: View {
         self.contestantsById = contestantsById
         self.isCurrentUser = isCurrentUser
         self.selectedEpisode = selectedEpisode
+        self.categories = categories
     }
 
     var body: some View {
@@ -206,28 +214,15 @@ private struct UserPicksCard: View {
                     .fontWeight(.semibold)
             }
 
-            let mergeContestants = contestants(
-                for: seasonPicks?.mergePicks ?? Set<String>(),
-                limit: 3
-            )
-            let immunityContestants = contestants(
-                for: weeklyPicks?.immunity ?? Set<String>(),
-                limit: 3
-            )
-            let votedOutContestants = contestants(
-                for: weeklyPicks?.votedOut ?? Set<String>(),
-                limit: 3
-            )
-            let remainContestants = contestants(
-                for: weeklyPicks?.remain ?? Set<String>(),
-                limit: 3,
-                excluding: weeklyPicks?.votedOut ?? Set<String>()
-            )
-
-            section(for: .merge, contestants: mergeContestants)
-            section(for: .immunity, contestants: immunityContestants)
-            section(for: .votedOut, contestants: votedOutContestants)
-            section(for: .remain, contestants: remainContestants)
+            if categories.isEmpty {
+                Text("No categories configured for this phase.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(categories) { category in
+                    section(for: category)
+                }
+            }
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -247,62 +242,95 @@ private struct UserPicksCard: View {
     }
 
     @ViewBuilder
-    private func section(for panel: Panel, contestants: [Contestant]) -> some View {
+    private func section(for category: PickPhase.Category) -> some View {
+        let title = displayTitle(for: category)
+        let kind = kind(for: category)
+        let contestants = contestants(for: category, kind: kind)
+
         if isCurrentUser {
-            switch panel {
-            case .merge:
+            switch kind {
+            case .seasonMerge:
                 NavigationLink {
                     MergePickEditor()
                 } label: {
-                    PickSection(title: panel.title, contestants: contestants, isInteractive: true)
+                    PickSection(title: title, contestants: contestants, isInteractive: true)
                 }
-            case .immunity, .votedOut, .remain:
-                if let episode = selectedEpisode, let weeklyPanel = panel.weeklyPanel {
+            case .seasonFinalThree:
+                NavigationLink {
+                    FinalThreePickEditor()
+                } label: {
+                    PickSection(title: title, contestants: contestants, isInteractive: true)
+                }
+            case .seasonWinner:
+                NavigationLink {
+                    WinnerPickEditor()
+                } label: {
+                    PickSection(title: title, contestants: contestants, isInteractive: true)
+                }
+            case let .weekly(panel):
+                if let episode = selectedEpisode {
                     NavigationLink {
-                        WeeklyPickEditor(episode: episode, panel: weeklyPanel)
+                        WeeklyPickEditor(episode: episode, panel: panel)
                     } label: {
-                        PickSection(title: panel.title, contestants: contestants, isInteractive: true)
+                        PickSection(title: title, contestants: contestants, isInteractive: true)
                     }
                 } else {
-                    PickSection(title: panel.title, contestants: contestants)
+                    PickSection(title: title, contestants: contestants)
                 }
+            case .unknown:
+                PickSection(title: title, contestants: contestants)
             }
         } else {
-            PickSection(title: panel.title, contestants: contestants)
+            PickSection(title: title, contestants: contestants)
         }
     }
 
-    private enum Panel {
-        case merge
-        case immunity
-        case votedOut
-        case remain
+    private enum CategoryKind {
+        case seasonMerge
+        case seasonFinalThree
+        case seasonWinner
+        case weekly(WeeklyPickPanel)
+        case unknown
+    }
 
-        var title: String {
-            switch self {
-            case .merge:
-                return "Mergers"
-            case .immunity:
-                return "Immunity"
-            case .votedOut:
-                return "Voted Out"
-            case .remain:
-                return "Remain"
-            }
+    private func displayTitle(for category: PickPhase.Category) -> String {
+        let trimmed = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Untitled Category" : trimmed
+    }
+
+    private func kind(for category: PickPhase.Category) -> CategoryKind {
+        let normalized = category.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if normalized.contains("merge") {
+            return .seasonMerge
         }
 
-        var weeklyPanel: WeeklyPickPanel? {
-            switch self {
-            case .merge:
-                return nil
-            case .immunity:
-                return .immunity
-            case .votedOut:
-                return .votedOut
-            case .remain:
-                return .remain
-            }
+        if normalized.contains("final") && (normalized.contains("three") || normalized.contains("3")) {
+            return .seasonFinalThree
         }
+
+        if normalized.contains("sole") && normalized.contains("survivor") {
+            return .seasonWinner
+        }
+
+        let winnerPhrases: [String] = ["winner", "winner pick", "season winner", "survivor winner"]
+        if winnerPhrases.contains(normalized) || normalized.contains("winner pick") {
+            return .seasonWinner
+        }
+
+        if normalized.contains("immunity") {
+            return .weekly(.immunity)
+        }
+
+        if normalized.contains("voted") || normalized.contains("vote") {
+            return .weekly(.votedOut)
+        }
+
+        if normalized.contains("remain") || normalized.contains("safe") {
+            return .weekly(.remain)
+        }
+
+        return .unknown
     }
 
     private func contestants(
@@ -317,6 +345,37 @@ private struct UserPicksCard: View {
             return Array(picks.prefix(limit))
         }
         return picks
+    }
+
+    private func contestants(for category: PickPhase.Category, kind: CategoryKind) -> [Contestant] {
+        let limit: Int? = category.totalPicks > 0 ? category.totalPicks : nil
+
+        switch kind {
+        case .seasonMerge:
+            return contestants(for: seasonPicks?.mergePicks ?? Set<String>(), limit: limit)
+        case .seasonFinalThree:
+            return contestants(for: seasonPicks?.finalThreePicks ?? Set<String>(), limit: limit)
+        case .seasonWinner:
+            if let winner = seasonPicks?.winnerPick {
+                return contestants(for: Set([winner]), limit: 1)
+            }
+            return []
+        case let .weekly(panel):
+            switch panel {
+            case .remain:
+                return contestants(
+                    for: weeklyPicks?.remain ?? Set<String>(),
+                    limit: limit,
+                    excluding: weeklyPicks?.votedOut ?? Set<String>()
+                )
+            case .votedOut:
+                return contestants(for: weeklyPicks?.votedOut ?? Set<String>(), limit: limit)
+            case .immunity:
+                return contestants(for: weeklyPicks?.immunity ?? Set<String>(), limit: limit)
+            }
+        case .unknown:
+            return []
+        }
     }
 }
 

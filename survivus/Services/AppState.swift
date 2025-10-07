@@ -8,6 +8,8 @@ final class AppState: ObservableObject {
     // in-memory mock `MemoryStore` so user progress survives app restarts.
     @Published var store: MemoryStore
     @Published var currentUserId: String
+    @Published var phases: [PickPhase]
+    @Published var activePhaseId: PickPhase.ID?
 
     init() {
         let config = SeasonConfig.mock()
@@ -20,9 +22,16 @@ final class AppState: ObservableObject {
         ]
         self.store = MemoryStore(config: config, results: results, users: users)
         self.currentUserId = users.first!.id
+        self.phases = PickPhase.preconfigured
+        self.activePhaseId = phases.first?.id
     }
 
     var scoring: ScoringEngine {
         ScoringEngine(config: store.config, resultsByEpisode: store.resultsByEpisode)
+    }
+
+    var activePhase: PickPhase? {
+        guard let activePhaseId else { return nil }
+        return phases.first(where: { $0.id == activePhaseId })
     }
 }
