@@ -5,6 +5,7 @@ struct AllPicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedWeek: WeekSelection = .none
     @State private var knownWeekIds: Set<Int> = []
+    @State private var collapsedUserIds: Set<String> = []
 
     private var weekOptions: [WeekOption] {
         let weeklyEpisodeIds = app.store.weeklyPicks.values.flatMap { $0.keys }
@@ -64,14 +65,27 @@ struct AllPicksView: View {
                             .padding(.bottom, 8)
 
                         ForEach(app.store.users) { user in
+                            let isCurrentUser = user.id == app.currentUserId
+                            let isCollapsed = collapsedUserIds.contains(user.id)
+
                             UserPicksCard(
                                 user: user,
                                 seasonPicks: seasonPicks(for: user),
                                 weeklyPicks: weeklyPicks(for: user),
                                 contestantsById: contestantsById,
-                                isCurrentUser: user.id == app.currentUserId,
+                                isCurrentUser: isCurrentUser,
                                 selectedEpisode: selectedEpisode,
-                                categories: activePhaseCategories
+                                categories: activePhaseCategories,
+                                isCollapsed: isCurrentUser ? false : isCollapsed,
+                                onToggleCollapse: isCurrentUser ? nil : {
+                                    withAnimation(.easeInOut) {
+                                        if isCollapsed {
+                                            collapsedUserIds.remove(user.id)
+                                        } else {
+                                            collapsedUserIds.insert(user.id)
+                                        }
+                                    }
+                                }
                             )
                         }
                     } else {
@@ -206,6 +220,8 @@ private struct UserPicksCard: View {
     let isCurrentUser: Bool
     let selectedEpisode: Episode?
     let categories: [PickPhase.Category]
+    let isCollapsed: Bool
+    let onToggleCollapse: (() -> Void)?
 
     init(
         user: UserProfile,
@@ -214,7 +230,9 @@ private struct UserPicksCard: View {
         contestantsById: [String: Contestant],
         isCurrentUser: Bool,
         selectedEpisode: Episode?,
-        categories: [PickPhase.Category]
+        categories: [PickPhase.Category],
+        isCollapsed: Bool,
+        onToggleCollapse: (() -> Void)?
     ) {
         self.user = user
         self.seasonPicks = seasonPicks
@@ -223,6 +241,8 @@ private struct UserPicksCard: View {
         self.isCurrentUser = isCurrentUser
         self.selectedEpisode = selectedEpisode
         self.categories = categories
+        self.isCollapsed = isCollapsed
+        self.onToggleCollapse = onToggleCollapse
     }
 
     var body: some View {
@@ -238,9 +258,29 @@ private struct UserPicksCard: View {
                 Text(user.displayName)
                     .font(.title3)
                     .fontWeight(.semibold)
+
+                Spacer()
+
+                if let onToggleCollapse {
+                    Button {
+                        onToggleCollapse()
+                    } label: {
+                        Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
+                            .imageScale(.medium)
+                            .padding(6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isCollapsed ? "Show picks" : "Hide picks")
+                    .accessibilityHint("Toggle to show or hide picks for \(user.displayName)")
+                }
             }
 
-            if categories.isEmpty {
+            if isCollapsed {
+                Text("Picks hidden")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if categories.isEmpty {
                 Text("No categories configured for this phase.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
