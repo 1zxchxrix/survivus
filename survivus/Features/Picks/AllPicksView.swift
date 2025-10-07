@@ -52,12 +52,13 @@ struct AllPicksView: View {
                 .foregroundStyle(.secondary)
             
             HStack(alignment: .firstTextBaseline) {
-                Picker<Text, <#SelectionValue: Hashable#>, ForEach<[WeekOption], WeekSelection, some View>>("Week", selection: $selectedWeekId) {
+                Picker("Week", selection: $selectedWeek) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
-                            .tag(option.id)
+                            .tag(option.selection)
                     }
-                }.pickerStyle(.menu)
+                }
+                .pickerStyle(.menu)
                 
                 Spacer()
                 
