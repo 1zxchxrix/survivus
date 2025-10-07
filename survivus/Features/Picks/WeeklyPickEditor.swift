@@ -40,17 +40,11 @@ struct WeeklyPickEditor: View {
                     all: config.contestants,
                     selection: Binding(
                         get: { selection(for: panel) },
-                        set: { newValue in updateSelection(newValue, limit: limit) }
+                        set: { newValue in updateSelection(newValue, limit: limit, locked: locked) }
                     ),
                     max: limit,
                     disabled: locked
                 )
-
-                HStack {
-                    Spacer()
-                    Button("Save Picks") { app.store.save(picks) }
-                        .disabled(locked)
-                }
             }
             .padding()
         }
@@ -76,7 +70,8 @@ struct WeeklyPickEditor: View {
         }
     }
 
-    private func updateSelection(_ newValue: Set<String>, limit: Int) {
+    private func updateSelection(_ newValue: Set<String>, limit: Int, locked: Bool) {
+        guard !locked else { return }
         let limited = Set(newValue.prefix(limit))
         switch panel {
         case .remain:
@@ -86,6 +81,7 @@ struct WeeklyPickEditor: View {
         case .immunity:
             picks.immunity = limited
         }
+        app.store.save(picks)
     }
 
     private func selectionLimit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int {
