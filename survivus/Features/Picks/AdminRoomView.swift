@@ -2,8 +2,8 @@ import SwiftUI
 
 struct AdminRoomView: View {
     @EnvironmentObject var app: AppState
-    @State private var phases: [AdminPhase] = []
-    @State private var currentPhase: AdminPhase?
+    @State private var phases: [AdminPhase] = AdminPhase.preconfiguredPhases
+    @State private var currentPhase: AdminPhase? = AdminPhase.preconfiguredPhases.first
     @State private var isPresentingCreatePhase = false
     @State private var isPresentingSelectPhase = false
     @State private var isPresentingStartWeek = false
@@ -584,6 +584,33 @@ private struct AdminPhase: Identifiable, Equatable {
 }
 
 private extension AdminPhase {
+    static let preconfiguredPhases: [AdminPhase] = [
+        AdminPhase(
+            name: "Pre-merge",
+            categories: [
+                .init(name: "Mergers", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: true),
+                .init(name: "Immunity", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false),
+                .init(name: "Voted out", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false)
+            ]
+        ),
+        AdminPhase(
+            name: "Post-merge",
+            categories: [
+                .init(name: "Immunity", totalPicks: 2, pointsPerCorrectPick: 5, isLocked: false),
+                .init(name: "Voted out", totalPicks: 2, pointsPerCorrectPick: 5, isLocked: false)
+            ]
+        ),
+        AdminPhase(
+            name: "Finals",
+            categories: [
+                .init(name: "Carried", totalPicks: 1, pointsPerCorrectPick: 10, isLocked: false),
+                .init(name: "Fire", totalPicks: 2, pointsPerCorrectPick: 10, isLocked: false),
+                .init(name: "Fire winner", totalPicks: 1, pointsPerCorrectPick: 15, isLocked: false),
+                .init(name: "Sole Survivor", totalPicks: 1, pointsPerCorrectPick: 25, isLocked: false)
+            ]
+        )
+    ]
+
     static var preview: AdminPhase {
         AdminPhase(
             name: "Week 1",
