@@ -517,16 +517,18 @@ private struct InsertResultsSheet: View {
         self.existingResult = existingResult
         self.onSave = onSave
 
+        let insertableCategories = phase.categories.filter { !$0.isLocked }
+
         var initialSelections = Dictionary(
-            uniqueKeysWithValues: phase.categories.map { ($0.id, Set<String>()) }
+            uniqueKeysWithValues: insertableCategories.map { ($0.id, Set<String>()) }
         )
 
         if let existingResult {
-            if let immunityCategory = phase.categories.first(where: { $0.matchesImmunityCategory }) {
+            if let immunityCategory = insertableCategories.first(where: { $0.matchesImmunityCategory }) {
                 initialSelections[immunityCategory.id] = Set(existingResult.immunityWinners)
             }
 
-            if let votedOutCategory = phase.categories.first(where: { $0.matchesVotedOutCategory }) {
+            if let votedOutCategory = insertableCategories.first(where: { $0.matchesVotedOutCategory }) {
                 initialSelections[votedOutCategory.id] = Set(existingResult.votedOut)
             }
         }
@@ -537,7 +539,7 @@ private struct InsertResultsSheet: View {
     var body: some View {
         NavigationStack {
             Group {
-                if phase.categories.isEmpty {
+                if insertableCategories.isEmpty {
                     ContentUnavailableView(
                         "No categories",
                         systemImage: "list.bullet.rectangle",
@@ -556,7 +558,7 @@ private struct InsertResultsSheet: View {
                                 .font(.headline)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                            ForEach(phase.categories) { category in
+                            ForEach(insertableCategories) { category in
                                 categoryCard(for: category)
                             }
                         }
@@ -576,12 +578,16 @@ private struct InsertResultsSheet: View {
                         onSave(result)
                         dismiss()
                     }
-                    .disabled(phase.categories.isEmpty || contestants.isEmpty)
+                    .disabled(insertableCategories.isEmpty || contestants.isEmpty)
                 }
             }
         }
         .presentationDetents([.fraction(0.85)])
         .presentationCornerRadius(28)
+    }
+
+    private var insertableCategories: [PickPhase.Category] {
+        phase.categories.filter { !$0.isLocked }
     }
 
     @ViewBuilder
@@ -636,11 +642,11 @@ private struct InsertResultsSheet: View {
     private func buildEpisodeResult() -> EpisodeResult {
         var result = existingResult ?? EpisodeResult(id: episodeId, immunityWinners: [], votedOut: [])
 
-        if let immunityCategory = phase.categories.first(where: { $0.matchesImmunityCategory }) {
+        if let immunityCategory = insertableCategories.first(where: { $0.matchesImmunityCategory }) {
             result.immunityWinners = sortedSelection(for: immunityCategory)
         }
 
-        if let votedOutCategory = phase.categories.first(where: { $0.matchesVotedOutCategory }) {
+        if let votedOutCategory = insertableCategories.first(where: { $0.matchesVotedOutCategory }) {
             result.votedOut = sortedSelection(for: votedOutCategory)
         }
 
