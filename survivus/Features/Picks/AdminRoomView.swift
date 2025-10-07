@@ -33,7 +33,7 @@ struct AdminRoomView: View {
                     selectedPhaseForNewWeekID = currentPhase?.id ?? phases.first?.id
                     isPresentingStartWeek = true
                 }
-                .disabled(!hasPhases)
+                .disabled(!canStartNewWeek)
             }
 
             Section("Phase") {
@@ -131,6 +131,18 @@ private extension AdminRoomView {
 
     var hasPhases: Bool {
         !phases.isEmpty
+    }
+
+    var canStartNewWeek: Bool {
+        hasPhases && hasSubmittedResultsForCurrentWeek
+    }
+
+    var hasSubmittedResultsForCurrentWeek: Bool {
+        guard let latestResult = app.store.results.max(by: { $0.id < $1.id }) else {
+            return true
+        }
+
+        return !latestResult.immunityWinners.isEmpty || !latestResult.votedOut.isEmpty
     }
 
     func startNewWeek(activating phase: AdminPhase) {
