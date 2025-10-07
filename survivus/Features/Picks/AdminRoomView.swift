@@ -6,8 +6,10 @@ struct AdminRoomView: View {
     @State private var currentPhase: AdminPhase?
     @State private var isPresentingCreatePhase = false
     @State private var isPresentingSelectPhase = false
+    @State private var isPresentingStartWeek = false
     @State private var phaseBeingEdited: AdminPhase?
     @State private var phaseForInsertingResults: AdminPhase?
+    @State private var selectedPhaseForNewWeekID: AdminPhase.ID?
 
     var body: some View {
         Form {
@@ -27,7 +29,10 @@ struct AdminRoomView: View {
                 .disabled(!canInsertResults || !hasPhases)
                 Button("Modify Previous Results") {}
                 .disabled(!hasPhases)
-                Button("Start New Week") {}
+                Button("Start New Week") {
+                    selectedPhaseForNewWeekID = currentPhase?.id ?? phases.first?.id
+                    isPresentingStartWeek = true
+                }
                 .disabled(!hasPhases)
             }
 
@@ -43,6 +48,16 @@ struct AdminRoomView: View {
             }
         }
         .navigationTitle("Admin Room")
+        .sheet(isPresented: $isPresentingStartWeek) {
+            StartWeekSheet(
+                phases: phases,
+                selectedPhaseID: selectedPhaseForNewWeekID ?? currentPhase?.id,
+                onStart: { phase in
+                    selectedPhaseForNewWeekID = phase.id
+                    startNewWeek(activating: phase)
+                }
+            )
+        }
         .sheet(isPresented: $isPresentingSelectPhase) {
             SelectPhaseSheet(
                 phases: phases,
@@ -116,6 +131,76 @@ private extension AdminRoomView {
 
     var hasPhases: Bool {
         !phases.isEmpty
+    }
+
+    func startNewWeek(activating phase: AdminPhase) {
+        let nextWeekId = (app.store.results.map(\.id).max() ?? 0) + 1
+        let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
+        app.store.results.append(newResult)
+        currentPhase = phase
+    }
+}
+
+private struct StartWeekSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let phases: [AdminPhase]
+    let onStart: (AdminPhase) -> Void
+
+    @State private var selectedPhaseID: AdminPhase.ID?
+
+    init(phases: [AdminPhase], selectedPhaseID: AdminPhase.ID?, onStart: @escaping (AdminPhase) -> Void) {
+        self.phases = phases
+        self.onStart = onStart
+        _selectedPhaseID = State(initialValue: selectedPhaseID ?? phases.first?.id)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if phases.isEmpty {
+                    ContentUnavailableView(
+                        "No phases",
+                        systemImage: "tray",
+                        description: Text("Create a phase before starting a new week.")
+                    )
+                } else {
+                    Form {
+                        Section("Phase") {
+                            Picker("Phase", selection: $selectedPhaseID) {
+                                ForEach(phases) { phase in
+                                    Text(phase.name).tag(Optional(phase.id))
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Start New Week")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Start") {
+                        if let id = selectedPhaseID,
+                           let phase = phases.first(where: { $0.id == id }) {
+                            onStart(phase)
+                        }
+                        dismiss()
+                    }
+                    .disabled(selectedPhaseID == nil)
+                }
+            }
+        }
+        .presentationDetents([.fraction(0.4)])
+        .presentationCornerRadius(28)
+        .onAppear {
+            if selectedPhaseID == nil {
+                selectedPhaseID = phases.first?.id
+            }
+        }
     }
 }
 
