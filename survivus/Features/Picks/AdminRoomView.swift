@@ -20,7 +20,7 @@ struct AdminRoomView: View {
 
             Section("Week") {
                 Button("Insert Results") {
-                    if let phase = currentPhase, !phase.categories.isEmpty {
+                    if let phase = currentPhase, !phase.categories.isEmpty, currentWeekId != nil {
                         phaseForInsertingResults = phase
                     }
                 }
@@ -97,7 +97,21 @@ struct AdminRoomView: View {
             .presentationCornerRadius(28)
         }
         .sheet(item: $phaseForInsertingResults) { phase in
-            InsertResultsSheet(phase: phase, contestants: app.store.config.contestants)
+            if let episodeId = currentWeekId {
+                InsertResultsSheet(
+                    phase: phase,
+                    contestants: app.store.config.contestants,
+                    episodeId: episodeId,
+                    existingResult: currentWeekResult,
+                    onSave: { result in
+                        if let index = app.store.results.firstIndex(where: { $0.id == result.id }) {
+                            app.store.results[index] = result
+                        } else {
+                            app.store.results.append(result)
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -129,7 +143,7 @@ private extension AdminRoomView {
     }
 
     var canInsertResults: Bool {
-        guard let phase = currentPhase else { return false }
+        guard let phase = currentPhase, currentWeekId != nil else { return false }
         return !phase.categories.isEmpty
     }
 
@@ -147,6 +161,15 @@ private extension AdminRoomView {
         }
 
         return !latestResult.immunityWinners.isEmpty || !latestResult.votedOut.isEmpty
+    }
+
+    var currentWeekId: Int? {
+        app.store.results.map(\.id).max()
+    }
+
+    var currentWeekResult: EpisodeResult? {
+        guard let currentWeekId else { return nil }
+        return app.store.results.first(where: { $0.id == currentWeekId })
     }
 
     func startNewWeek(activating phase: PickPhase) {
@@ -475,17 +498,40 @@ private struct InsertResultsSheet: View {
 
     let phase: PickPhase
     let contestants: [Contestant]
+    let episodeId: Int
+    let existingResult: EpisodeResult?
+    let onSave: (EpisodeResult) -> Void
 
     @State private var selections: [PickPhase.Category.ID: Set<String>]
 
-    init(phase: PickPhase, contestants: [Contestant]) {
+    init(
+        phase: PickPhase,
+        contestants: [Contestant],
+        episodeId: Int,
+        existingResult: EpisodeResult?,
+        onSave: @escaping (EpisodeResult) -> Void
+    ) {
         self.phase = phase
         self.contestants = contestants
-        _selections = State(
-            initialValue: Dictionary(
-                uniqueKeysWithValues: phase.categories.map { ($0.id, Set<String>()) }
-            )
+        self.episodeId = episodeId
+        self.existingResult = existingResult
+        self.onSave = onSave
+
+        var initialSelections = Dictionary(
+            uniqueKeysWithValues: phase.categories.map { ($0.id, Set<String>()) }
         )
+
+        if let existingResult {
+            if let immunityCategory = phase.categories.first(where: { $0.matchesImmunityCategory }) {
+                initialSelections[immunityCategory.id] = Set(existingResult.immunityWinners)
+            }
+
+            if let votedOutCategory = phase.categories.first(where: { $0.matchesVotedOutCategory }) {
+                initialSelections[votedOutCategory.id] = Set(existingResult.votedOut)
+            }
+        }
+
+        _selections = State(initialValue: initialSelections)
     }
 
     var body: some View {
@@ -525,8 +571,12 @@ private struct InsertResultsSheet: View {
                     Button("Close") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { dismiss() }
-                        .disabled(phase.categories.isEmpty || contestants.isEmpty)
+                    Button("Save") {
+                        let result = buildEpisodeResult()
+                        onSave(result)
+                        dismiss()
+                    }
+                    .disabled(phase.categories.isEmpty || contestants.isEmpty)
                 }
             }
         }
@@ -582,10 +632,34 @@ private struct InsertResultsSheet: View {
             set: { selections[category.id] = $0 }
         )
     }
+
+    private func buildEpisodeResult() -> EpisodeResult {
+        var result = existingResult ?? EpisodeResult(id: episodeId, immunityWinners: [], votedOut: [])
+
+        if let immunityCategory = phase.categories.first(where: { $0.matchesImmunityCategory }) {
+            result.immunityWinners = sortedSelection(for: immunityCategory)
+        }
+
+        if let votedOutCategory = phase.categories.first(where: { $0.matchesVotedOutCategory }) {
+            result.votedOut = sortedSelection(for: votedOutCategory)
+        }
+
+        return result
+    }
+
+    private func sortedSelection(for category: PickPhase.Category) -> [String] {
+        Array(selections[category.id] ?? []).sorted()
+    }
 }
 
 #Preview("Insert Results Sheet") {
-    InsertResultsSheet(phase: .preview, contestants: AppState().store.config.contestants)
+    InsertResultsSheet(
+        phase: .preview,
+        contestants: AppState().store.config.contestants,
+        episodeId: 1,
+        existingResult: EpisodeResult(id: 1, immunityWinners: [], votedOut: []),
+        onSave: { _ in }
+    )
 }
 
 private struct PhaseRow: View {
@@ -638,6 +712,20 @@ private struct PhaseRow: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, 8)
+    }
+}
+
+private extension PickPhase.Category {
+    var normalizedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    var matchesImmunityCategory: Bool {
+        normalizedName.contains("immunity")
+    }
+
+    var matchesVotedOutCategory: Bool {
+        normalizedName.contains("voted")
     }
 }
 
