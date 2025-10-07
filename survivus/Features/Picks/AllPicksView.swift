@@ -37,13 +37,16 @@ struct AllPicksView: View {
     }
 
     private var activePhaseCategories: [PickPhase.Category] {
-        app.activePhase?.categories ?? []
+        activePhase?.categories ?? []
     }
 
     private var hasConfiguredPickData: Bool {
-        let hasSeasonPicks = !app.store.seasonPicks.isEmpty
-        let hasWeeklyPicks = app.store.weeklyPicks.values.contains { !$0.isEmpty }
-        return hasSeasonPicks || hasWeeklyPicks
+        guard let activePhase else { return false }
+        return !activePhase.categories.isEmpty
+    }
+
+    private var activePhase: PickPhase? {
+        app.activePhase
     }
 
     private var selectedEpisode: Episode? {
