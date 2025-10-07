@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct AllPicksView: View {
@@ -51,7 +52,7 @@ struct AllPicksView: View {
 
     private var selectedEpisode: Episode? {
         guard case let .week(episodeId) = selectedWeek else { return nil }
-        return app.store.config.episodes.first(where: { $0.id == episodeId })
+        return episode(for: episodeId)
     }
 
     var body: some View {
@@ -171,6 +172,28 @@ private extension AllPicksView {
     func weeklyPicks(for user: UserProfile) -> WeeklyPicks? {
         guard case let .week(episodeId) = selectedWeek else { return nil }
         return app.store.weeklyPicks[user.id]?[episodeId]
+    }
+
+    func episode(for episodeId: Int) -> Episode {
+        if let configuredEpisode = app.store.config.episodes.first(where: { $0.id == episodeId }) {
+            return configuredEpisode
+        }
+
+        let sortedEpisodes = app.store.config.episodes.sorted { $0.id < $1.id }
+        let precedingEpisode = sortedEpisodes.last(where: { $0.id < episodeId })
+
+        let baseDate = precedingEpisode?.airDate ?? Date()
+        let inferredAirDate = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: baseDate) ?? baseDate
+
+        let fallbackTitle = weekOptions.first(where: { $0.selection.weekId == episodeId })?.title
+            ?? "Week \(episodeId)"
+
+        return Episode(
+            id: episodeId,
+            airDate: inferredAirDate,
+            title: fallbackTitle,
+            isMergeEpisode: precedingEpisode?.isMergeEpisode ?? false
+        )
     }
 
 }
