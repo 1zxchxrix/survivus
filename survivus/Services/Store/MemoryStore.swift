@@ -12,8 +12,8 @@ final class MemoryStore: ObservableObject {
         self.config = config
         self.results = results
         self.users = users
-        self.seasonPicks = Dictionary(uniqueKeysWithValues: users.map { ($0.id, SeasonPicks(userId: $0.id)) })
-        self.weeklyPicks = Dictionary(uniqueKeysWithValues: users.map { ($0.id, [:]) })
+        self.seasonPicks = [:]
+        self.weeklyPicks = [:]
     }
 
     var resultsByEpisode: [Int: EpisodeResult] {

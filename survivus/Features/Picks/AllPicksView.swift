@@ -37,6 +37,12 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
+    private var hasConfiguredPickData: Bool {
+        let hasSeasonPicks = !app.store.seasonPicks.isEmpty
+        let hasWeeklyPicks = app.store.weeklyPicks.values.contains { !$0.isEmpty }
+        return hasSeasonPicks || hasWeeklyPicks
+    }
+
     private var selectedEpisode: Episode? {
         guard case let .week(episodeId) = selectedWeek else { return nil }
         return app.store.config.episodes.first(where: { $0.id == episodeId })
@@ -46,18 +52,35 @@ struct AllPicksView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    weekPicker
-                        .padding(.bottom, 8)
+                    if hasConfiguredPickData {
+                        weekPicker
+                            .padding(.bottom, 8)
 
-                    ForEach(app.store.users) { user in
-                        UserPicksCard(
-                            user: user,
-                            seasonPicks: seasonPicks(for: user),
-                            weeklyPicks: weeklyPicks(for: user),
-                            contestantsById: contestantsById,
-                            isCurrentUser: user.id == app.currentUserId,
-                            selectedEpisode: selectedEpisode
-                        )
+                        ForEach(app.store.users) { user in
+                            UserPicksCard(
+                                user: user,
+                                seasonPicks: seasonPicks(for: user),
+                                weeklyPicks: weeklyPicks(for: user),
+                                contestantsById: contestantsById,
+                                isCurrentUser: user.id == app.currentUserId,
+                                selectedEpisode: selectedEpisode
+                            )
+                        }
+                    } else {
+                        VStack(spacing: 24) {
+                            ContentUnavailableView(
+                                "No pick categories",
+                                systemImage: "square.grid.3x3",
+                                description: Text("Check back once phases and pick categories have been created.")
+                            )
+                            NavigationLink {
+                                AdminRoomView()
+                            } label: {
+                                Label("Open Admin Room", systemImage: "door.left.hand.open")
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
                     }
                 }
                 .padding()
