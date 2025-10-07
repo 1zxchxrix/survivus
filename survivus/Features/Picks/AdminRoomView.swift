@@ -14,7 +14,7 @@ struct AdminRoomView: View {
             Section {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Current Phase: \(currentPhase?.name ?? "None")")
-                    Text("Current Week: 2")
+                    Text("Current Week: \(currentWeekTitle)")
                 }
             }
 
@@ -94,6 +94,18 @@ struct AdminRoomView: View {
 }
 
 private extension AdminRoomView {
+    var currentWeekTitle: String {
+        guard let weekId = app.store.results.map(\.id).max() else {
+            return "None"
+        }
+
+        if let episode = app.store.config.episodes.first(where: { $0.id == weekId }) {
+            return episode.title
+        }
+
+        return "Week \(weekId)"
+    }
+
     var canInsertResults: Bool {
         guard let phase = currentPhase else { return false }
         return !phase.categories.isEmpty
