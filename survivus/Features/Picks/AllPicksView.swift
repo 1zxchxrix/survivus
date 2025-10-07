@@ -52,7 +52,7 @@ struct AllPicksView: View {
                 .foregroundStyle(.secondary)
             
             HStack(alignment: .firstTextBaseline) {
-                Picker("Week", selection: $selectedWeekId) {
+                Picker<Text, <#SelectionValue: Hashable#>, ForEach<[WeekOption], WeekSelection, some View>>("Week", selection: $selectedWeekId) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
                             .tag(option.id)
