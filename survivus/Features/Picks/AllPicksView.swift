@@ -5,7 +5,9 @@ struct AllPicksView: View {
     @State private var selectedWeek: WeekSelection = .none
 
     private var weekOptions: [WeekOption] {
+        let now = Date()
         let episodeOptions = app.store.config.episodes
+            .filter { $0.airDate <= now }
             .sorted { $0.id < $1.id }
             .map { WeekOption(selection: .week($0.id), title: $0.title) }
         return [WeekOption(selection: .none, title: "None")] + episodeOptions
