@@ -3,16 +3,17 @@ import SwiftUI
 struct AllPicksView: View {
     @EnvironmentObject var app: AppState
     @State private var selectedWeek: WeekSelection = .none
+    @State private var knownWeekIds: Set<Int> = []
 
     private var weekOptions: [WeekOption] {
         let weeklyEpisodeIds = app.store.weeklyPicks.values.flatMap { $0.keys }
-        let availableEpisodeIds = Set(weeklyEpisodeIds)
+        let startedEpisodeIds = app.store.results.map(\.id)
+        let availableEpisodeIds = Set(weeklyEpisodeIds).union(startedEpisodeIds)
 
         guard !availableEpisodeIds.isEmpty else {
             return [WeekOption(selection: .none, title: "None")]
         }
 
-        let now = Date()
         let episodesById = Dictionary(uniqueKeysWithValues: app.store.config.episodes.map { ($0.id, $0) })
         let episodeOptions = availableEpisodeIds
             .sorted()
@@ -20,8 +21,6 @@ struct AllPicksView: View {
                 guard let episode = episodesById[episodeId] else {
                     return WeekOption(selection: .week(episodeId), title: "Week \(episodeId)")
                 }
-
-                guard episode.airDate <= now else { return nil }
 
                 return WeekOption(selection: .week(episode.id), title: episode.title)
             }
@@ -87,10 +86,11 @@ struct AllPicksView: View {
             }
             .navigationTitle("Picks")
         }
+        .onAppear {
+            updateSelectedWeek(with: availableWeekSelections)
+        }
         .onChange(of: availableWeekSelections) { selections in
-            if !selections.contains(selectedWeek) {
-                selectedWeek = .none
-            }
+            updateSelectedWeek(with: selections)
         }
     }
 
@@ -128,6 +128,34 @@ struct AllPicksView: View {
 }
 
 private extension AllPicksView {
+    func updateSelectedWeek(with selections: Set<WeekSelection>) {
+        let weekIds = Set(selections.compactMap { $0.weekId })
+
+        defer { knownWeekIds = weekIds }
+
+        guard !weekIds.isEmpty else {
+            selectedWeek = .none
+            return
+        }
+
+        let newlyAddedWeeks = weekIds.subtracting(knownWeekIds)
+
+        if let newestWeek = newlyAddedWeeks.max() {
+            selectedWeek = .week(newestWeek)
+            return
+        }
+
+        if let currentWeekId = selectedWeek.weekId, weekIds.contains(currentWeekId) {
+            return
+        }
+
+        if let latestWeek = weekIds.max() {
+            selectedWeek = .week(latestWeek)
+        } else {
+            selectedWeek = .none
+        }
+    }
+
     func seasonPicks(for user: UserProfile) -> SeasonPicks? {
         app.store.seasonPicks[user.id]
     }
@@ -352,6 +380,13 @@ private struct PickSection: View {
 private enum WeekSelection: Hashable {
     case none
     case week(Int)
+}
+
+private extension WeekSelection {
+    var weekId: Int? {
+        if case let .week(id) = self { return id }
+        return nil
+    }
 }
 
 private struct WeekOption: Identifiable {
