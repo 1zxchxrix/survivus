@@ -338,11 +338,9 @@ private struct UserPicksCard: View {
 
     private func contestants(
         for ids: Set<String>,
-        limit: Int? = nil,
-        excluding excludedIds: Set<String> = Set<String>()
+        limit: Int? = nil
     ) -> [Contestant] {
-        let filteredIds = ids.subtracting(excludedIds)
-        let picks = filteredIds.compactMap { contestantsById[$0] }
+        let picks = ids.compactMap { contestantsById[$0] }
             .sorted { $0.name < $1.name }
         if let limit {
             return Array(picks.prefix(limit))
@@ -366,11 +364,7 @@ private struct UserPicksCard: View {
         case let .weekly(panel):
             switch panel {
             case .remain:
-                return contestants(
-                    for: weeklyPicks?.remain ?? Set<String>(),
-                    limit: limit,
-                    excluding: weeklyPicks?.votedOut ?? Set<String>()
-                )
+                return contestants(for: weeklyPicks?.remain ?? Set<String>(), limit: limit)
             case .votedOut:
                 return contestants(for: weeklyPicks?.votedOut ?? Set<String>(), limit: limit)
             case .immunity:
