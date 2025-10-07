@@ -11,7 +11,7 @@ final class AppState: ObservableObject {
 
     init() {
         let config = SeasonConfig.mock()
-        let results = config.episodes.map { EpisodeResult.mock(episodeId: $0.id) }
+        let results: [EpisodeResult] = []
         let users = [
             UserProfile(id: "u1", displayName: "Zac", avatarAssetName: "zac"),
             UserProfile(id: "u2", displayName: "Mace", avatarAssetName: "mace"),
@@ -20,7 +20,6 @@ final class AppState: ObservableObject {
         ]
         self.store = MemoryStore(config: config, results: results, users: users)
         self.currentUserId = users.first!.id
-        self.store.loadMockPicks()
     }
 
     var scoring: ScoringEngine {
