@@ -24,15 +24,18 @@ struct AdminRoomView: View {
                         phaseForInsertingResults = phase
                     }
                 }
-                .disabled(!canInsertResults)
+                .disabled(!canInsertResults || !hasPhases)
                 Button("Modify Previous Results") {}
+                .disabled(!hasPhases)
                 Button("Start New Week") {}
+                .disabled(!hasPhases)
             }
 
             Section("Phase") {
                 Button("Select Current Phase") {
                     isPresentingSelectPhase = true
                 }
+                .disabled(!hasPhases)
                 Button("Create New Phase") {
                     phaseBeingEdited = nil
                     isPresentingCreatePhase = true
@@ -109,6 +112,10 @@ private extension AdminRoomView {
     var canInsertResults: Bool {
         guard let phase = currentPhase else { return false }
         return !phase.categories.isEmpty
+    }
+
+    var hasPhases: Bool {
+        !phases.isEmpty
     }
 }
 
