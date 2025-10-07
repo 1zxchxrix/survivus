@@ -5,8 +5,12 @@ import UIKit
 
 /// Displays a contestant's circular avatar using the image that matches the contestant identifier.
 struct ContestantAvatar: View {
+    @Environment(\.votedOutContestantIDs) private var votedOutContestantIDs
+
     let imageName: String
     var size: CGFloat = 28
+
+    private var isVotedOut: Bool { votedOutContestantIDs.contains(imageName) }
 
     var body: some View {
         Group {
@@ -24,6 +28,8 @@ struct ContestantAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+        .grayscale(isVotedOut ? 1 : 0)
+        .opacity(isVotedOut ? 0.45 : 1)
         .accessibilityHidden(true)
     }
 

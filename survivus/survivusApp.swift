@@ -17,6 +17,7 @@ struct SurvivusApp: App {
                     .environmentObject(app)
                     .tabItem { Label("Table", systemImage: "tablecells") }
             }
+            .environment(\.votedOutContestantIDs, app.votedOutContestantIDs)
         }
     }
 }

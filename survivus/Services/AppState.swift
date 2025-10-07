@@ -35,6 +35,10 @@ final class AppState: ObservableObject {
         ScoringEngine(config: store.config, resultsByEpisode: store.resultsByEpisode)
     }
 
+    var votedOutContestantIDs: Set<String> {
+        Set(store.results.flatMap(\.votedOut))
+    }
+
     var activePhase: PickPhase? {
         guard let activePhaseId else { return nil }
         return phases.first(where: { $0.id == activePhaseId })
