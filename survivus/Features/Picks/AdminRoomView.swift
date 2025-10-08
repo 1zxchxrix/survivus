@@ -720,18 +720,3 @@ private struct PhaseRow: View {
         .padding(.vertical, 8)
     }
 }
-
-private extension PickPhase.Category {
-    var normalizedName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    var matchesImmunityCategory: Bool {
-        normalizedName.contains("immunity")
-    }
-
-    var matchesVotedOutCategory: Bool {
-        normalizedName.contains("voted")
-    }
-}
-
