@@ -80,6 +80,8 @@ struct AllPicksView: View {
                                 isCurrentUser: isCurrentUser,
                                 selectedEpisode: selectedEpisode,
                                 categories: activePhaseCategories,
+                                seasonConfig: app.store.config,
+                                scoringEngine: app.scoring,
                                 isCollapsed: isCurrentUser ? false : isCollapsed,
                                 onToggleCollapse: isCurrentUser ? nil : {
                                     withAnimation(.easeInOut) {
@@ -224,6 +226,8 @@ private struct UserPicksCard: View {
     let isCurrentUser: Bool
     let selectedEpisode: Episode?
     let categories: [PickPhase.Category]
+    let seasonConfig: SeasonConfig
+    let scoringEngine: ScoringEngine
     let isCollapsed: Bool
     let onToggleCollapse: (() -> Void)?
 
@@ -235,6 +239,8 @@ private struct UserPicksCard: View {
         isCurrentUser: Bool,
         selectedEpisode: Episode?,
         categories: [PickPhase.Category],
+        seasonConfig: SeasonConfig,
+        scoringEngine: ScoringEngine,
         isCollapsed: Bool,
         onToggleCollapse: (() -> Void)?
     ) {
@@ -245,6 +251,8 @@ private struct UserPicksCard: View {
         self.isCurrentUser = isCurrentUser
         self.selectedEpisode = selectedEpisode
         self.categories = categories
+        self.seasonConfig = seasonConfig
+        self.scoringEngine = scoringEngine
         self.isCollapsed = isCollapsed
         self.onToggleCollapse = onToggleCollapse
     }
@@ -416,7 +424,7 @@ private struct UserPicksCard: View {
     }
 
     private func contestants(for category: PickPhase.Category, kind: CategoryKind) -> [Contestant] {
-        let limit: Int? = category.totalPicks > 0 ? category.totalPicks : nil
+        let limit: Int? = selectionLimit(for: category, kind: kind)
 
         switch kind {
         case .seasonMerge:
@@ -440,6 +448,40 @@ private struct UserPicksCard: View {
         case .unknown:
             return []
         }
+    }
+}
+
+private extension UserPicksCard {
+    func selectionLimit(for category: PickPhase.Category, kind: CategoryKind) -> Int? {
+        switch kind {
+        case .weekly(let panel):
+            guard let episode = selectedEpisode else {
+                return positiveLimit(from: category.totalPicks)
+            }
+
+            let phase = scoringEngine.phase(for: episode)
+            let caps = (phase == .preMerge) ? seasonConfig.weeklyPickCapsPreMerge : seasonConfig.weeklyPickCapsPostMerge
+
+            return limit(for: panel, caps: caps)
+
+        case .seasonMerge, .seasonFinalThree, .seasonWinner, .unknown:
+            return positiveLimit(from: category.totalPicks)
+        }
+    }
+
+    func limit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int? {
+        switch panel {
+        case .remain:
+            return caps.remain ?? 3
+        case .votedOut:
+            return caps.votedOut ?? 3
+        case .immunity:
+            return caps.immunity ?? 3
+        }
+    }
+
+    func positiveLimit(from value: Int) -> Int? {
+        value > 0 ? value : nil
     }
 }
 
