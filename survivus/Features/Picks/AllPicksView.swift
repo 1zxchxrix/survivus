@@ -324,6 +324,7 @@ private struct UserPicksCard: View {
         let title = displayTitle(for: category)
         let kind = kind(for: category)
         let contestants = contestants(for: category, kind: kind)
+        let correctContestantIDs = correctContestantIDs(for: category, kind: kind)
 
         if isCurrentUser {
             switch kind {
@@ -331,35 +332,67 @@ private struct UserPicksCard: View {
                 NavigationLink {
                     MergePickEditor()
                 } label: {
-                    PickSection(title: title, contestants: contestants, isInteractive: true)
+                    PickSection(
+                        title: title,
+                        contestants: contestants,
+                        isInteractive: true,
+                        correctContestantIDs: correctContestantIDs
+                    )
                 }
             case .seasonFinalThree:
                 NavigationLink {
                     FinalThreePickEditor()
                 } label: {
-                    PickSection(title: title, contestants: contestants, isInteractive: true)
+                    PickSection(
+                        title: title,
+                        contestants: contestants,
+                        isInteractive: true,
+                        correctContestantIDs: correctContestantIDs
+                    )
                 }
             case .seasonWinner:
                 NavigationLink {
                     WinnerPickEditor()
                 } label: {
-                    PickSection(title: title, contestants: contestants, isInteractive: true)
+                    PickSection(
+                        title: title,
+                        contestants: contestants,
+                        isInteractive: true,
+                        correctContestantIDs: correctContestantIDs
+                    )
                 }
             case let .weekly(panel):
                 if let episode = selectedEpisode {
                     NavigationLink {
                         WeeklyPickEditor(episode: episode, panel: panel)
                     } label: {
-                        PickSection(title: title, contestants: contestants, isInteractive: true)
+                        PickSection(
+                            title: title,
+                            contestants: contestants,
+                            isInteractive: true,
+                            correctContestantIDs: correctContestantIDs
+                        )
                     }
                 } else {
-                    PickSection(title: title, contestants: contestants)
+                    PickSection(
+                        title: title,
+                        contestants: contestants,
+                        correctContestantIDs: correctContestantIDs
+                    )
                 }
             case .unknown:
-                PickSection(title: title, contestants: contestants)
+                PickSection(
+                    title: title,
+                    contestants: contestants,
+                    correctContestantIDs: correctContestantIDs
+                )
             }
         } else {
-            PickSection(title: title, contestants: contestants)
+            PickSection(
+                title: title,
+                contestants: contestants,
+                correctContestantIDs: correctContestantIDs
+            )
         }
     }
 
@@ -449,6 +482,27 @@ private struct UserPicksCard: View {
             return []
         }
     }
+
+    private func correctContestantIDs(for category: PickPhase.Category, kind: CategoryKind) -> Set<String> {
+        guard case let .weekly(panel) = kind,
+              let episode = selectedEpisode,
+              let result = scoringEngine.resultsByEpisode[episode.id],
+              let weeklyPicks
+        else {
+            return []
+        }
+
+        let votedOutIds = Set(result.votedOut)
+
+        switch panel {
+        case .remain:
+            return weeklyPicks.remain.subtracting(votedOutIds)
+        case .votedOut:
+            return weeklyPicks.votedOut.intersection(votedOutIds)
+        case .immunity:
+            return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
+        }
+    }
 }
 
 private extension UserPicksCard {
@@ -489,11 +543,18 @@ private struct PickSection: View {
     let title: String
     let contestants: [Contestant]
     let isInteractive: Bool
+    let correctContestantIDs: Set<String>
 
-    init(title: String, contestants: [Contestant], isInteractive: Bool = false) {
+    init(
+        title: String,
+        contestants: [Contestant],
+        isInteractive: Bool = false,
+        correctContestantIDs: Set<String> = []
+    ) {
         self.title = title
         self.contestants = contestants
         self.isInteractive = isInteractive
+        self.correctContestantIDs = correctContestantIDs
     }
 
     var body: some View {
@@ -523,7 +584,14 @@ private struct PickSection: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12, alignment: .top)], spacing: 12) {
                     ForEach(contestants) { contestant in
                         VStack(spacing: 8) {
-                            ContestantAvatar(imageName: contestant.id, size: 60)
+                            ZStack(alignment: .topTrailing) {
+                                ContestantAvatar(imageName: contestant.id, size: 60)
+
+                                if correctContestantIDs.contains(contestant.id) {
+                                    checkmarkBadge
+                                        .offset(x: 4, y: -4)
+                                }
+                            }
 
                             Text(contestant.name)
                                 .font(.caption)
@@ -539,6 +607,23 @@ private struct PickSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+    }
+
+    private var checkmarkBadge: some View {
+        ZStack {
+            Circle()
+                .fill(Color(.secondarySystemGroupedBackground))
+                .frame(width: 24, height: 24)
+                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+
+            Circle()
+                .fill(Color(.systemGreen))
+                .frame(width: 24, height: 24)
+
+            Image(systemName: "checkmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.white)
+        }
     }
 }
 
