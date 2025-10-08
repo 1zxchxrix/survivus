@@ -23,7 +23,7 @@ struct WeeklyPickEditor: View {
         let userId = app.currentUserId
         let phase = app.scoring.phase(for: episode)
         let caps = (phase == .preMerge) ? config.weeklyPickCapsPreMerge : config.weeklyPickCapsPostMerge
-        let limit = selectionLimit(for: panel, caps: caps)
+        let limit = phaseCategoryLimit(for: panel) ?? selectionLimit(for: panel, caps: caps)
         let locked = picksLocked(for: episode)
 
         ScrollView {
@@ -93,6 +93,24 @@ struct WeeklyPickEditor: View {
         case .immunity:
             return caps.immunity ?? 3
         }
+    }
+
+    private func phaseCategoryLimit(for panel: WeeklyPickPanel) -> Int? {
+        guard let categories = app.activePhase?.categories else { return nil }
+
+        let matchingCategory: PickPhase.Category?
+
+        switch panel {
+        case .remain:
+            matchingCategory = categories.first(where: { $0.matchesRemainCategory })
+        case .votedOut:
+            matchingCategory = categories.first(where: { $0.matchesVotedOutCategory })
+        case .immunity:
+            matchingCategory = categories.first(where: { $0.matchesImmunityCategory })
+        }
+
+        guard let total = matchingCategory?.totalPicks, total > 0 else { return nil }
+        return total
     }
 
     private func navigationTitle(for panel: WeeklyPickPanel) -> String {
