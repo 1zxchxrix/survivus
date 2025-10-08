@@ -452,7 +452,7 @@ private struct UserPicksCard: View {
 }
 
 private extension UserPicksCard {
-    func selectionLimit(for category: PickPhase.Category, kind: CategoryKind) -> Int? {
+    private func selectionLimit(for category: PickPhase.Category, kind: CategoryKind) -> Int? {
         switch kind {
         case .weekly(let panel):
             guard let episode = selectedEpisode else {
@@ -469,7 +469,7 @@ private extension UserPicksCard {
         }
     }
 
-    func limit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int? {
+    private func limit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int? {
         switch panel {
         case .remain:
             return caps.remain ?? 3
@@ -480,7 +480,7 @@ private extension UserPicksCard {
         }
     }
 
-    func positiveLimit(from value: Int) -> Int? {
+    private func positiveLimit(from value: Int) -> Int? {
         value > 0 ? value : nil
     }
 }
