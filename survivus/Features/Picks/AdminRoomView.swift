@@ -376,13 +376,17 @@ private struct CategoryEditorSheet: View {
 
     @State private var draft: CategoryDraft
     @State private var usesPoints: Bool
+    @State private var pointsInput: String
 
     var onSave: (CategoryDraft) -> Void
 
     init(category: CategoryDraft?, onSave: @escaping (CategoryDraft) -> Void) {
-        let initialDraft = category ?? CategoryDraft()
+        var initialDraft = category ?? CategoryDraft()
+        initialDraft.totalPicks = max(1, min(initialDraft.totalPicks, 5))
+
         _draft = State(initialValue: initialDraft)
         _usesPoints = State(initialValue: initialDraft.pointsPerCorrectPick != nil)
+        _pointsInput = State(initialValue: initialDraft.pointsPerCorrectPick.map(String.init) ?? "")
         self.onSave = onSave
     }
 
@@ -392,29 +396,46 @@ private struct CategoryEditorSheet: View {
                 Section("Details") {
                     TextField("Category name", text: $draft.name)
 
-                    Stepper(value: $draft.totalPicks, in: 1...10) {
-                        Text("Total picks: \(draft.totalPicks)")
+                    Picker("Total picks", selection: $draft.totalPicks) {
+                        ForEach(1...5, id: \.self) { value in
+                            Text("\(value)").tag(value)
+                        }
                     }
+                    .pickerStyle(.wheel)
 
                     Toggle("Assign points per correct pick", isOn: $usesPoints)
                         .onChange(of: usesPoints) { newValue in
                             if newValue {
-                                draft.pointsPerCorrectPick = draft.pointsPerCorrectPick ?? 1
+                                if pointsInput.isEmpty {
+                                    pointsInput = String(draft.pointsPerCorrectPick ?? 1)
+                                }
+                                draft.pointsPerCorrectPick = Int(pointsInput) ?? 1
+                                pointsInput = String(draft.pointsPerCorrectPick ?? 1)
                             } else {
                                 draft.pointsPerCorrectPick = nil
                             }
                         }
 
                     if usesPoints {
-                        Stepper(value: Binding(
-                            get: { draft.pointsPerCorrectPick ?? 1 },
-                            set: { draft.pointsPerCorrectPick = $0 }
-                        ), in: 1...50) {
-                            Text("Points per correct pick: \(draft.pointsPerCorrectPick ?? 1)")
-                        }
+                        TextField("Points per correct pick", text: Binding(
+                            get: { pointsInput },
+                            set: { newValue in
+                                let filtered = newValue.filter(\.isNumber)
+                                pointsInput = filtered
+                                draft.pointsPerCorrectPick = Int(filtered)
+                            }
+                        ))
+                        .keyboardType(.numberPad)
                     }
 
                     Toggle("Lock category", isOn: $draft.isLocked)
+                }
+
+                Section {
+                    Button("Save") {
+                        saveCategory()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .navigationTitle(draft.name.isEmpty ? "Add Category" : "Edit Category")
@@ -423,23 +444,29 @@ private struct CategoryEditorSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        var categoryToSave = draft
-                        let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if trimmedName.isEmpty {
-                            categoryToSave.name = "Untitled Category"
-                        } else {
-                            categoryToSave.name = trimmedName
-                        }
-
-                        onSave(categoryToSave)
-                        dismiss()
-                    }
-                }
             }
         }
+    }
+
+    private func saveCategory() {
+        var categoryToSave = draft
+
+        if usesPoints {
+            let value = Int(pointsInput) ?? 1
+            categoryToSave.pointsPerCorrectPick = value
+        } else {
+            categoryToSave.pointsPerCorrectPick = nil
+        }
+
+        let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty {
+            categoryToSave.name = "Untitled Category"
+        } else {
+            categoryToSave.name = trimmedName
+        }
+
+        onSave(categoryToSave)
+        dismiss()
     }
 }
 
