@@ -375,7 +375,6 @@ private struct CategoryEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: CategoryDraft
-    @State private var usesPoints: Bool
     @State private var pointsInput: String
 
     var onSave: (CategoryDraft) -> Void
@@ -385,7 +384,6 @@ private struct CategoryEditorSheet: View {
         initialDraft.totalPicks = max(1, min(initialDraft.totalPicks, 5))
 
         _draft = State(initialValue: initialDraft)
-        _usesPoints = State(initialValue: initialDraft.pointsPerCorrectPick != nil)
         _pointsInput = State(initialValue: initialDraft.pointsPerCorrectPick.map(String.init) ?? "")
         self.onSave = onSave
     }
@@ -403,30 +401,20 @@ private struct CategoryEditorSheet: View {
                     }
                     .pickerStyle(.wheel)
 
-                    Toggle("Assign points per correct pick", isOn: $usesPoints)
-                        .onChange(of: usesPoints) { newValue in
-                            if newValue {
-                                if pointsInput.isEmpty {
-                                    pointsInput = String(draft.pointsPerCorrectPick ?? 1)
-                                }
-                                draft.pointsPerCorrectPick = Int(pointsInput) ?? 1
-                                pointsInput = String(draft.pointsPerCorrectPick ?? 1)
+                    TextField("Points per correct pick", text: Binding(
+                        get: { pointsInput },
+                        set: { newValue in
+                            let filtered = newValue.filter(\.isNumber)
+                            pointsInput = filtered
+
+                            if let value = Int(filtered) {
+                                draft.pointsPerCorrectPick = value
                             } else {
                                 draft.pointsPerCorrectPick = nil
                             }
                         }
-
-                    if usesPoints {
-                        TextField("Points per correct pick", text: Binding(
-                            get: { pointsInput },
-                            set: { newValue in
-                                let filtered = newValue.filter(\.isNumber)
-                                pointsInput = filtered
-                                draft.pointsPerCorrectPick = Int(filtered)
-                            }
-                        ))
-                        .keyboardType(.numberPad)
-                    }
+                    ))
+                    .keyboardType(.numberPad)
 
                     Toggle("Lock category", isOn: $draft.isLocked)
                 }
@@ -451,8 +439,7 @@ private struct CategoryEditorSheet: View {
     private func saveCategory() {
         var categoryToSave = draft
 
-        if usesPoints {
-            let value = Int(pointsInput) ?? 1
+        if let value = Int(pointsInput) {
             categoryToSave.pointsPerCorrectPick = value
         } else {
             categoryToSave.pointsPerCorrectPick = nil
