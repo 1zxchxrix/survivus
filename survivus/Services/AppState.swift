@@ -11,7 +11,14 @@ final class AppState: ObservableObject {
     }
     @Published var currentUserId: String
     @Published var phases: [PickPhase]
-    @Published var activePhaseId: PickPhase.ID?
+    @Published private(set) var activatedPhaseIDs: Set<PickPhase.ID>
+    @Published var activePhaseId: PickPhase.ID? {
+        didSet {
+            if let id = activePhaseId {
+                activatedPhaseIDs.insert(id)
+            }
+        }
+    }
 
     private var cancellables: Set<AnyCancellable> = []
 
@@ -27,7 +34,11 @@ final class AppState: ObservableObject {
         self.store = MemoryStore(config: config, results: results, users: users)
         self.currentUserId = users.first!.id
         self.phases = PickPhase.preconfigured
+        self.activatedPhaseIDs = []
         self.activePhaseId = phases.first?.id
+        if let id = activePhaseId {
+            activatedPhaseIDs.insert(id)
+        }
         subscribeToStoreChanges()
     }
 
@@ -42,6 +53,10 @@ final class AppState: ObservableObject {
     var activePhase: PickPhase? {
         guard let activePhaseId else { return nil }
         return phases.first(where: { $0.id == activePhaseId })
+    }
+
+    func hasPhaseEverBeenActive(_ id: PickPhase.ID) -> Bool {
+        activatedPhaseIDs.contains(id)
     }
 
     private func subscribeToStoreChanges() {
