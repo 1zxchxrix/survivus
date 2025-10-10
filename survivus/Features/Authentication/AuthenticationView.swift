@@ -17,7 +17,7 @@ struct AuthenticationView: View {
                         .font(.title2)
                         .fontWeight(.semibold)
 
-                    Text("Enter your username to get started. We'll try Face ID first and fall back to your passcode if needed.")
+                    Text("Enter your username to get started.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }

@@ -720,7 +720,7 @@ private struct PhaseRow: View {
                     }
 
                     if !isEditable {
-                        LockPill(text: "Previously active")
+                        LockPill(text: "Cannot be modified")
                     }
                 }
 
