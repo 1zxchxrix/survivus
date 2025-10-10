@@ -85,7 +85,7 @@ struct TableView: View {
                         .padding(.vertical, 8)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .coordinateSpace(name: "tableScroll")
             .onPreferenceChange(HorizontalScrollOffsetKey.self) { horizontalScrollOffset = $0 }
