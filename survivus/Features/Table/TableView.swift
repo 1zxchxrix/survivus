@@ -108,15 +108,13 @@ struct TableView: View {
             for category in phase.categories {
                 let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
                 guard !trimmedId.isEmpty, !seenIds.contains(trimmedId) else { continue }
-                guard let metric = TableColumnDefinition.Metric(category: category) else { continue }
-
                 seenIds.insert(trimmedId)
                 result.append(
                     TableColumnDefinition(
                         id: trimmedId,
                         title: trimmedId,
                         width: 48,
-                        metric: metric
+                        metric: TableColumnDefinition.Metric(category: category)
                     )
                 )
             }
@@ -211,7 +209,7 @@ private struct TableRow: View {
 
             ForEach(pinnedColumns) { column in
                 Text(column.displayValue(for: breakdown))
-                    .font(.subheadline.weight(column.metric == .total ? .semibold : .regular))
+                    .font(.subheadline.weight(column.metric == .some(.total) ? .semibold : .regular))
                     .frame(width: column.width, alignment: .center)
             }
         }
@@ -223,7 +221,7 @@ private struct TableRow: View {
 
             ForEach(scrollableColumns) { column in
                 Text(column.displayValue(for: breakdown))
-                    .font(.subheadline.weight(column.metric == .total ? .semibold : .regular))
+                    .font(.subheadline.weight(column.metric == .some(.total) ? .semibold : .regular))
                     .frame(width: column.width, alignment: .center)
             }
         }
@@ -269,13 +267,14 @@ private struct TableColumnDefinition: Identifiable, Hashable {
     let id: String
     let title: String
     let width: CGFloat
-    let metric: Metric
+    let metric: Metric?
 
     func displayValue(for breakdown: UserScoreBreakdown) -> String {
-        String(value(for: breakdown))
+        guard let metric else { return "-" }
+        return String(value(for: breakdown, metric: metric))
     }
 
-    private func value(for breakdown: UserScoreBreakdown) -> Int {
+    private func value(for breakdown: UserScoreBreakdown, metric: Metric) -> Int {
         switch metric {
         case .weeks:
             return breakdown.weeksParticipated
