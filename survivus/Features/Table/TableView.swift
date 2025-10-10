@@ -14,7 +14,7 @@ struct TableView: View {
         let pinnedColumns = columns.first.map { [$0] } ?? []
         let scrollableColumns = Array(columns.dropFirst())
         let nameColumnMinWidth: CGFloat = 160
-        let columnSpacing: CGFloat = 8
+        let columnSpacing: CGFloat = 4
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
             var votedOutPoints = 0
