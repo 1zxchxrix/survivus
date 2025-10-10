@@ -37,16 +37,24 @@ private struct RootView: View {
 
 private struct MainTabView: View {
     @EnvironmentObject private var app: AppState
+    @State private var selectedTab: Tab = .picks
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             ResultsView()
                 .tabItem { Label("Results", systemImage: "list.bullet.rectangle") }
+                .tag(Tab.results)
             AllPicksView()
                 .tabItem { Label("Picks", systemImage: "checkmark.circle") }
+                .tag(Tab.picks)
             TableView()
                 .tabItem { Label("Table", systemImage: "tablecells") }
+                .tag(Tab.table)
         }
         .environment(\.votedOutContestantIDs, app.votedOutContestantIDs)
     }
+}
+
+private extension MainTabView {
+    enum Tab { case results, picks, table }
 }
