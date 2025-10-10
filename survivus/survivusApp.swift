@@ -21,6 +21,7 @@ private struct RootView: View {
         Group {
             if authentication.isAuthenticated {
                 MainTabView()
+                    .environmentObject(authentication)
                     .transition(.opacity)
             } else {
                 AuthenticationView(viewModel: authentication)

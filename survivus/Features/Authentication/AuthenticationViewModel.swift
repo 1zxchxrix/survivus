@@ -97,4 +97,14 @@ final class AuthenticationViewModel: ObservableObject {
         requiresPasscode = false
         errorMessage = nil
     }
+
+    func signOut() {
+        authenticatedUserID = nil
+        isAuthenticated = false
+        requiresPasscode = false
+        username = ""
+        passcode = ""
+        pendingCredential = nil
+        errorMessage = nil
+    }
 }
