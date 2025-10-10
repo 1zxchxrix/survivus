@@ -42,6 +42,17 @@ struct AllPicksView: View {
         activePhase?.categories ?? []
     }
 
+    private var usersInDisplayOrder: [UserProfile] {
+        guard let currentUserIndex = app.store.users.firstIndex(where: { $0.id == app.currentUserId }) else {
+            return app.store.users
+        }
+
+        var orderedUsers = app.store.users
+        let currentUser = orderedUsers.remove(at: currentUserIndex)
+        orderedUsers.insert(currentUser, at: 0)
+        return orderedUsers
+    }
+
     private var hasConfiguredPickData: Bool {
         guard let activePhase else { return false }
         return !activePhase.categories.isEmpty
@@ -68,7 +79,7 @@ struct AllPicksView: View {
                         weekPicker
                             .padding(.bottom, 8)
 
-                        ForEach(app.store.users) { user in
+                        ForEach(usersInDisplayOrder) { user in
                             let isCurrentUser = user.id == app.currentUserId
                             let isCollapsed = collapsedUserIds.contains(user.id)
 
