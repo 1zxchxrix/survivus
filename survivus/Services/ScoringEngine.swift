@@ -1,5 +1,12 @@
 import Foundation
 
+struct WeeklyScoreBreakdown {
+    var votedOut: Int
+    var remain: Int
+    var immunity: Int
+    var categoryPointsByColumnId: [String: Int]
+}
+
 struct ScoringEngine {
     let config: SeasonConfig
     let resultsByEpisode: [Int: EpisodeResult]
@@ -10,14 +17,47 @@ struct ScoringEngine {
         return merged ? .postMerge : .preMerge
     }
 
-    func score(weekly: WeeklyPicks, episode: Episode) -> (votedOut: Int, remain: Int, immunity: Int) {
-        guard let result = resultsByEpisode[episode.id] else { return (0, 0, 0) }
+    func score(
+        weekly: WeeklyPicks,
+        episode: Episode,
+        categoriesById: [PickPhase.Category.ID: PickPhase.Category] = [:]
+    ) -> WeeklyScoreBreakdown {
+        guard let result = resultsByEpisode[episode.id] else {
+            return WeeklyScoreBreakdown(votedOut: 0, remain: 0, immunity: 0, categoryPointsByColumnId: [:])
+        }
         let votedOutHits = weekly.votedOut.intersection(result.votedOut).count
         let remainHits = weekly.remain.filter { !result.votedOut.contains($0) }.count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
         let phase = phase(for: episode)
         let immunityPts = (phase == .preMerge) ? immunityHits * 1 : immunityHits * 3
-        return (votedOutHits * 3, remainHits * 1, immunityPts)
+        var categoryPoints: [String: Int] = [:]
+
+        for (categoryId, winners) in result.categoryWinners {
+            guard let category = categoriesById[categoryId] else { continue }
+            guard
+                !category.matchesRemainCategory,
+                !category.matchesVotedOutCategory,
+                !category.matchesImmunityCategory
+            else {
+                continue
+            }
+
+            guard let pointsPerPick = category.pointsPerCorrectPick, pointsPerPick > 0 else { continue }
+            let hits = weekly.selections(for: categoryId).intersection(Set(winners)).count
+            guard hits > 0 else { continue }
+
+            let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !columnId.isEmpty else { continue }
+
+            categoryPoints[columnId, default: 0] += hits * pointsPerPick
+        }
+
+        return WeeklyScoreBreakdown(
+            votedOut: votedOutHits * 3,
+            remain: remainHits * 1,
+            immunity: immunityPts,
+            categoryPointsByColumnId: categoryPoints
+        )
     }
 
     func mergeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {

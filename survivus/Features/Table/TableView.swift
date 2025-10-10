@@ -12,6 +12,9 @@ struct TableView: View {
         let activeColumnIDs = activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
         let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
         let columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated] + dynamicColumns
+        let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
+            phase.categories.map { ($0.id, $0) }
+        })
         let pinnedColumns = columns.first.map { [$0] } ?? []
         let scrollableColumns = Array(columns.dropFirst())
         let nameColumnMinWidth: CGFloat = 160
@@ -22,14 +25,18 @@ struct TableView: View {
             var remainPoints = 0
             var immunityPoints = 0
             var weeksParticipated = 0
+            var categoryPoints: [String: Int] = [:]
 
             for episode in config.episodes where episode.id <= lastEpisodeWithResult {
                 if let picks = app.store.weeklyPicks[user.id]?[episode.id] {
                     weeksParticipated += 1
-                    let score = scoring.score(weekly: picks, episode: episode)
+                    let score = scoring.score(weekly: picks, episode: episode, categoriesById: categoriesById)
                     votedOutPoints += score.votedOut
                     remainPoints += score.remain
                     immunityPoints += score.immunity
+                    for (columnId, points) in score.categoryPointsByColumnId {
+                        categoryPoints[columnId, default: 0] += points
+                    }
                 }
             }
 
@@ -46,7 +53,8 @@ struct TableView: View {
                 immunityPoints: immunityPoints,
                 mergeTrackPoints: mergePoints,
                 finalThreeTrackPoints: finalThreePoints,
-                winnerPoints: winnerPoints
+                winnerPoints: winnerPoints,
+                categoryPointsByColumnId: categoryPoints
             )
         }
         .sorted { $0.total > $1.total }
@@ -260,6 +268,7 @@ private struct TableColumnDefinition: Identifiable, Hashable {
         case finalThree
         case winner
         case total
+        case custom(String)
 
         init?(category: PickPhase.Category) {
             if category.matchesRemainCategory {
@@ -275,7 +284,9 @@ private struct TableColumnDefinition: Identifiable, Hashable {
             } else if category.matchesWinnerCategory {
                 self = .winner
             } else {
-                return nil
+                let trimmed = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                guard !trimmed.isEmpty else { return nil }
+                self = .custom(trimmed)
             }
         }
     }
@@ -314,6 +325,8 @@ private struct TableColumnDefinition: Identifiable, Hashable {
             return breakdown.winnerPoints
         case .total:
             return breakdown.total
+        case let .custom(columnId):
+            return breakdown.points(forColumnId: columnId)
         }
     }
 }
