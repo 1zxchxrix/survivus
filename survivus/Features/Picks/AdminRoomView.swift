@@ -792,12 +792,6 @@ private struct PhaseRow: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-
-                if !isEditable {
-                    Text("Phases that have been active cannot be modified.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 12)
