@@ -15,8 +15,8 @@ struct TableView: View {
         let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
             phase.categories.map { ($0.id, $0) }
         })
-        let pinnedColumns = columns.first.map { [$0] } ?? []
-        let scrollableColumns = Array(columns.dropFirst())
+        let pinnedColumns = columns.filter { $0.isPinned }
+        let scrollableColumns = columns.filter { !$0.isPinned }
         let nameColumnMinWidth: CGFloat = 160
         let columnSpacing: CGFloat = 4
 
@@ -138,7 +138,8 @@ struct TableView: View {
                         title: trimmedId,
                         width: 48,
                         metric: TableColumnDefinition.Metric(category: category),
-                        isActive: activeColumnIDs.contains(trimmedId)
+                        isActive: activeColumnIDs.contains(trimmedId),
+                        isPinned: false
                     )
                 )
             }
@@ -296,6 +297,7 @@ private struct TableColumnDefinition: Identifiable, Hashable {
     let width: CGFloat
     let metric: Metric?
     let isActive: Bool
+    let isPinned: Bool
 
     func displayValue(for breakdown: UserScoreBreakdown) -> String {
         guard isActive else { return "-" }
@@ -332,8 +334,23 @@ private struct TableColumnDefinition: Identifiable, Hashable {
 }
 
 private extension TableColumnDefinition {
-    static let weeksParticipated = TableColumnDefinition(id: "Wk", title: "Wk", width: 40, metric: .weeks, isActive: true)
-    static let totalPoints = TableColumnDefinition(id: "Pts", title: "Pts", width: 52, metric: .total, isActive: true)
+    static let weeksParticipated = TableColumnDefinition(
+        id: "Wk",
+        title: "Wk",
+        width: 40,
+        metric: .weeks,
+        isActive: true,
+        isPinned: false
+    )
+
+    static let totalPoints = TableColumnDefinition(
+        id: "Pts",
+        title: "Pts",
+        width: 52,
+        metric: .total,
+        isActive: true,
+        isPinned: true
+    )
 }
 
 private struct HorizontalScrollOffsetKey: PreferenceKey {
