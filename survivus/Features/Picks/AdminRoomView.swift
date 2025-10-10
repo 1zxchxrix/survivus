@@ -491,6 +491,13 @@ private struct SelectPhaseSheet: View {
                 }
             }
             .navigationTitle("Modify Phase")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+            }
         }
         .presentationDetents([.fraction(0.8)])
         .presentationCornerRadius(28)
