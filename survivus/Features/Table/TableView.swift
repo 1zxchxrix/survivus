@@ -17,6 +17,7 @@ struct TableView: View {
         let scrollableColumns = columns.filter { !$0.isPinned }
         let nameColumnMinWidth: CGFloat = 160
         let columnSpacing: CGFloat = 4
+        let rowContentMinHeight: CGFloat = 32
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
             var votedOutPoints = 0
@@ -67,6 +68,7 @@ struct TableView: View {
                             usersById: usersById,
                             nameColumnMinWidth: nameColumnMinWidth,
                             columnSpacing: columnSpacing,
+                            rowContentMinHeight: rowContentMinHeight,
                             showsTrailingSeparator: false
                         )
                     } else {
@@ -77,6 +79,7 @@ struct TableView: View {
                                 usersById: usersById,
                                 nameColumnMinWidth: nameColumnMinWidth,
                                 columnSpacing: columnSpacing,
+                                rowContentMinHeight: rowContentMinHeight,
                                 showsTrailingSeparator: true
                             )
 
@@ -84,7 +87,8 @@ struct TableView: View {
                                 TableScrollableSection(
                                     scrollableColumns: scrollableColumns,
                                     breakdowns: breakdowns,
-                                    columnSpacing: columnSpacing
+                                    columnSpacing: columnSpacing,
+                                    rowContentMinHeight: rowContentMinHeight
                                 )
                             }
                             .background(Color(.systemGroupedBackground))
@@ -149,6 +153,7 @@ private struct TablePinnedSection: View {
     let usersById: [UserProfile.ID: UserProfile]
     let nameColumnMinWidth: CGFloat
     let columnSpacing: CGFloat
+    let rowContentMinHeight: CGFloat
     let showsTrailingSeparator: Bool
 
     var body: some View {
@@ -174,7 +179,8 @@ private struct TablePinnedSection: View {
                     user: usersById[breakdown.userId],
                     pinnedColumns: pinnedColumns,
                     nameColumnMinWidth: nameColumnMinWidth,
-                    columnSpacing: columnSpacing
+                    columnSpacing: columnSpacing,
+                    rowContentMinHeight: rowContentMinHeight
                 )
                 .padding(.vertical, 8)
             }
@@ -194,6 +200,7 @@ private struct TableScrollableSection: View {
     let scrollableColumns: [TableColumnDefinition]
     let breakdowns: [UserScoreBreakdown]
     let columnSpacing: CGFloat
+    let rowContentMinHeight: CGFloat
 
     var body: some View {
         VStack(spacing: 0) {
@@ -215,7 +222,8 @@ private struct TableScrollableSection: View {
                 TableScrollableRow(
                     breakdown: breakdown,
                     columns: scrollableColumns,
-                    columnSpacing: columnSpacing
+                    columnSpacing: columnSpacing,
+                    rowContentMinHeight: rowContentMinHeight
                 )
                 .padding(.vertical, 8)
             }
@@ -266,6 +274,7 @@ private struct TablePinnedRow: View {
     let pinnedColumns: [TableColumnDefinition]
     let nameColumnMinWidth: CGFloat
     let columnSpacing: CGFloat
+    let rowContentMinHeight: CGFloat
 
     var body: some View {
         HStack(spacing: columnSpacing) {
@@ -274,7 +283,7 @@ private struct TablePinnedRow: View {
                     Image(user.avatarAssetName)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 32, height: 32)
+                        .frame(width: avatarSize, height: avatarSize)
                         .clipShape(Circle())
                         .accessibilityHidden(true)
 
@@ -290,6 +299,7 @@ private struct TablePinnedRow: View {
                 }
             }
             .frame(minWidth: nameColumnMinWidth, alignment: .leading)
+            .frame(minHeight: rowContentMinHeight, alignment: .center)
 
             ForEach(pinnedColumns) { column in
                 Text(column.displayValue(for: breakdown))
@@ -298,12 +308,15 @@ private struct TablePinnedRow: View {
             }
         }
     }
+
+    private var avatarSize: CGFloat { 32 }
 }
 
 private struct TableScrollableRow: View {
     let breakdown: UserScoreBreakdown
     let columns: [TableColumnDefinition]
     let columnSpacing: CGFloat
+    let rowContentMinHeight: CGFloat
 
     var body: some View {
         HStack(spacing: columnSpacing) {
@@ -313,6 +326,7 @@ private struct TableScrollableRow: View {
                     .frame(width: column.width, alignment: .center)
             }
         }
+        .frame(minHeight: rowContentMinHeight, alignment: .center)
     }
 }
 
