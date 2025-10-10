@@ -416,12 +416,19 @@ private struct CategoryEditorSheet: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.characters)
 
-                    Picker("Total picks", selection: $draft.totalPicks) {
-                        ForEach(1...5, id: \.self) { value in
-                            Text("\(value)").tag(value)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Total picks")
+                            .font(.callout)
+                            .fontWeight(.semibold)
+
+                        Picker("Total picks", selection: $draft.totalPicks) {
+                            ForEach(1...5, id: \.self) { value in
+                                Text("\(value)").tag(value)
+                            }
                         }
+                        .labelsHidden()
+                        .pickerStyle(.wheel)
                     }
-                    .pickerStyle(.wheel)
 
                     TextField("Points per correct pick", text: Binding(
                         get: { pointsInput },
