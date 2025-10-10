@@ -27,7 +27,7 @@ final class AppState: ObservableObject {
         let results: [EpisodeResult] = []
         let users = [
             UserProfile(id: "u1", displayName: "Zac", avatarAssetName: "zac"),
-            UserProfile(id: "u2", displayName: "Mace", avatarAssetName: "mace"),
+            UserProfile(id: "u2", displayName: "Sam", avatarAssetName: "mace"),
             UserProfile(id: "u3", displayName: "Chris", avatarAssetName: "chris"),
             UserProfile(id: "u4", displayName: "Liz", avatarAssetName: "liz")
         ]
@@ -40,6 +40,11 @@ final class AppState: ObservableObject {
             activatedPhaseIDs.insert(id)
         }
         subscribeToStoreChanges()
+    }
+
+    func selectUser(with userId: String) {
+        guard store.users.contains(where: { $0.id == userId }) else { return }
+        currentUserId = userId
     }
 
     var scoring: ScoringEngine {
