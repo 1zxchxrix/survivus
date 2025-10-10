@@ -2,8 +2,6 @@ import SwiftUI
 
 struct TableView: View {
     @EnvironmentObject var app: AppState
-    @State private var horizontalScrollOffset: CGFloat = 0
-
     var body: some View {
         let config = app.store.config
         let scoring = app.scoring
@@ -60,46 +58,42 @@ struct TableView: View {
         .sorted { $0.total > $1.total }
 
         return NavigationStack {
-            GeometryReader { proxy in
-                ScrollView([.vertical, .horizontal]) {
-                    VStack(spacing: 0) {
-                        TableHeader(
+            ScrollView(.vertical) {
+                Group {
+                    if scrollableColumns.isEmpty {
+                        TablePinnedSection(
                             pinnedColumns: pinnedColumns,
-                            scrollableColumns: scrollableColumns,
+                            breakdowns: breakdowns,
+                            usersById: usersById,
                             nameColumnMinWidth: nameColumnMinWidth,
                             columnSpacing: columnSpacing,
-                            horizontalOffset: horizontalScrollOffset
+                            showsTrailingSeparator: false
                         )
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-
-                        if !breakdowns.isEmpty {
-                            Divider()
-                        }
-
-                        ForEach(Array(breakdowns.enumerated()), id: \.element.id) { index, breakdown in
-                            if index > 0 {
-                                Divider()
-                            }
-
-                            TableRow(
-                                breakdown: breakdown,
-                                user: usersById[breakdown.userId],
+                    } else {
+                        HStack(alignment: .top, spacing: columnSpacing) {
+                            TablePinnedSection(
                                 pinnedColumns: pinnedColumns,
-                                scrollableColumns: scrollableColumns,
+                                breakdowns: breakdowns,
+                                usersById: usersById,
                                 nameColumnMinWidth: nameColumnMinWidth,
                                 columnSpacing: columnSpacing,
-                                horizontalOffset: horizontalScrollOffset
+                                showsTrailingSeparator: true
                             )
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
+
+                            ScrollView(.horizontal) {
+                                TableScrollableSection(
+                                    scrollableColumns: scrollableColumns,
+                                    breakdowns: breakdowns,
+                                    columnSpacing: columnSpacing
+                                )
+                            }
+                            .background(Color(.systemGroupedBackground))
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .frame(minHeight: proxy.size.height, alignment: .top)
                 }
-                .coordinateSpace(name: "tableScroll")
-                .onPreferenceChange(HorizontalScrollOffsetKey.self) { horizontalScrollOffset = $0 }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
             }
             .navigationTitle("Table")
@@ -149,14 +143,92 @@ struct TableView: View {
     }
 }
 
-private struct TableHeader: View {
+private struct TablePinnedSection: View {
     let pinnedColumns: [TableColumnDefinition]
-    let scrollableColumns: [TableColumnDefinition]
+    let breakdowns: [UserScoreBreakdown]
+    let usersById: [UserProfile.ID: UserProfile]
     let nameColumnMinWidth: CGFloat
     let columnSpacing: CGFloat
-    let horizontalOffset: CGFloat
+    let showsTrailingSeparator: Bool
 
-    private var pinnedContent: some View {
+    var body: some View {
+        VStack(spacing: 0) {
+            TablePinnedHeader(
+                pinnedColumns: pinnedColumns,
+                nameColumnMinWidth: nameColumnMinWidth,
+                columnSpacing: columnSpacing
+            )
+            .padding(.vertical, 8)
+
+            if !breakdowns.isEmpty {
+                Divider()
+            }
+
+            ForEach(Array(breakdowns.enumerated()), id: \.element.id) { index, breakdown in
+                if index > 0 {
+                    Divider()
+                }
+
+                TablePinnedRow(
+                    breakdown: breakdown,
+                    user: usersById[breakdown.userId],
+                    pinnedColumns: pinnedColumns,
+                    nameColumnMinWidth: nameColumnMinWidth,
+                    columnSpacing: columnSpacing
+                )
+                .padding(.vertical, 8)
+            }
+        }
+        .background(Color(.systemGroupedBackground))
+        .overlay(alignment: .trailing) {
+            if showsTrailingSeparator {
+                Color(.separator)
+                    .frame(width: 1)
+                    .opacity(0.5)
+            }
+        }
+    }
+}
+
+private struct TableScrollableSection: View {
+    let scrollableColumns: [TableColumnDefinition]
+    let breakdowns: [UserScoreBreakdown]
+    let columnSpacing: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TableScrollableHeader(
+                columns: scrollableColumns,
+                columnSpacing: columnSpacing
+            )
+            .padding(.vertical, 8)
+
+            if !breakdowns.isEmpty {
+                Divider()
+            }
+
+            ForEach(Array(breakdowns.enumerated()), id: \.element.id) { index, breakdown in
+                if index > 0 {
+                    Divider()
+                }
+
+                TableScrollableRow(
+                    breakdown: breakdown,
+                    columns: scrollableColumns,
+                    columnSpacing: columnSpacing
+                )
+                .padding(.vertical, 8)
+            }
+        }
+    }
+}
+
+private struct TablePinnedHeader: View {
+    let pinnedColumns: [TableColumnDefinition]
+    let nameColumnMinWidth: CGFloat
+    let columnSpacing: CGFloat
+
+    var body: some View {
         HStack(spacing: columnSpacing) {
             Text("Name")
                 .font(.subheadline.weight(.semibold))
@@ -168,47 +240,34 @@ private struct TableHeader: View {
                     .frame(width: column.width, alignment: .center)
             }
         }
+        .foregroundStyle(.secondary)
     }
+}
+
+private struct TableScrollableHeader: View {
+    let columns: [TableColumnDefinition]
+    let columnSpacing: CGFloat
 
     var body: some View {
         HStack(spacing: columnSpacing) {
-            pinnedContent.hidden()
-
-            ForEach(scrollableColumns) { column in
+            ForEach(columns) { column in
                 Text(column.title)
                     .font(.footnote.weight(.semibold))
                     .frame(width: column.width, alignment: .center)
             }
         }
-        .overlay(alignment: .leading) {
-            pinnedContent
-                .offset(x: horizontalOffset)
-                .background(Color(.systemGroupedBackground))
-                .allowsHitTesting(false)
-        }
         .foregroundStyle(.secondary)
-        .background(
-            GeometryReader { proxy in
-                Color.clear
-                    .preference(
-                        key: HorizontalScrollOffsetKey.self,
-                        value: -proxy.frame(in: .named("tableScroll")).minX
-                    )
-            }
-        )
     }
 }
 
-private struct TableRow: View {
+private struct TablePinnedRow: View {
     let breakdown: UserScoreBreakdown
     let user: UserProfile?
     let pinnedColumns: [TableColumnDefinition]
-    let scrollableColumns: [TableColumnDefinition]
     let nameColumnMinWidth: CGFloat
     let columnSpacing: CGFloat
-    let horizontalOffset: CGFloat
 
-    private var pinnedContent: some View {
+    var body: some View {
         HStack(spacing: columnSpacing) {
             HStack(spacing: 8) {
                 if let user {
@@ -239,22 +298,20 @@ private struct TableRow: View {
             }
         }
     }
+}
+
+private struct TableScrollableRow: View {
+    let breakdown: UserScoreBreakdown
+    let columns: [TableColumnDefinition]
+    let columnSpacing: CGFloat
 
     var body: some View {
         HStack(spacing: columnSpacing) {
-            pinnedContent.hidden()
-
-            ForEach(scrollableColumns) { column in
+            ForEach(columns) { column in
                 Text(column.displayValue(for: breakdown))
                     .font(.subheadline.weight(column.metric == .some(.total) ? .semibold : .regular))
                     .frame(width: column.width, alignment: .center)
             }
-        }
-        .overlay(alignment: .leading) {
-            pinnedContent
-                .offset(x: horizontalOffset)
-                .background(Color(.systemGroupedBackground))
-                .allowsHitTesting(false)
         }
     }
 }
@@ -353,10 +410,3 @@ private extension TableColumnDefinition {
     )
 }
 
-private struct HorizontalScrollOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
