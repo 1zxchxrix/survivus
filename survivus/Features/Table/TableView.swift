@@ -51,30 +51,10 @@ struct TableView: View {
         .sorted { $0.total > $1.total }
 
         return NavigationStack {
-            ScrollView([.vertical, .horizontal]) {
-                VStack(spacing: 0) {
-                    TableHeader(
-                        pinnedColumns: pinnedColumns,
-                        scrollableColumns: scrollableColumns,
-                        nameColumnMinWidth: nameColumnMinWidth,
-                        columnSpacing: columnSpacing,
-                        horizontalOffset: horizontalScrollOffset
-                    )
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-
-                    if !breakdowns.isEmpty {
-                        Divider()
-                    }
-
-                    ForEach(Array(breakdowns.enumerated()), id: \.element.id) { index, breakdown in
-                        if index > 0 {
-                            Divider()
-                        }
-
-                        TableRow(
-                            breakdown: breakdown,
-                            user: usersById[breakdown.userId],
+            GeometryReader { proxy in
+                ScrollView([.vertical, .horizontal]) {
+                    VStack(spacing: 0) {
+                        TableHeader(
                             pinnedColumns: pinnedColumns,
                             scrollableColumns: scrollableColumns,
                             nameColumnMinWidth: nameColumnMinWidth,
@@ -83,13 +63,36 @@ struct TableView: View {
                         )
                         .padding(.horizontal)
                         .padding(.vertical, 8)
+
+                        if !breakdowns.isEmpty {
+                            Divider()
+                        }
+
+                        ForEach(Array(breakdowns.enumerated()), id: \.element.id) { index, breakdown in
+                            if index > 0 {
+                                Divider()
+                            }
+
+                            TableRow(
+                                breakdown: breakdown,
+                                user: usersById[breakdown.userId],
+                                pinnedColumns: pinnedColumns,
+                                scrollableColumns: scrollableColumns,
+                                nameColumnMinWidth: nameColumnMinWidth,
+                                columnSpacing: columnSpacing,
+                                horizontalOffset: horizontalScrollOffset
+                            )
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(minHeight: proxy.size.height, alignment: .top)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .coordinateSpace(name: "tableScroll")
+                .onPreferenceChange(HorizontalScrollOffsetKey.self) { horizontalScrollOffset = $0 }
+                .background(Color(.systemGroupedBackground))
             }
-            .coordinateSpace(name: "tableScroll")
-            .onPreferenceChange(HorizontalScrollOffsetKey.self) { horizontalScrollOffset = $0 }
-            .background(Color(.systemGroupedBackground))
             .navigationTitle("Table")
         }
     }
