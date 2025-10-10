@@ -72,7 +72,7 @@ struct AdminRoomView: View {
                 onDelete: { phase in
                     app.phases.removeAll { $0.id == phase.id }
                     if app.activePhaseId == phase.id {
-                        app.activePhaseId = app.phases.first?.id
+                        app.activePhaseId = nil
                     }
                 }
             )
@@ -184,8 +184,8 @@ private extension AdminRoomView {
             app.phases.append(phase)
         }
 
-        if app.activePhaseId == nil || app.activePhaseId == phase.id {
-            app.activePhaseId = phase.id
+        if app.activePhaseId == phase.id {
+            app.activePhaseId = nil
         }
     }
 }
