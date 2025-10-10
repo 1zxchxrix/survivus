@@ -13,8 +13,8 @@ struct TableView: View {
         let columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated] + dynamicColumns
         let pinnedColumns = columns.first.map { [$0] } ?? []
         let scrollableColumns = Array(columns.dropFirst())
-        let nameColumnMinWidth: CGFloat = 160
-        let columnSpacing: CGFloat = 4
+        let nameColumnMinWidth: CGFloat = 100
+        let columnSpacing: CGFloat = 1
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
             var votedOutPoints = 0
