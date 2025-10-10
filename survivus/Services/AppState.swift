@@ -35,10 +35,7 @@ final class AppState: ObservableObject {
         self.currentUserId = users.first!.id
         self.phases = PickPhase.preconfigured
         self.activatedPhaseIDs = []
-        self.activePhaseId = phases.first?.id
-        if let id = activePhaseId {
-            activatedPhaseIDs.insert(id)
-        }
+        self.activePhaseId = nil
         subscribeToStoreChanges()
     }
 
