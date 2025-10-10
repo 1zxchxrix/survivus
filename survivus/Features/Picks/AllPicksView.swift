@@ -579,6 +579,8 @@ private extension UserPicksCard {
             return caps.votedOut ?? 3
         case .immunity:
             return caps.immunity ?? 3
+        case .custom:
+            return nil
         }
     }
 
