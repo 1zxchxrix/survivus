@@ -7,6 +7,19 @@ struct WeeklyPicks: Identifiable, Hashable, Codable {
     var remain: Set<String> = []
     var votedOut: Set<String> = []
     var immunity: Set<String> = []
+    var categorySelections: [UUID: Set<String>] = [:]
+
+    func selections(for categoryId: UUID) -> Set<String> {
+        categorySelections[categoryId] ?? []
+    }
+
+    mutating func setSelections(_ selections: Set<String>, for categoryId: UUID) {
+        if selections.isEmpty {
+            categorySelections.removeValue(forKey: categoryId)
+        } else {
+            categorySelections[categoryId] = selections
+        }
+    }
 }
 
 struct SeasonPicks: Identifiable, Hashable, Codable {
