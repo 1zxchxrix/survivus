@@ -363,6 +363,8 @@ private struct CategoryRow: View {
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 2) {
+                Text("Column ID: \(category.columnId.isEmpty ? "COL" : category.columnId)")
+
                 Text("Total picks: \(category.totalPicks)")
 
                 if let points = category.pointsPerCorrectPick {
@@ -403,6 +405,16 @@ private struct CategoryEditorSheet: View {
             Form {
                 Section("Details") {
                     TextField("Category name", text: $draft.name)
+
+                    TextField("Column ID", text: Binding(
+                        get: { draft.columnId },
+                        set: { newValue in
+                            let allowed = newValue.uppercased().filter { $0.isLetter || $0.isNumber }
+                            draft.columnId = String(allowed.prefix(4))
+                        }
+                    ))
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.characters)
 
                     Picker("Total picks", selection: $draft.totalPicks) {
                         ForEach(1...5, id: \.self) { value in
@@ -459,8 +471,40 @@ private struct CategoryEditorSheet: View {
             categoryToSave.name = trimmedName
         }
 
+        categoryToSave.columnId = sanitizedColumnId(
+            from: draft.columnId,
+            fallbackName: categoryToSave.name
+        )
+
         onSave(categoryToSave)
         dismiss()
+    }
+
+    private func sanitizedColumnId(from input: String, fallbackName: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return String(trimmed.prefix(4)).uppercased()
+        }
+
+        let components = fallbackName
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+
+        let abbreviation = components
+            .compactMap { $0.first }
+            .prefix(4)
+
+        if !abbreviation.isEmpty {
+            return abbreviation.map(String.init).joined().uppercased()
+        }
+
+        let condensed = fallbackName.replacingOccurrences(of: " ", with: "")
+        if !condensed.isEmpty {
+            return String(condensed.prefix(4)).uppercased()
+        }
+
+        return "COL"
     }
 }
 
