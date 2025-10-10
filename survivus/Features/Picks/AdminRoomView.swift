@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AdminRoomView: View {
     @EnvironmentObject var app: AppState
-    @State private var isPresentingCreatePhase = false
+    @State private var isPresentingNewPhase = false
     @State private var isPresentingSelectPhase = false
     @State private var isPresentingStartWeek = false
     @State private var phaseBeingEdited: PickPhase?
@@ -40,8 +40,7 @@ struct AdminRoomView: View {
                 }
                 .disabled(!hasPhases)
                 Button("Create New Phase") {
-                    phaseBeingEdited = nil
-                    isPresentingCreatePhase = true
+                    isPresentingNewPhase = true
                 }
             }
         }
@@ -67,7 +66,6 @@ struct AdminRoomView: View {
                 onModify: { phase in
                     phaseBeingEdited = phase
                     isPresentingSelectPhase = false
-                    isPresentingCreatePhase = true
                 },
                 onDelete: { phase in
                     app.phases.removeAll { $0.id == phase.id }
@@ -77,21 +75,18 @@ struct AdminRoomView: View {
                 }
             )
         }
-        .sheet(isPresented: $isPresentingCreatePhase, onDismiss: {
-            phaseBeingEdited = nil
-        }) {
-            CreatePhaseSheet(phase: phaseBeingEdited) { phase in
-                if let index = app.phases.firstIndex(where: { $0.id == phase.id }) {
-                    app.phases[index] = phase
-                } else {
-                    app.phases.append(phase)
-                }
-
-                if app.activePhaseId == phase.id {
-                    app.activePhaseId = phase.id
-                } else if app.activePhaseId == nil {
-                    app.activePhaseId = phase.id
-                }
+        .sheet(isPresented: $isPresentingNewPhase) {
+            CreatePhaseSheet(phase: nil) { newPhase in
+                handlePhaseSave(newPhase)
+                isPresentingNewPhase = false
+            }
+            .presentationDetents([.fraction(0.8)])
+            .presentationCornerRadius(28)
+        }
+        .sheet(item: $phaseBeingEdited) { phase in
+            CreatePhaseSheet(phase: phase) { updatedPhase in
+                handlePhaseSave(updatedPhase)
+                phaseBeingEdited = nil
             }
             .presentationDetents([.fraction(0.8)])
             .presentationCornerRadius(28)
@@ -177,6 +172,18 @@ private extension AdminRoomView {
         let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
         app.store.results.append(newResult)
         app.activePhaseId = phase.id
+    }
+
+    func handlePhaseSave(_ phase: PickPhase) {
+        if let index = app.phases.firstIndex(where: { $0.id == phase.id }) {
+            app.phases[index] = phase
+        } else {
+            app.phases.append(phase)
+        }
+
+        if app.activePhaseId == nil || app.activePhaseId == phase.id {
+            app.activePhaseId = phase.id
+        }
     }
 }
 
