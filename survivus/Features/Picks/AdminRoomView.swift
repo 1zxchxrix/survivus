@@ -59,11 +59,13 @@ struct AdminRoomView: View {
             SelectPhaseSheet(
                 phases: phases,
                 currentPhaseID: currentPhase?.id,
+                lockedPhaseIDs: app.activatedPhaseIDs,
                 onActivate: { phase in
                     app.activePhaseId = phase.id
                     isPresentingSelectPhase = false
                 },
                 onModify: { phase in
+                    guard !app.hasPhaseEverBeenActive(phase.id) else { return }
                     phaseBeingEdited = phase
                     isPresentingSelectPhase = false
                 },
@@ -176,6 +178,7 @@ private extension AdminRoomView {
 
     func handlePhaseSave(_ phase: PickPhase) {
         if let index = app.phases.firstIndex(where: { $0.id == phase.id }) {
+            guard !app.hasPhaseEverBeenActive(phase.id) else { return }
             app.phases[index] = phase
         } else {
             app.phases.append(phase)
@@ -466,6 +469,7 @@ private struct SelectPhaseSheet: View {
 
     let phases: [PickPhase]
     let currentPhaseID: PickPhase.ID?
+    let lockedPhaseIDs: Set<PickPhase.ID>
     let onActivate: (PickPhase) -> Void
     let onModify: (PickPhase) -> Void
     let onDelete: (PickPhase) -> Void
@@ -485,6 +489,7 @@ private struct SelectPhaseSheet: View {
                             PhaseRow(
                                 phase: phase,
                                 isActive: phase.id == currentPhaseID,
+                                isEditable: !lockedPhaseIDs.contains(phase.id),
                                 onActivate: {
                                     onActivate($0)
                                     dismiss()
@@ -689,12 +694,14 @@ private struct InsertResultsSheet: View {
 private struct PhaseRow: View {
     let phase: PickPhase
     let isActive: Bool
+    let isEditable: Bool
     let onActivate: (PickPhase) -> Void
     let onModify: (PickPhase) -> Void
     let onDelete: (PickPhase) -> Void
 
     var body: some View {
         Button {
+            guard isEditable else { return }
             onModify(phase)
         } label: {
             VStack(alignment: .leading, spacing: 8) {
@@ -711,11 +718,21 @@ private struct PhaseRow: View {
                             .foregroundStyle(Color.accentColor)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
+
+                    if !isEditable {
+                        LockPill(text: "Previously active")
+                    }
                 }
 
                 if !phase.categories.isEmpty {
                     Text("Categories: \(phase.categories.count)")
                         .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !isEditable {
+                    Text("Phases that have been active cannot be modified.")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
