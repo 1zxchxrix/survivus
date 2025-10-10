@@ -16,5 +16,42 @@ struct UserScoreBreakdown: Identifiable, Hashable, Codable {
     var mergeTrackPoints: Int
     var finalThreeTrackPoints: Int
     var winnerPoints: Int
-    var total: Int { votedOutPoints + remainPoints + immunityPoints + mergeTrackPoints + finalThreeTrackPoints + winnerPoints }
+    var categoryPointsByColumnId: [String: Int]
+
+    init(
+        userId: String,
+        weeksParticipated: Int,
+        votedOutPoints: Int,
+        remainPoints: Int,
+        immunityPoints: Int,
+        mergeTrackPoints: Int,
+        finalThreeTrackPoints: Int,
+        winnerPoints: Int,
+        categoryPointsByColumnId: [String: Int] = [:]
+    ) {
+        self.userId = userId
+        self.weeksParticipated = weeksParticipated
+        self.votedOutPoints = votedOutPoints
+        self.remainPoints = remainPoints
+        self.immunityPoints = immunityPoints
+        self.mergeTrackPoints = mergeTrackPoints
+        self.finalThreeTrackPoints = finalThreeTrackPoints
+        self.winnerPoints = winnerPoints
+        self.categoryPointsByColumnId = categoryPointsByColumnId
+    }
+
+    var total: Int {
+        votedOutPoints
+            + remainPoints
+            + immunityPoints
+            + mergeTrackPoints
+            + finalThreeTrackPoints
+            + winnerPoints
+            + categoryPointsByColumnId.values.reduce(0, +)
+    }
+
+    func points(forColumnId columnId: String) -> Int {
+        let normalized = columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return categoryPointsByColumnId[normalized] ?? 0
+    }
 }

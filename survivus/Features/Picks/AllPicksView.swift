@@ -487,8 +487,11 @@ private struct UserPicksCard: View {
             return weeklyPicks.votedOut.intersection(votedOutIds)
         case .immunity:
             return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
-        case .custom:
-            return []
+        case let .custom(categoryId):
+            let winners = Set(result.winners(for: categoryId))
+            guard !winners.isEmpty else { return [] }
+            let selections = weeklyPicks.selections(for: categoryId)
+            return selections.intersection(winners)
         }
     }
 

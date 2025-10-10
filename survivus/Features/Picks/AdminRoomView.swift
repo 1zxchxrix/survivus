@@ -605,6 +605,13 @@ private struct InsertResultsSheet: View {
             if let votedOutCategory = insertableCategories.first(where: { $0.matchesVotedOutCategory }) {
                 initialSelections[votedOutCategory.id] = Set(existingResult.votedOut)
             }
+
+            for category in insertableCategories {
+                let winners = existingResult.winners(for: category.id)
+                if !winners.isEmpty {
+                    initialSelections[category.id] = Set(winners)
+                }
+            }
         }
 
         _selections = State(initialValue: initialSelections)
@@ -716,12 +723,17 @@ private struct InsertResultsSheet: View {
     private func buildEpisodeResult() -> EpisodeResult {
         var result = existingResult ?? EpisodeResult(id: episodeId, immunityWinners: [], votedOut: [])
 
-        if let immunityCategory = insertableCategories.first(where: { $0.matchesImmunityCategory }) {
-            result.immunityWinners = sortedSelection(for: immunityCategory)
-        }
+        for category in insertableCategories {
+            let winners = sortedSelection(for: category)
+            result.setWinners(winners, for: category.id)
 
-        if let votedOutCategory = insertableCategories.first(where: { $0.matchesVotedOutCategory }) {
-            result.votedOut = sortedSelection(for: votedOutCategory)
+            if category.matchesImmunityCategory {
+                result.immunityWinners = winners
+            }
+
+            if category.matchesVotedOutCategory {
+                result.votedOut = winners
+            }
         }
 
         return result
