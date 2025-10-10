@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TableView: View {
     @EnvironmentObject var app: AppState
+    @State private var horizontalScrollOffset: CGFloat = 0
 
     var body: some View {
         let config = app.store.config
@@ -9,8 +10,11 @@ struct TableView: View {
         let lastEpisodeWithResult = app.store.results.map { $0.id }.max() ?? 0
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
         let dynamicColumns = columns(from: app.phases)
-        let columns: [TableColumnDefinition] = [.weeksParticipated] + dynamicColumns + [.totalPoints]
+        let columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated] + dynamicColumns
+        let pinnedColumns = columns.first.map { [$0] } ?? []
+        let scrollableColumns = Array(columns.dropFirst())
         let nameColumnMinWidth: CGFloat = 160
+        let columnSpacing: CGFloat = 8
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
             var votedOutPoints = 0
@@ -49,9 +53,15 @@ struct TableView: View {
         return NavigationStack {
             ScrollView([.vertical, .horizontal]) {
                 VStack(spacing: 0) {
-                    TableHeader(columns: columns, nameColumnMinWidth: nameColumnMinWidth)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
+                    TableHeader(
+                        pinnedColumns: pinnedColumns,
+                        scrollableColumns: scrollableColumns,
+                        nameColumnMinWidth: nameColumnMinWidth,
+                        columnSpacing: columnSpacing,
+                        horizontalOffset: horizontalScrollOffset
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
 
                     if !breakdowns.isEmpty {
                         Divider()
@@ -65,8 +75,11 @@ struct TableView: View {
                         TableRow(
                             breakdown: breakdown,
                             user: usersById[breakdown.userId],
-                            columns: columns,
-                            nameColumnMinWidth: nameColumnMinWidth
+                            pinnedColumns: pinnedColumns,
+                            scrollableColumns: scrollableColumns,
+                            nameColumnMinWidth: nameColumnMinWidth,
+                            columnSpacing: columnSpacing,
+                            horizontalOffset: horizontalScrollOffset
                         )
                         .padding(.horizontal)
                         .padding(.vertical, 8)
@@ -74,6 +87,8 @@ struct TableView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .coordinateSpace(name: "tableScroll")
+            .onPreferenceChange(HorizontalScrollOffsetKey.self) { horizontalScrollOffset = $0 }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Table")
         }
@@ -97,7 +112,7 @@ struct TableView: View {
                     TableColumnDefinition(
                         id: trimmedId,
                         title: trimmedId,
-                        width: 56,
+                        width: 48,
                         metric: metric
                     )
                 )
@@ -109,33 +124,66 @@ struct TableView: View {
 }
 
 private struct TableHeader: View {
-    let columns: [TableColumnDefinition]
+    let pinnedColumns: [TableColumnDefinition]
+    let scrollableColumns: [TableColumnDefinition]
     let nameColumnMinWidth: CGFloat
+    let columnSpacing: CGFloat
+    let horizontalOffset: CGFloat
 
-    var body: some View {
-        HStack(spacing: 12) {
+    private var pinnedContent: some View {
+        HStack(spacing: columnSpacing) {
             Text("Name")
                 .font(.subheadline.weight(.semibold))
                 .frame(minWidth: nameColumnMinWidth, alignment: .leading)
 
-            ForEach(columns) { column in
+            ForEach(pinnedColumns) { column in
                 Text(column.title)
                     .font(.footnote.weight(.semibold))
                     .frame(width: column.width, alignment: .center)
             }
         }
+    }
+
+    var body: some View {
+        HStack(spacing: columnSpacing) {
+            pinnedContent.hidden()
+
+            ForEach(scrollableColumns) { column in
+                Text(column.title)
+                    .font(.footnote.weight(.semibold))
+                    .frame(width: column.width, alignment: .center)
+            }
+        }
+        .overlay(alignment: .leading) {
+            pinnedContent
+                .offset(x: horizontalOffset)
+                .background(Color(.systemGroupedBackground))
+                .allowsHitTesting(false)
+        }
         .foregroundStyle(.secondary)
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(
+                        key: HorizontalScrollOffsetKey.self,
+                        value: -proxy.frame(in: .named("tableScroll")).minX
+                    )
+            }
+        )
     }
 }
 
 private struct TableRow: View {
     let breakdown: UserScoreBreakdown
     let user: UserProfile?
-    let columns: [TableColumnDefinition]
+    let pinnedColumns: [TableColumnDefinition]
+    let scrollableColumns: [TableColumnDefinition]
     let nameColumnMinWidth: CGFloat
+    let columnSpacing: CGFloat
+    let horizontalOffset: CGFloat
 
-    var body: some View {
-        HStack(spacing: 12) {
+    private var pinnedContent: some View {
+        HStack(spacing: columnSpacing) {
             HStack(spacing: 8) {
                 if let user {
                     Image(user.avatarAssetName)
@@ -158,11 +206,29 @@ private struct TableRow: View {
             }
             .frame(minWidth: nameColumnMinWidth, alignment: .leading)
 
-            ForEach(columns) { column in
+            ForEach(pinnedColumns) { column in
                 Text(column.displayValue(for: breakdown))
                     .font(.subheadline.weight(column.metric == .total ? .semibold : .regular))
                     .frame(width: column.width, alignment: .center)
             }
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: columnSpacing) {
+            pinnedContent.hidden()
+
+            ForEach(scrollableColumns) { column in
+                Text(column.displayValue(for: breakdown))
+                    .font(.subheadline.weight(column.metric == .total ? .semibold : .regular))
+                    .frame(width: column.width, alignment: .center)
+            }
+        }
+        .overlay(alignment: .leading) {
+            pinnedContent
+                .offset(x: horizontalOffset)
+                .background(Color(.systemGroupedBackground))
+                .allowsHitTesting(false)
         }
     }
 }
@@ -229,6 +295,14 @@ private struct TableColumnDefinition: Identifiable, Hashable {
 }
 
 private extension TableColumnDefinition {
-    static let weeksParticipated = TableColumnDefinition(id: "Wk", title: "Wk", width: 44, metric: .weeks)
-    static let totalPoints = TableColumnDefinition(id: "Pts", title: "Pts", width: 56, metric: .total)
+    static let weeksParticipated = TableColumnDefinition(id: "Wk", title: "Wk", width: 40, metric: .weeks)
+    static let totalPoints = TableColumnDefinition(id: "Pts", title: "Pts", width: 52, metric: .total)
+}
+
+private struct HorizontalScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
 }
