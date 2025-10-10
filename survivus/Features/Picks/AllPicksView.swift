@@ -259,34 +259,7 @@ private struct UserPicksCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(user.avatarAssetName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
-                    .accessibilityHidden(true)
-
-                Text(user.displayName)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
-                if let onToggleCollapse {
-                    Button {
-                        onToggleCollapse()
-                    } label: {
-                        Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
-                            .imageScale(.medium)
-                            .padding(6)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(isCollapsed ? "Show picks" : "Hide picks")
-                    .accessibilityHint("Toggle to show or hide picks for \(user.displayName)")
-                }
-            }
+            header
 
             if isCollapsed {
                 Text("Picks hidden")
@@ -501,6 +474,62 @@ private struct UserPicksCard: View {
             return weeklyPicks.votedOut.intersection(votedOutIds)
         case .immunity:
             return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
+        }
+    }
+
+    @ViewBuilder
+    private var header: some View {
+        if isCurrentUser {
+            NavigationLink {
+                ActiveUserProfileView(user: user)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(user.avatarAssetName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(Circle())
+
+                    Text(user.displayName)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("View profile")
+            .accessibilityHint("Open your profile to sign out")
+        } else {
+            HStack(spacing: 12) {
+                Image(user.avatarAssetName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+                    .accessibilityHidden(true)
+
+                Text(user.displayName)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Spacer()
+
+                if let onToggleCollapse {
+                    Button {
+                        onToggleCollapse()
+                    } label: {
+                        Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
+                            .imageScale(.medium)
+                            .padding(6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isCollapsed ? "Show picks" : "Hide picks")
+                    .accessibilityHint("Toggle to show or hide picks for \(user.displayName)")
+                }
+            }
         }
     }
 }
