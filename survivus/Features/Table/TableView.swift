@@ -9,7 +9,8 @@ struct TableView: View {
         let scoring = app.scoring
         let lastEpisodeWithResult = app.store.results.map { $0.id }.max() ?? 0
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
-        let dynamicColumns = columns(from: app.phases)
+        let activeColumnIDs = activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
+        let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
         let columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated] + dynamicColumns
         let pinnedColumns = columns.first.map { [$0] } ?? []
         let scrollableColumns = Array(columns.dropFirst())
@@ -97,7 +98,21 @@ struct TableView: View {
         }
     }
 
-    private func columns(from phases: [PickPhase]) -> [TableColumnDefinition] {
+    private func activeColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
+        var result: Set<String> = []
+
+        for phase in phases where activatedPhaseIDs.contains(phase.id) {
+            for category in phase.categories {
+                let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                guard !trimmedId.isEmpty else { continue }
+                result.insert(trimmedId)
+            }
+        }
+
+        return result
+    }
+
+    private func columns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
         var seenIds: Set<String> = [
             TableColumnDefinition.weeksParticipated.id.uppercased(),
             TableColumnDefinition.totalPoints.id.uppercased()
@@ -114,7 +129,8 @@ struct TableView: View {
                         id: trimmedId,
                         title: trimmedId,
                         width: 48,
-                        metric: TableColumnDefinition.Metric(category: category)
+                        metric: TableColumnDefinition.Metric(category: category),
+                        isActive: activeColumnIDs.contains(trimmedId)
                     )
                 )
             }
@@ -268,9 +284,10 @@ private struct TableColumnDefinition: Identifiable, Hashable {
     let title: String
     let width: CGFloat
     let metric: Metric?
+    let isActive: Bool
 
     func displayValue(for breakdown: UserScoreBreakdown) -> String {
-        guard let metric else { return "-" }
+        guard isActive, let metric else { return "-" }
         return String(value(for: breakdown, metric: metric))
     }
 
@@ -297,8 +314,8 @@ private struct TableColumnDefinition: Identifiable, Hashable {
 }
 
 private extension TableColumnDefinition {
-    static let weeksParticipated = TableColumnDefinition(id: "Wk", title: "Wk", width: 40, metric: .weeks)
-    static let totalPoints = TableColumnDefinition(id: "Pts", title: "Pts", width: 52, metric: .total)
+    static let weeksParticipated = TableColumnDefinition(id: "Wk", title: "Wk", width: 40, metric: .weeks, isActive: true)
+    static let totalPoints = TableColumnDefinition(id: "Pts", title: "Pts", width: 52, metric: .total, isActive: true)
 }
 
 private struct HorizontalScrollOffsetKey: PreferenceKey {
