@@ -490,7 +490,7 @@ private struct SelectPhaseSheet: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Modify Phase")
+            .navigationTitle("Select Phase to Modify")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
