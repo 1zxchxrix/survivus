@@ -35,7 +35,7 @@ struct AdminRoomView: View {
             }
 
             Section("Phase") {
-                Button("Select Current Phase") {
+                Button("Modify Phase") {
                     isPresentingSelectPhase = true
                 }
                 .disabled(!hasPhases)
@@ -490,14 +490,7 @@ private struct SelectPhaseSheet: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Select Phase")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-            }
+            .navigationTitle("Modify Phase")
         }
         .presentationDetents([.fraction(0.8)])
         .presentationCornerRadius(28)
