@@ -687,33 +687,37 @@ private struct PhaseRow: View {
     let onDelete: (PickPhase) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(phase.name)
-                    .font(.headline)
+        Button {
+            onModify(phase)
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(phase.name)
+                        .font(.headline)
 
-                if isActive {
-                    Text("Active")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.15))
-                        .foregroundStyle(Color.accentColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    if isActive {
+                        Text("Active")
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.15))
+                            .foregroundStyle(Color.accentColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+
+                if !phase.categories.isEmpty {
+                    Text("Categories: \(phase.categories.count)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
-
-            if !phase.categories.isEmpty {
-                Text("Categories: \(phase.categories.count)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 8)
+        .buttonStyle(.plain)
         .contentShape(Rectangle())
-        .onTapGesture {
-            onModify(phase)
-        }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
                 onDelete(phase)
