@@ -15,8 +15,10 @@ struct TableView: View {
         })
         let pinnedColumns = columns.filter { $0.isPinned }
         let scrollableColumns = columns.filter { !$0.isPinned }
-        let nameColumnMinWidth: CGFloat = 90
-        let columnSpacing: CGFloat = 1
+        let nameColumnMinWidth: CGFloat = 160
+        let columnSpacing: CGFloat = 4
+        let tableHorizontalPadding: CGFloat = 12
+        let pinnedToScrollableSpacing: CGFloat = tableHorizontalPadding
         let rowContentMinHeight: CGFloat = 32
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
@@ -72,7 +74,7 @@ struct TableView: View {
                             showsTrailingSeparator: false
                         )
                     } else {
-                        HStack(alignment: .top, spacing: columnSpacing) {
+                        HStack(alignment: .top, spacing: pinnedToScrollableSpacing) {
                             TablePinnedSection(
                                 pinnedColumns: pinnedColumns,
                                 breakdowns: breakdowns,
@@ -95,7 +97,7 @@ struct TableView: View {
                         }
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, tableHorizontalPadding)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
