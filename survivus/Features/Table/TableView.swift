@@ -287,7 +287,12 @@ private struct TableColumnDefinition: Identifiable, Hashable {
     let isActive: Bool
 
     func displayValue(for breakdown: UserScoreBreakdown) -> String {
-        guard isActive, let metric else { return "-" }
+        guard isActive else { return "-" }
+
+        guard let metric else {
+            return "0"
+        }
+
         return String(value(for: breakdown, metric: metric))
     }
 
