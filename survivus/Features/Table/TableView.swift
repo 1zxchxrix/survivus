@@ -15,8 +15,8 @@ struct TableView: View {
         })
         let pinnedColumns = columns.filter { $0.isPinned }
         let scrollableColumns = columns.filter { !$0.isPinned }
-        let nameColumnMinWidth: CGFloat = 160
-        let columnSpacing: CGFloat = 4
+        let nameColumnMinWidth: CGFloat = 90
+        let columnSpacing: CGFloat = 1
         let rowContentMinHeight: CGFloat = 32
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
