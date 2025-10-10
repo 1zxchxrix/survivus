@@ -708,26 +708,26 @@ private struct PhaseRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-
-            HStack(spacing: 12) {
-                Button("Activate") {
-                    onActivate(phase)
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Modify") {
-                    onModify(phase)
-                }
-                .buttonStyle(.bordered)
-
-                Button(role: .destructive) {
-                    onDelete(phase)
-                } label: {
-                    Text("Delete")
-                }
-            }
-            .buttonStyle(.borderless)
         }
         .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onModify(phase)
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                onDelete(phase)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                onActivate(phase)
+            } label: {
+                Label("Activate", systemImage: "checkmark.circle")
+            }
+            .tint(.blue)
+        }
     }
 }
