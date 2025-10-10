@@ -239,7 +239,7 @@ private struct TablePinnedHeader: View {
     var body: some View {
         HStack(spacing: columnSpacing) {
             Text("Name")
-                .font(.subheadline.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .frame(minWidth: nameColumnMinWidth, alignment: .leading)
 
             ForEach(pinnedColumns) { column in
