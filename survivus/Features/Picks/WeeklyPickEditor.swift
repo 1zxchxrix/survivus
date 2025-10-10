@@ -4,6 +4,14 @@ enum WeeklyPickPanel: Hashable {
     case remain
     case votedOut
     case immunity
+    case custom(UUID)
+
+    var categoryId: UUID? {
+        if case let .custom(id) = self {
+            return id
+        }
+        return nil
+    }
 }
 
 struct WeeklyPickEditor: View {
@@ -67,6 +75,8 @@ struct WeeklyPickEditor: View {
             return picks.votedOut
         case .immunity:
             return picks.immunity
+        case let .custom(categoryId):
+            return picks.selections(for: categoryId)
         }
     }
 
@@ -80,6 +90,8 @@ struct WeeklyPickEditor: View {
             picks.votedOut = limited
         case .immunity:
             picks.immunity = limited
+        case let .custom(categoryId):
+            picks.setSelections(limited, for: categoryId)
         }
         app.store.save(picks)
     }
@@ -92,21 +104,23 @@ struct WeeklyPickEditor: View {
             return caps.votedOut ?? 3
         case .immunity:
             return caps.immunity ?? 3
+        case .custom:
+            return defaultCustomLimit
         }
     }
 
     private func phaseCategoryLimit(for panel: WeeklyPickPanel) -> Int? {
-        guard let categories = app.activePhase?.categories else { return nil }
-
         let matchingCategory: PickPhase.Category?
 
         switch panel {
         case .remain:
-            matchingCategory = categories.first(where: { $0.matchesRemainCategory })
+            matchingCategory = app.activePhase?.categories.first(where: { $0.matchesRemainCategory })
         case .votedOut:
-            matchingCategory = categories.first(where: { $0.matchesVotedOutCategory })
+            matchingCategory = app.activePhase?.categories.first(where: { $0.matchesVotedOutCategory })
         case .immunity:
-            matchingCategory = categories.first(where: { $0.matchesImmunityCategory })
+            matchingCategory = app.activePhase?.categories.first(where: { $0.matchesImmunityCategory })
+        case let .custom(categoryId):
+            matchingCategory = category(withId: categoryId)
         }
 
         guard let total = matchingCategory?.totalPicks, total > 0 else { return nil }
@@ -121,6 +135,8 @@ struct WeeklyPickEditor: View {
             return "Who Will be Voted Out"
         case .immunity:
             return "Who Will Have Immunity"
+        case let .custom(categoryId):
+            return categoryName(for: categoryId)
         }
     }
 
@@ -132,6 +148,40 @@ struct WeeklyPickEditor: View {
             return "Select up to \(limit) players you think will be voted out."
         case .immunity:
             return "Select up to \(limit) players you think will win immunity."
+        case let .custom(categoryId):
+            let name = categoryName(for: categoryId)
+            return "Select up to \(limit) players for \(name)."
         }
+    }
+
+    private var defaultCustomLimit: Int {
+        guard let categoryId = panel.categoryId,
+              let category = category(withId: categoryId)
+        else { return 3 }
+
+        return max(category.totalPicks, 1)
+    }
+
+    private func categoryName(for categoryId: UUID) -> String {
+        guard let category = category(withId: categoryId) else {
+            return "Category"
+        }
+
+        let trimmed = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Category" : trimmed
+    }
+
+    private func category(withId id: UUID) -> PickPhase.Category? {
+        if let category = app.activePhase?.categories.first(where: { $0.id == id }) {
+            return category
+        }
+
+        for phase in app.phases {
+            if let category = phase.categories.first(where: { $0.id == id }) {
+                return category
+            }
+        }
+
+        return nil
     }
 }

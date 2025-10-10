@@ -425,7 +425,7 @@ private struct UserPicksCard: View {
             return .weekly(.remain)
         }
 
-        return .unknown
+        return .weekly(.custom(category.id))
     }
 
     private func contestants(
@@ -461,6 +461,8 @@ private struct UserPicksCard: View {
                 return contestants(for: weeklyPicks?.votedOut ?? Set<String>(), limit: limit)
             case .immunity:
                 return contestants(for: weeklyPicks?.immunity ?? Set<String>(), limit: limit)
+            case let .custom(categoryId):
+                return contestants(for: weeklyPicks?.selections(for: categoryId) ?? Set<String>(), limit: limit)
             }
         case .unknown:
             return []
@@ -485,6 +487,8 @@ private struct UserPicksCard: View {
             return weeklyPicks.votedOut.intersection(votedOutIds)
         case .immunity:
             return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
+        case .custom:
+            return []
         }
     }
 
@@ -549,6 +553,10 @@ private extension UserPicksCard {
     private func selectionLimit(for category: PickPhase.Category, kind: CategoryKind) -> Int? {
         switch kind {
         case .weekly(let panel):
+            if case .custom = panel {
+                return positiveLimit(from: category.totalPicks)
+            }
+
             guard let episode = selectedEpisode else {
                 return positiveLimit(from: category.totalPicks)
             }
