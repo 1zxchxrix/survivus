@@ -64,7 +64,7 @@ extension PickPhase {
             categories: [
                 .init(name: "Carried", columnId: "CA", totalPicks: 1, pointsPerCorrectPick: 10, isLocked: false),
                 .init(name: "Fire", columnId: "FI", totalPicks: 2, pointsPerCorrectPick: 10, isLocked: false),
-                .init(name: "Fire winner", columnId: "FW", totalPicks: 1, pointsPerCorrectPick: 15, isLocked: false),
+                .init(name: "Fire Winner", columnId: "FW", totalPicks: 1, pointsPerCorrectPick: 15, isLocked: false),
                 .init(name: "Sole Survivor", columnId: "SS", totalPicks: 1, pointsPerCorrectPick: 25, isLocked: false)
             ]
         )

@@ -260,6 +260,7 @@ private struct CreatePhaseSheet: View {
     @State private var categories: [CategoryDraft]
     @State private var isPresentingCategoryEditor = false
     @State private var categoryBeingEdited: CategoryDraft?
+    @State private var isPresetListExpanded = false
 
     private let phase: PickPhase?
     var onSave: (PickPhase) -> Void
@@ -307,6 +308,29 @@ private struct CreatePhaseSheet: View {
                     } label: {
                         Label("Add category", systemImage: "plus.circle.fill")
                     }
+
+                    DisclosureGroup(isExpanded: $isPresetListExpanded) {
+                        let presets = CategoryPreset.all
+
+                        VStack(spacing: 8) {
+                            ForEach(Array(presets.enumerated()), id: \.element.id) { index, preset in
+                                Button {
+                                    addCategory(from: preset)
+                                } label: {
+                                    CategoryPresetRow(preset: preset)
+                                        .padding(.vertical, 4)
+                                }
+                                .buttonStyle(.plain)
+
+                                if index < presets.count - 1 {
+                                    Divider()
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                    } label: {
+                        Label("Category presets", systemImage: "square.grid.2x2")
+                    }
                 }
             }
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
@@ -349,6 +373,16 @@ private struct CreatePhaseSheet: View {
     }
 }
 
+private extension CreatePhaseSheet {
+    func addCategory(from preset: CategoryPreset) {
+        let newCategory = preset.makeDraft()
+        categories.append(newCategory)
+        withAnimation {
+            isPresetListExpanded = false
+        }
+    }
+}
+
 private struct CategoryRow: View {
     let category: CategoryDraft
 
@@ -380,6 +414,36 @@ private struct CategoryRow: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+private struct CategoryPresetRow: View {
+    let preset: CategoryPreset
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(preset.name)
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Column ID: \(preset.columnId.isEmpty ? "COL" : preset.columnId)")
+
+                Text("Total picks: \(preset.totalPicks)")
+
+                if let points = preset.pointsPerCorrectPick {
+                    Text("Points per correct pick: \(points)")
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+
+            if preset.isLocked {
+                Text("Locked")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
