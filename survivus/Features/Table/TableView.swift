@@ -15,7 +15,7 @@ struct TableView: View {
         })
         let pinnedColumns = columns.filter { $0.isPinned }
         let scrollableColumns = columns.filter { !$0.isPinned }
-        let nameColumnMinWidth: CGFloat = 160
+        let nameColumnWidth: CGFloat = 120
         let columnSpacing: CGFloat = 4
         let tableHorizontalPadding: CGFloat = 12
         let pinnedToScrollableSpacing: CGFloat = tableHorizontalPadding
@@ -68,7 +68,7 @@ struct TableView: View {
                             pinnedColumns: pinnedColumns,
                             breakdowns: breakdowns,
                             usersById: usersById,
-                            nameColumnMinWidth: nameColumnMinWidth,
+                            nameColumnWidth: nameColumnWidth,
                             columnSpacing: columnSpacing,
                             rowContentMinHeight: rowContentMinHeight,
                             showsTrailingSeparator: false
@@ -79,7 +79,7 @@ struct TableView: View {
                                 pinnedColumns: pinnedColumns,
                                 breakdowns: breakdowns,
                                 usersById: usersById,
-                                nameColumnMinWidth: nameColumnMinWidth,
+                                nameColumnWidth: nameColumnWidth,
                                 columnSpacing: columnSpacing,
                                 rowContentMinHeight: rowContentMinHeight,
                                 showsTrailingSeparator: true
@@ -153,7 +153,7 @@ private struct TablePinnedSection: View {
     let pinnedColumns: [TableColumnDefinition]
     let breakdowns: [UserScoreBreakdown]
     let usersById: [UserProfile.ID: UserProfile]
-    let nameColumnMinWidth: CGFloat
+    let nameColumnWidth: CGFloat
     let columnSpacing: CGFloat
     let rowContentMinHeight: CGFloat
     let showsTrailingSeparator: Bool
@@ -162,7 +162,7 @@ private struct TablePinnedSection: View {
         VStack(spacing: 0) {
             TablePinnedHeader(
                 pinnedColumns: pinnedColumns,
-                nameColumnMinWidth: nameColumnMinWidth,
+                nameColumnWidth: nameColumnWidth,
                 columnSpacing: columnSpacing
             )
             .padding(.vertical, 8)
@@ -180,7 +180,7 @@ private struct TablePinnedSection: View {
                     breakdown: breakdown,
                     user: usersById[breakdown.userId],
                     pinnedColumns: pinnedColumns,
-                    nameColumnMinWidth: nameColumnMinWidth,
+                    nameColumnWidth: nameColumnWidth,
                     columnSpacing: columnSpacing,
                     rowContentMinHeight: rowContentMinHeight
                 )
@@ -235,14 +235,14 @@ private struct TableScrollableSection: View {
 
 private struct TablePinnedHeader: View {
     let pinnedColumns: [TableColumnDefinition]
-    let nameColumnMinWidth: CGFloat
+    let nameColumnWidth: CGFloat
     let columnSpacing: CGFloat
 
     var body: some View {
         HStack(spacing: columnSpacing) {
             Text("Name")
                 .font(.footnote.weight(.semibold))
-                .frame(minWidth: nameColumnMinWidth, alignment: .leading)
+                .frame(width: nameColumnWidth, alignment: .leading)
 
             ForEach(pinnedColumns) { column in
                 Text(column.title)
@@ -274,7 +274,7 @@ private struct TablePinnedRow: View {
     let breakdown: UserScoreBreakdown
     let user: UserProfile?
     let pinnedColumns: [TableColumnDefinition]
-    let nameColumnMinWidth: CGFloat
+    let nameColumnWidth: CGFloat
     let columnSpacing: CGFloat
     let rowContentMinHeight: CGFloat
 
@@ -292,15 +292,15 @@ private struct TablePinnedRow: View {
                     Text(user.displayName)
                         .font(.subheadline)
                         .lineLimit(1)
-                        .layoutPriority(1)
+                        .truncationMode(.tail)
                 } else {
                     Text(breakdown.userId)
                         .font(.subheadline)
                         .lineLimit(1)
-                        .layoutPriority(1)
+                        .truncationMode(.tail)
                 }
             }
-            .frame(minWidth: nameColumnMinWidth, alignment: .leading)
+            .frame(width: nameColumnWidth, alignment: .leading)
             .frame(minHeight: rowContentMinHeight, alignment: .center)
 
             ForEach(pinnedColumns) { column in
