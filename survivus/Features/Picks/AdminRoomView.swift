@@ -261,6 +261,8 @@ private struct CreatePhaseSheet: View {
     @State private var isPresentingCategoryEditor = false
     @State private var categoryBeingEdited: CategoryDraft?
     @State private var isPresetListExpanded = false
+    @State private var availablePresets: [CategoryPreset]
+    @State private var presetUsageByCategoryID: [CategoryDraft.ID: CategoryPreset.ID]
 
     private let phase: PickPhase?
     var onSave: (PickPhase) -> Void
@@ -268,8 +270,12 @@ private struct CreatePhaseSheet: View {
     init(phase: PickPhase? = nil, onSave: @escaping (PickPhase) -> Void) {
         self.phase = phase
         self.onSave = onSave
+        let initialCategories = phase?.categories.map(CategoryDraft.init) ?? []
+        let presetState = Self.initialPresetState(for: initialCategories)
         _phaseName = State(initialValue: phase?.name ?? "")
-        _categories = State(initialValue: phase?.categories.map(CategoryDraft.init) ?? [])
+        _categories = State(initialValue: initialCategories)
+        _availablePresets = State(initialValue: presetState.availablePresets)
+        _presetUsageByCategoryID = State(initialValue: presetState.usage)
     }
 
     var body: some View {
@@ -290,9 +296,10 @@ private struct CreatePhaseSheet: View {
                                     .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
+                            .transition(.move(edge: .top).combined(with: .opacity))
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
-                                    categories.removeAll { $0.id == category.id }
+                                    removeCategory(category)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -310,29 +317,37 @@ private struct CreatePhaseSheet: View {
                     }
 
                     DisclosureGroup(isExpanded: $isPresetListExpanded) {
-                        let presets = CategoryPreset.all
-
                         VStack(spacing: 8) {
-                            ForEach(Array(presets.enumerated()), id: \.element.id) { index, preset in
-                                Button {
-                                    addCategory(from: preset)
-                                } label: {
-                                    CategoryPresetRow(preset: preset)
-                                        .padding(.vertical, 4)
-                                }
-                                .buttonStyle(.plain)
+                            if availablePresets.isEmpty {
+                                Text("All presets have been added")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .transition(.opacity)
+                            } else {
+                                ForEach(Array(availablePresets.enumerated()), id: \.element.id) { index, preset in
+                                    Button {
+                                        addCategory(from: preset)
+                                    } label: {
+                                        CategoryPresetRow(preset: preset)
+                                            .padding(.vertical, 4)
+                                    }
+                                    .buttonStyle(.plain)
 
-                                if index < presets.count - 1 {
-                                    Divider()
+                                    if index < availablePresets.count - 1 {
+                                        Divider()
+                                    }
                                 }
                             }
                         }
                         .padding(.top, 4)
+                        .animation(.easeInOut, value: availablePresets)
                     } label: {
                         Label("Category presets", systemImage: "square.grid.2x2")
                     }
                 }
             }
+            .animation(.easeInOut, value: categories)
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $isPresentingCategoryEditor, onDismiss: {
@@ -341,8 +356,11 @@ private struct CreatePhaseSheet: View {
                 CategoryEditorSheet(category: categoryBeingEdited) { category in
                     if let index = categories.firstIndex(where: { $0.id == category.id }) {
                         categories[index] = category
+                        updatePresetUsage(for: category)
                     } else {
-                        categories.append(category)
+                        withAnimation(.easeInOut) {
+                            categories.append(category)
+                        }
                     }
                 }
             }
@@ -376,11 +394,83 @@ private struct CreatePhaseSheet: View {
 private extension CreatePhaseSheet {
     func addCategory(from preset: CategoryPreset) {
         let newCategory = preset.makeDraft()
-        categories.append(newCategory)
-        withAnimation {
+        presetUsageByCategoryID[newCategory.id] = preset.id
+        withAnimation(.easeInOut) {
+            categories.append(newCategory)
+            availablePresets = availablePresets.filter { $0.id != preset.id }
             isPresetListExpanded = false
         }
     }
+
+    func removeCategory(_ category: CategoryDraft) {
+        withAnimation(.easeInOut) {
+            categories.removeAll { $0.id == category.id }
+        }
+
+        guard let presetID = presetUsageByCategoryID.removeValue(forKey: category.id),
+              let preset = CategoryPreset.all.first(where: { $0.id == presetID })
+        else { return }
+
+        withAnimation(.easeInOut) {
+            availablePresets = sortPresets(availablePresets + [preset])
+        }
+    }
+
+    func updatePresetUsage(for category: CategoryDraft) {
+        guard let presetID = presetUsageByCategoryID[category.id],
+              let preset = CategoryPreset.all.first(where: { $0.id == presetID })
+        else { return }
+
+        if Self.matchesPreset(category, preset: preset) {
+            return
+        }
+
+        presetUsageByCategoryID.removeValue(forKey: category.id)
+
+        withAnimation(.easeInOut) {
+            availablePresets = sortPresets(availablePresets + [preset])
+        }
+    }
+
+    static func initialPresetState(for categories: [CategoryDraft]) -> (availablePresets: [CategoryPreset], usage: [CategoryDraft.ID: CategoryPreset.ID]) {
+        var usage: [CategoryDraft.ID: CategoryPreset.ID] = [:]
+
+        for category in categories {
+            if let preset = matchingPreset(for: category) {
+                usage[category.id] = preset.id
+            }
+        }
+
+        let usedPresetIDs = Set(usage.values)
+        let availablePresets = CategoryPreset.all.filter { !usedPresetIDs.contains($0.id) }
+
+        return (availablePresets, usage)
+    }
+
+    static func matchingPreset(for category: CategoryDraft) -> CategoryPreset? {
+        CategoryPreset.all.first { matchesPreset(category, preset: $0) }
+    }
+
+    static func matchesPreset(_ category: CategoryDraft, preset: CategoryPreset) -> Bool {
+        normalize(columnId: category.columnId) == normalize(columnId: preset.columnId)
+    }
+
+    static func normalize(columnId: String) -> String {
+        columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+
+    func sortPresets(_ presets: [CategoryPreset]) -> [CategoryPreset] {
+        let order = Self.presetOrder
+        return presets.sorted { (order[$0.id] ?? 0) < (order[$1.id] ?? 0) }
+    }
+
+    private static let presetOrder: [CategoryPreset.ID: Int] = {
+        var order: [CategoryPreset.ID: Int] = [:]
+        for (index, preset) in CategoryPreset.all.enumerated() {
+            order[preset.id] = index
+        }
+        return order
+    }()
 }
 
 private struct CategoryRow: View {
