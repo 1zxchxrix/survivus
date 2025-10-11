@@ -258,7 +258,6 @@ private struct CreatePhaseSheet: View {
 
     @State private var phaseName: String
     @State private var categories: [CategoryDraft]
-    @State private var isPresentingCategoryEditor = false
     @State private var categoryBeingEdited: CategoryDraft?
     @State private var isPresetListExpanded = false
     @State private var availablePresets: [CategoryPreset]
@@ -290,7 +289,6 @@ private struct CreatePhaseSheet: View {
                         ForEach(categories) { category in
                             Button {
                                 categoryBeingEdited = category
-                                isPresentingCategoryEditor = true
                             } label: {
                                 CategoryRow(category: category)
                                     .padding(.vertical, 4)
@@ -310,8 +308,7 @@ private struct CreatePhaseSheet: View {
 
                 Section {
                     Button {
-                        categoryBeingEdited = nil
-                        isPresentingCategoryEditor = true
+                        categoryBeingEdited = CategoryDraft()
                     } label: {
                         Label("Add category", systemImage: "plus.circle.fill")
                     }
@@ -350,10 +347,11 @@ private struct CreatePhaseSheet: View {
             .animation(.easeInOut, value: categories)
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $isPresentingCategoryEditor, onDismiss: {
+            .sheet(item: $categoryBeingEdited, onDismiss: {
                 categoryBeingEdited = nil
-            }) {
-                CategoryEditorSheet(category: categoryBeingEdited) { category in
+            }) { category in
+                let isExistingCategory = categories.contains(where: { $0.id == category.id })
+                CategoryEditorSheet(category: category, isEditingExisting: isExistingCategory) { category in
                     if let index = categories.firstIndex(where: { $0.id == category.id }) {
                         categories[index] = category
                         updatePresetUsage(for: category)
@@ -543,14 +541,16 @@ private struct CategoryEditorSheet: View {
     @State private var draft: CategoryDraft
     @State private var pointsInput: String
 
+    private let isEditingExisting: Bool
     var onSave: (CategoryDraft) -> Void
 
-    init(category: CategoryDraft?, onSave: @escaping (CategoryDraft) -> Void) {
-        var initialDraft = category ?? CategoryDraft()
+    init(category: CategoryDraft, isEditingExisting: Bool, onSave: @escaping (CategoryDraft) -> Void) {
+        var initialDraft = category
         initialDraft.totalPicks = max(1, min(initialDraft.totalPicks, 5))
 
         _draft = State(initialValue: initialDraft)
         _pointsInput = State(initialValue: initialDraft.pointsPerCorrectPick.map(String.init) ?? "")
+        self.isEditingExisting = isEditingExisting
         self.onSave = onSave
     }
 
@@ -606,7 +606,7 @@ private struct CategoryEditorSheet: View {
                     .tint(.blue)
                 }
             }
-            .navigationTitle(draft.name.isEmpty ? "Add Category" : "Edit Category")
+            .navigationTitle(isEditingExisting ? "Edit Category" : "Add Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
