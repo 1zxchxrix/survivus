@@ -20,6 +20,9 @@ struct TableView: View {
         let tableHorizontalPadding: CGFloat = 12
         let pinnedToScrollableSpacing: CGFloat = tableHorizontalPadding
         let rowContentMinHeight: CGFloat = 32
+        let pinnedSectionWidth = pinnedColumns.reduce(nameColumnWidth) { partialWidth, column in
+            partialWidth + columnSpacing + column.width
+        }
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
             var votedOutPoints = 0
@@ -69,6 +72,7 @@ struct TableView: View {
                             breakdowns: breakdowns,
                             usersById: usersById,
                             nameColumnWidth: nameColumnWidth,
+                            pinnedSectionWidth: pinnedSectionWidth,
                             columnSpacing: columnSpacing,
                             rowContentMinHeight: rowContentMinHeight,
                             showsTrailingSeparator: false
@@ -80,6 +84,7 @@ struct TableView: View {
                                 breakdowns: breakdowns,
                                 usersById: usersById,
                                 nameColumnWidth: nameColumnWidth,
+                                pinnedSectionWidth: pinnedSectionWidth,
                                 columnSpacing: columnSpacing,
                                 rowContentMinHeight: rowContentMinHeight,
                                 showsTrailingSeparator: true
@@ -154,6 +159,7 @@ private struct TablePinnedSection: View {
     let breakdowns: [UserScoreBreakdown]
     let usersById: [UserProfile.ID: UserProfile]
     let nameColumnWidth: CGFloat
+    let pinnedSectionWidth: CGFloat
     let columnSpacing: CGFloat
     let rowContentMinHeight: CGFloat
     let showsTrailingSeparator: Bool
@@ -195,6 +201,7 @@ private struct TablePinnedSection: View {
                     .opacity(0.5)
             }
         }
+        .frame(width: pinnedSectionWidth, alignment: .leading)
     }
 }
 
