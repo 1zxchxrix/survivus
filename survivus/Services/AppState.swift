@@ -8,8 +8,8 @@ final class AppState: ObservableObject {
     // in-memory mock `MemoryStore` so user progress survives app restarts.
     @Published var store: MemoryStore {
         didSet {
-            store.delegate = self
-            subscribeToStoreChanges()
+            guard isStoreObservationActive else { return }
+            configureStoreObservation()
         }
     }
     @Published var currentUserId: String
@@ -24,6 +24,7 @@ final class AppState: ObservableObject {
     }
 
     private var cancellables: Set<AnyCancellable> = []
+    private var isStoreObservationActive = false
     private let repository: FirestoreLeagueRepository
 
     init(
@@ -33,14 +34,15 @@ final class AppState: ObservableObject {
         phases: [PickPhase]? = nil,
         connectToFirestore: Bool = true
     ) {
-        self.store = store ?? MemoryStore.placeholder()
-        self.currentUserId = self.store.users.first?.id ?? ""
+        let initialStore = store ?? MemoryStore.placeholder()
+        self.store = initialStore
+        self.currentUserId = initialStore.users.first?.id ?? ""
         self.phases = phases ?? []
         self.activatedPhaseIDs = []
         self.activePhaseId = nil
         self.repository = repository ?? FirestoreLeagueRepository(seasonId: seasonId)
-        self.store.delegate = self
-        subscribeToStoreChanges()
+        configureStoreObservation()
+        isStoreObservationActive = true
 
         if connectToFirestore {
             configureFirestoreBindings()
@@ -78,6 +80,11 @@ final class AppState: ObservableObject {
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
+    }
+
+    private func configureStoreObservation() {
+        store.delegate = self
+        subscribeToStoreChanges()
     }
 
     private func configureFirestoreBindings() {
