@@ -8,10 +8,19 @@ struct ResultsView: View {
     }
 
     private var displayedEpisodes: [Episode] {
-        let episodeIdsWithResults = Set(app.store.results.map { $0.id })
-        return app.store.config.episodes
-            .filter { episodeIdsWithResults.contains($0.id) }
-            .sorted(by: { $0.airDate > $1.airDate })
+        let configuredEpisodes = Dictionary(uniqueKeysWithValues: app.store.config.episodes.map { ($0.id, $0) })
+        return app.store.results
+            .compactMap { result in
+                configuredEpisodes[result.id] ?? Episode(id: result.id)
+            }
+            .sorted(by: { lhs, rhs in
+                let lhsDate = lhs.airDate ?? .distantPast
+                let rhsDate = rhs.airDate ?? .distantPast
+                if lhsDate == rhsDate {
+                    return lhs.id > rhs.id
+                }
+                return lhsDate > rhsDate
+            })
     }
 
     var body: some View {
@@ -29,7 +38,9 @@ struct ResultsView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
                         }
                         Spacer()
-                        Text(episode.airDate, style: .date).foregroundStyle(.secondary)
+                        if let airDate = episode.airDate {
+                            Text(airDate, style: .date).foregroundStyle(.secondary)
+                        }
                     }
                     if let result {
                         let immunityContestants = contestants(for: result.immunityWinners)
