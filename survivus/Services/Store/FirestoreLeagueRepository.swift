@@ -1,6 +1,6 @@
 import Foundation
 
-#if canImport(FirebaseFirestore)
+#if canImport(FirebaseFirestore) && canImport(FirebaseFirestoreInternalWrapper)
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
