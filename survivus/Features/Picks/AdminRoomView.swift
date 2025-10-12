@@ -116,7 +116,7 @@ struct AdminRoomView: View {
 #Preview {
     NavigationStack {
         AdminRoomView()
-            .environmentObject(AppState())
+            .environmentObject(AppState.preview)
     }
 }
 
@@ -901,7 +901,7 @@ private struct InsertResultsSheet: View {
 #Preview("Insert Results Sheet") {
     InsertResultsSheet(
         phase: .preview,
-        contestants: AppState().store.config.contestants,
+        contestants: AppState.preview.store.config.contestants,
         episodeId: 1,
         existingResult: EpisodeResult(id: 1, immunityWinners: [], votedOut: []),
         onSave: { _ in }
