@@ -701,5 +701,5 @@ private struct WeekOption: Identifiable {
 
 #Preview {
     AllPicksView()
-        .environmentObject(AppState())
+        .environmentObject(AppState.preview)
 }

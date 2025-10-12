@@ -1,12 +1,19 @@
 import Foundation
 import Combine
 
+protocol MemoryStoreDelegate: AnyObject {
+    func memoryStore(_ store: MemoryStore, didSaveWeeklyPicks picks: WeeklyPicks)
+    func memoryStore(_ store: MemoryStore, didUpdateSeasonPicks picks: SeasonPicks)
+}
+
 final class MemoryStore: ObservableObject {
     @Published var config: SeasonConfig
     @Published var results: [EpisodeResult]
     @Published var users: [UserProfile]
     @Published var seasonPicks: [String: SeasonPicks]
     @Published var weeklyPicks: [String: [Int: WeeklyPicks]]
+
+    weak var delegate: MemoryStoreDelegate?
 
     init(config: SeasonConfig, results: [EpisodeResult], users: [UserProfile]) {
         self.config = config
@@ -30,6 +37,7 @@ final class MemoryStore: ObservableObject {
     func save(_ picks: WeeklyPicks) {
         weeklyPicks[picks.userId, default: [:]][picks.episodeId] = picks
         objectWillChange.send()
+        delegate?.memoryStore(self, didSaveWeeklyPicks: picks)
     }
 
     func updateSeasonPicks(for userId: String, update: (inout SeasonPicks) -> Void) {
@@ -37,5 +45,12 @@ final class MemoryStore: ObservableObject {
         update(&picks)
         seasonPicks[userId] = picks
         objectWillChange.send()
+        delegate?.memoryStore(self, didUpdateSeasonPicks: picks)
+    }
+}
+
+extension MemoryStore {
+    static func placeholder() -> MemoryStore {
+        MemoryStore(config: .placeholder, results: [], users: [])
     }
 }

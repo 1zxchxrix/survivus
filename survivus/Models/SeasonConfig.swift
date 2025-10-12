@@ -15,3 +15,9 @@ struct SeasonConfig: Codable {
     var weeklyPickCapsPostMerge: WeeklyPickCaps = .init(remain: 3, votedOut: 3, immunity: nil)
     var lockHourUTC: Int = 23
 }
+
+extension SeasonConfig {
+    static var placeholder: SeasonConfig {
+        SeasonConfig(seasonId: "loading", name: "Loading…", contestants: [], episodes: [])
+    }
+}
