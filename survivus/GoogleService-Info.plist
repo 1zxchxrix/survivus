@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyDO-1MbYAl3Cbr4Day6CN_3V14NG3HRQ6I</string>
+	<string>AIzaSyCVMIdKrgjarDxOE4ONkAlnFUFb4Jg4w4c</string>
 	<key>GCM_SENDER_ID</key>
-	<string>124754584530</string>
+	<string>84486730351</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.zachariasalad.survivus</string>
 	<key>PROJECT_ID</key>
-	<string>safestop-4f090</string>
+	<string>survivus1514</string>
 	<key>STORAGE_BUCKET</key>
-	<string>safestop-4f090.firebasestorage.app</string>
+	<string>survivus1514.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:124754584530:ios:ae2caffd8cc566fdf25e0b</string>
+	<string>1:84486730351:ios:7bd02c0499e014f592139a</string>
 </dict>
 </plist>
