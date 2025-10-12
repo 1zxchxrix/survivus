@@ -82,6 +82,8 @@ Check these files into Git so changes to the backend schema are reviewed the sam
 
    Use `firebase firestore:documents:set --document seasons/$SEASON/results/<episode>` for per-episode results. The CLI accepts multi-write batches when you supply multiple document/value pairs in a single call, so you can script loops to iterate through arrays in your JSON files.
 
+   > **Python seeding script:** Prefer a single command? Run `python scripts/seed_firestore.py --credentials path/to/service-account.json --project your-project-id --wipe-first` to push the repository's mock data into Firestore. The script mirrors the hierarchy above, wipes the existing season when requested, and is safe to re-run as you tweak the fixtures.
+
 4. Seed nested collections (weekly picks) by iterating users and episodes:
    ```bash
    jq -c '.[]' "$ROOT/weeklyPicks.json" | while read -r entry; do
