@@ -1,4 +1,6 @@
 import Foundation
+
+#if canImport(FirebaseFirestore)
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
@@ -355,3 +357,222 @@ struct WeeklyPicksDocument: Codable {
         return picks
     }
 }
+#else
+
+final class FirestoreLeagueRepository {
+    static let defaultSeasonId = "season-001"
+
+    init(seasonId: String = FirestoreLeagueRepository.defaultSeasonId, database: Any? = nil) {}
+
+    func invalidate() {}
+
+    func observeSeasonConfig(onChange: @escaping @MainActor (SeasonConfig) -> Void) {}
+
+    func observeSeasonState(onChange: @escaping @MainActor (SeasonStateDocument) -> Void) {}
+
+    func observePhases(onChange: @escaping @MainActor ([PhaseDocument]) -> Void) {}
+
+    func observeResults(onChange: @escaping @MainActor ([EpisodeResult]) -> Void) {}
+
+    func observeUsers(onChange: @escaping @MainActor ([UserProfile]) -> Void) {}
+
+    func observeSeasonPicks(onChange: @escaping @MainActor ([SeasonPicks]) -> Void) {}
+
+    func observeWeeklyPicks(onChange: @escaping @MainActor ([WeeklyPicks]) -> Void) {}
+
+    func saveSeasonPicks(_ picks: SeasonPicks) {}
+
+    func saveWeeklyPicks(_ picks: WeeklyPicks) {}
+}
+
+struct SeasonStateDocument: Codable {
+    var activePhaseId: String?
+    var activatedPhaseIds: [String]?
+
+    init(activePhaseId: String? = nil, activatedPhaseIds: [String]? = nil) {
+        self.activePhaseId = activePhaseId
+        self.activatedPhaseIds = activatedPhaseIds
+    }
+}
+
+struct PhaseDocument: Codable {
+    var documentId: String?
+    var id: String?
+    var name: String
+    var sortIndex: Int?
+    var categories: [PhaseCategoryDocument]
+
+    init(documentId: String? = nil, id: String? = nil, name: String = "", sortIndex: Int? = nil, categories: [PhaseCategoryDocument] = []) {
+        self.documentId = documentId
+        self.id = id
+        self.name = name
+        self.sortIndex = sortIndex
+        self.categories = categories
+    }
+
+    var phaseId: UUID? {
+        if let id, let uuid = UUID(uuidString: id) {
+            return uuid
+        }
+        if let documentId, let uuid = UUID(uuidString: documentId) {
+            return uuid
+        }
+        return nil
+    }
+}
+
+struct PhaseCategoryDocument: Codable {
+    var id: String
+    var name: String
+    var columnId: String
+    var totalPicks: Int
+    var pointsPerCorrectPick: Int?
+    var isLocked: Bool
+
+    init(
+        id: String = UUID().uuidString,
+        name: String = "",
+        columnId: String = "",
+        totalPicks: Int = 0,
+        pointsPerCorrectPick: Int? = nil,
+        isLocked: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.columnId = columnId
+        self.totalPicks = totalPicks
+        self.pointsPerCorrectPick = pointsPerCorrectPick
+        self.isLocked = isLocked
+    }
+
+    func model() -> PickPhase.Category? {
+        guard let uuid = UUID(uuidString: id) else { return nil }
+        return PickPhase.Category(
+            id: uuid,
+            name: name,
+            columnId: columnId,
+            totalPicks: totalPicks,
+            pointsPerCorrectPick: pointsPerCorrectPick,
+            isLocked: isLocked
+        )
+    }
+}
+
+struct EpisodeResultDocument: Codable {
+    var documentId: String?
+    var immunityWinners: [String]
+    var votedOut: [String]
+    var categoryWinners: [String: [String]]?
+
+    init(
+        documentId: String? = nil,
+        immunityWinners: [String] = [],
+        votedOut: [String] = [],
+        categoryWinners: [String: [String]]? = nil
+    ) {
+        self.documentId = documentId
+        self.immunityWinners = immunityWinners
+        self.votedOut = votedOut
+        self.categoryWinners = categoryWinners
+    }
+
+    var model: EpisodeResult? {
+        guard let documentId, let id = Int(documentId) else { return nil }
+        var result = EpisodeResult(id: id, immunityWinners: immunityWinners, votedOut: votedOut)
+        categoryWinners?.forEach { key, values in
+            if let uuid = UUID(uuidString: key) {
+                result.setWinners(values, for: uuid)
+            }
+        }
+        return result
+    }
+}
+
+struct UserDocument: Codable {
+    var documentId: String?
+    var displayName: String
+    var avatarAssetName: String
+
+    init(documentId: String? = nil, displayName: String = "", avatarAssetName: String = "") {
+        self.documentId = documentId
+        self.displayName = displayName
+        self.avatarAssetName = avatarAssetName
+    }
+
+    var model: UserProfile? {
+        guard let documentId else { return nil }
+        return UserProfile(id: documentId, displayName: displayName, avatarAssetName: avatarAssetName)
+    }
+}
+
+struct SeasonPicksDocument: Codable {
+    var documentId: String?
+    var mergePicks: [String]?
+    var finalThreePicks: [String]?
+    var winnerPick: String?
+
+    init(documentId: String? = nil, mergePicks: [String]? = nil, finalThreePicks: [String]? = nil, winnerPick: String? = nil) {
+        self.documentId = documentId
+        self.mergePicks = mergePicks
+        self.finalThreePicks = finalThreePicks
+        self.winnerPick = winnerPick
+    }
+
+    init(from picks: SeasonPicks) {
+        self.documentId = picks.userId
+        mergePicks = Array(picks.mergePicks)
+        finalThreePicks = Array(picks.finalThreePicks)
+        winnerPick = picks.winnerPick
+    }
+
+    var model: SeasonPicks? {
+        guard let documentId else { return nil }
+        var picks = SeasonPicks(userId: documentId)
+        if let mergePicks { picks.mergePicks = Set(mergePicks) }
+        if let finalThreePicks { picks.finalThreePicks = Set(finalThreePicks) }
+        picks.winnerPick = winnerPick
+        return picks
+    }
+}
+
+struct WeeklyPicksDocument: Codable {
+    var documentId: String?
+    var remain: [String]?
+    var votedOut: [String]?
+    var immunity: [String]?
+    var categorySelections: [String: [String]]?
+
+    init(documentId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil) {
+        self.documentId = documentId
+        self.remain = remain
+        self.votedOut = votedOut
+        self.immunity = immunity
+        self.categorySelections = categorySelections
+    }
+
+    init(from picks: WeeklyPicks) {
+        self.documentId = String(picks.episodeId)
+        remain = Array(picks.remain)
+        votedOut = Array(picks.votedOut)
+        immunity = Array(picks.immunity)
+        categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
+            partialResult[entry.key.uuidString] = Array(entry.value)
+        }
+    }
+
+    func model(userId: String) -> WeeklyPicks? {
+        guard let documentId, let episodeId = Int(documentId) else { return nil }
+        var picks = WeeklyPicks(userId: userId, episodeId: episodeId)
+        if let remain { picks.remain = Set(remain) }
+        if let votedOut { picks.votedOut = Set(votedOut) }
+        if let immunity { picks.immunity = Set(immunity) }
+        categorySelections?.forEach { key, values in
+            if let uuid = UUID(uuidString: key) {
+                picks.setSelections(Set(values), for: uuid)
+            }
+        }
+        return picks
+    }
+}
+
+#endif
