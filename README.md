@@ -36,6 +36,10 @@ Key service types keep the UI lightweight:
 
 The project currently ships with an in-memory mock store. On launch, `AppState` loads mock contestants, episodes, and picks so you can explore the interface without signing in or configuring a backend.
 
+### Automating the Firestore backend
+
+When you are ready to move from the in-memory store to Firestore, treat the backend as infrastructure-as-code. The [Firebase infrastructure guide](docs/firebase-infra-as-code.md) outlines the document hierarchy `FirestoreLeagueRepository` expects and shows how to seed that data with the Firebase CLI so that JSON fixtures and indexes can live alongside the Swift sources.
+
 ## Roadmap ideas
 
 - Replace the mock `MemoryStore` with a persistent store backed by Core Data so user picks survive restarts.
