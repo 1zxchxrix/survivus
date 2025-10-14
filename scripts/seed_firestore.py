@@ -322,7 +322,17 @@ def build_seed_data(season_doc_id: str = SEASON_ID, base_date: dt.datetime | Non
             "id": phase.id,
             "name": phase.name,
             "sortIndex": phase.sort_index,
-            "categories": [category.__dict__ for category in phase.categories],
+            "categories": [
+                {
+                    "id": category.id,
+                    "name": category.name,
+                    "columnId": category.column_id,
+                    "totalPicks": category.total_picks,
+                    "pointsPerCorrectPick": category.points_per_correct_pick,
+                    "isLocked": category.is_locked,
+                }
+                for category in phase.categories
+            ],
         }
         for phase in phases
     ]
