@@ -30,7 +30,11 @@ final class FirestoreLeagueRepository {
     func observeSeasonConfig(onChange: @escaping @MainActor (SeasonConfig) -> Void) {
         let reference = database.collection("seasons").document(seasonId)
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil, let snapshot, snapshot.exists else { return }
+            if let error {
+                self.logSnapshotError(error, context: "SeasonConfig")
+                return
+            }
+            guard let snapshot, snapshot.exists else { return }
             do {
                 let config = try snapshot.data(as: SeasonConfig.self)
                 Task { @MainActor in onChange(config) }
@@ -48,7 +52,10 @@ final class FirestoreLeagueRepository {
             .document("current")
 
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil else { return }
+            if let error {
+                self.logSnapshotError(error, context: "SeasonState")
+                return
+            }
             do {
                 if let snapshot, snapshot.exists {
                     let state = try snapshot.data(as: SeasonStateDocument.self)
@@ -69,7 +76,11 @@ final class FirestoreLeagueRepository {
             .collection("phases")
 
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil, let documents = snapshot?.documents else { return }
+            if let error {
+                self.logSnapshotError(error, context: "Phases")
+                return
+            }
+            guard let documents = snapshot?.documents else { return }
             let phases: [PhaseDocument] = documents.compactMap { document in
                 do {
                     return try document.data(as: PhaseDocument.self)
@@ -89,7 +100,11 @@ final class FirestoreLeagueRepository {
             .collection("results")
 
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil, let documents = snapshot?.documents else { return }
+            if let error {
+                self.logSnapshotError(error, context: "Results")
+                return
+            }
+            guard let documents = snapshot?.documents else { return }
             let results: [EpisodeResult] = documents.compactMap { document in
                 do {
                     let payload = try document.data(as: EpisodeResultDocument.self)
@@ -113,7 +128,11 @@ final class FirestoreLeagueRepository {
             .collection("users")
 
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil, let documents = snapshot?.documents else { return }
+            if let error {
+                self.logSnapshotError(error, context: "Users")
+                return
+            }
+            guard let documents = snapshot?.documents else { return }
             let users: [UserProfile] = documents.compactMap { document in
                 do {
                     let payload = try document.data(as: UserDocument.self)
@@ -134,7 +153,11 @@ final class FirestoreLeagueRepository {
             .collection("seasonPicks")
 
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil, let documents = snapshot?.documents else { return }
+            if let error {
+                self.logSnapshotError(error, context: "SeasonPicks")
+                return
+            }
+            guard let documents = snapshot?.documents else { return }
             let picks: [SeasonPicks] = documents.compactMap { document in
                 do {
                     let payload = try document.data(as: SeasonPicksDocument.self)
@@ -155,7 +178,11 @@ final class FirestoreLeagueRepository {
             .collectionGroup("episodes")
 
         register(reference.addSnapshotListener { snapshot, error in
-            guard error == nil, let documents = snapshot?.documents else { return }
+            if let error {
+                self.logSnapshotError(error, context: "WeeklyPicks")
+                return
+            }
+            guard let documents = snapshot?.documents else { return }
             let picks: [WeeklyPicks] = documents.compactMap { document in
                 do {
                     let payload = try document.data(as: WeeklyPicksDocument.self)
@@ -222,6 +249,12 @@ final class FirestoreLeagueRepository {
     private func logEncodingError(_ error: Error, context: String) {
         #if DEBUG
         print("[FirestoreLeagueRepository] Failed to encode \(context): \(error)")
+        #endif
+    }
+
+    private func logSnapshotError(_ error: Error, context: String) {
+        #if DEBUG
+        print("[FirestoreLeagueRepository] Firestore returned an error for \(context): \(error)")
         #endif
     }
 }
