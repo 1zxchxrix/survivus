@@ -2,6 +2,7 @@ import Foundation
 
 #if canImport(FirebaseFirestore) && canImport(FirebaseFirestoreInternalWrapper)
 import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class FirestoreLeagueRepository {
     static let defaultSeasonId = "season-001"
@@ -35,10 +36,10 @@ final class FirestoreLeagueRepository {
             }
             guard let snapshot, snapshot.exists else { return }
             do {
-                let config: SeasonConfig = try self.decodeDocument(snapshot, as: SeasonConfig.self)
+                let config = try snapshot.data(as: SeasonConfig.self)
                 Task { @MainActor in onChange(config) }
             } catch {
-                self.logDecodingError(error, context: "SeasonConfig")
+                logDecodingError(error, context: "SeasonConfig")
             }
         })
     }
@@ -57,7 +58,7 @@ final class FirestoreLeagueRepository {
             }
             do {
                 if let snapshot, snapshot.exists {
-                    let state: SeasonStateDocument = try self.decodeDocument(snapshot, as: SeasonStateDocument.self)
+                    let state = try snapshot.data(as: SeasonStateDocument.self)
                     Task { @MainActor in onChange(state) }
                 } else {
                     Task { @MainActor in onChange(SeasonStateDocument()) }
@@ -82,7 +83,7 @@ final class FirestoreLeagueRepository {
             guard let documents = snapshot?.documents else { return }
             let phases: [PhaseDocument] = documents.compactMap { document in
                 do {
-                    return try self.decodeDocument(document, as: PhaseDocument.self)
+                    return try document.data(as: PhaseDocument.self)
                 } catch {
                     self.logDecodingError(error, context: "PhaseDocument")
                     return nil
@@ -106,7 +107,7 @@ final class FirestoreLeagueRepository {
             guard let documents = snapshot?.documents else { return }
             let results: [EpisodeResult] = documents.compactMap { document in
                 do {
-                    let payload: EpisodeResultDocument = try self.decodeDocument(document, as: EpisodeResultDocument.self)
+                    let payload = try document.data(as: EpisodeResultDocument.self)
                     return payload.model
                 } catch {
                     self.logDecodingError(error, context: "EpisodeResultDocument")
@@ -134,7 +135,7 @@ final class FirestoreLeagueRepository {
             guard let documents = snapshot?.documents else { return }
             let users: [UserProfile] = documents.compactMap { document in
                 do {
-                    let payload: UserDocument = try self.decodeDocument(document, as: UserDocument.self)
+                    let payload = try document.data(as: UserDocument.self)
                     return payload.model
                 } catch {
                     self.logDecodingError(error, context: "UserDocument")
@@ -159,7 +160,7 @@ final class FirestoreLeagueRepository {
             guard let documents = snapshot?.documents else { return }
             let picks: [SeasonPicks] = documents.compactMap { document in
                 do {
-                    let payload: SeasonPicksDocument = try self.decodeDocument(document, as: SeasonPicksDocument.self)
+                    let payload = try document.data(as: SeasonPicksDocument.self)
                     return payload.model
                 } catch {
                     self.logDecodingError(error, context: "SeasonPicksDocument")
@@ -184,7 +185,7 @@ final class FirestoreLeagueRepository {
             guard let documents = snapshot?.documents else { return }
             let picks: [WeeklyPicks] = documents.compactMap { document in
                 do {
-                    let payload: WeeklyPicksDocument = try self.decodeDocument(document, as: WeeklyPicksDocument.self)
+                    let payload = try document.data(as: WeeklyPicksDocument.self)
                     guard let userId = document.reference.parent.parent?.documentID else { return nil }
                     return payload.model(userId: userId)
                 } catch {
@@ -207,8 +208,7 @@ final class FirestoreLeagueRepository {
 
         let payload = SeasonPicksDocument(from: picks)
         do {
-            let data = try encodeDocument(payload)
-            try reference.setData(data, merge: true)
+            try reference.setData(from: payload, merge: true)
         } catch {
             logEncodingError(error, context: "SeasonPicks")
         }
@@ -225,8 +225,7 @@ final class FirestoreLeagueRepository {
 
         let payload = WeeklyPicksDocument(from: picks)
         do {
-            let data = try encodeDocument(payload)
-            try reference.setData(data, merge: true)
+            try reference.setData(from: payload, merge: true)
         } catch {
             logEncodingError(error, context: "WeeklyPicks")
         }
@@ -260,93 +259,139 @@ final class FirestoreLeagueRepository {
     }
 }
 
-private extension FirestoreLeagueRepository {
-    enum FirestoreCodingError: Error {
-        case missingData
-        case invalidTopLevel
-        case unsupportedValue(Any)
-    }
+// MARK: - Firestore payloads
 
-    func decodeDocument<T: Decodable>(_ snapshot: DocumentSnapshot, as type: T.Type) throws -> T {
-        guard var data = snapshot.data() else {
-            throw FirestoreCodingError.missingData
+struct SeasonStateDocument: Codable {
+    var activePhaseId: String?
+    var activatedPhaseIds: [String]?
+}
+
+struct PhaseDocument: Codable {
+    @DocumentID var documentId: String?
+    var id: String?
+    var name: String
+    var sortIndex: Int?
+    var categories: [PhaseCategoryDocument]
+
+    var phaseId: UUID? {
+        if let id, let uuid = UUID(uuidString: id) {
+            return uuid
         }
-        if data["documentId"] == nil {
-            data["documentId"] = snapshot.documentID
+        if let documentId, let uuid = UUID(uuidString: documentId) {
+            return uuid
         }
-        return try decodeDictionary(data, as: type)
+        return nil
     }
+}
 
-    func decodeDocument<T: Decodable>(_ snapshot: QueryDocumentSnapshot, as type: T.Type) throws -> T {
-        var data = snapshot.data()
-        if data["documentId"] == nil {
-            data["documentId"] = snapshot.documentID
-        }
-        return try decodeDictionary(data, as: type)
+struct PhaseCategoryDocument: Codable {
+    var id: String
+    var name: String
+    var columnId: String
+    var totalPicks: Int
+    var pointsPerCorrectPick: Int?
+    var isLocked: Bool
+
+    func model() -> PickPhase.Category? {
+        guard let uuid = UUID(uuidString: id) else { return nil }
+        return PickPhase.Category(
+            id: uuid,
+            name: name,
+            columnId: columnId,
+            totalPicks: totalPicks,
+            pointsPerCorrectPick: pointsPerCorrectPick,
+            isLocked: isLocked
+        )
     }
+}
 
-    func decodeDictionary<T: Decodable>(_ dictionary: [String: Any], as type: T.Type) throws -> T {
-        let json = try makeJSONReadyDictionary(from: dictionary)
-        let data = try JSONSerialization.data(withJSONObject: json, options: [])
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .secondsSince1970
-        return try decoder.decode(T.self, from: data)
-    }
+struct EpisodeResultDocument: Codable {
+    @DocumentID var documentId: String?
+    var immunityWinners: [String]
+    var votedOut: [String]
+    var categoryWinners: [String: [String]]?
 
-    func encodeDocument<T: Encodable>(_ value: T) throws -> [String: Any] {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        let data = try encoder.encode(value)
-        let jsonObject = try JSONSerialization.jsonObject(with: data, options: [])
-        guard var dictionary = jsonObject as? [String: Any] else {
-            throw FirestoreCodingError.invalidTopLevel
-        }
-        dictionary.removeValue(forKey: "documentId")
-        return dictionary
-    }
-
-    func makeJSONReadyDictionary(from dictionary: [String: Any]) throws -> [String: Any] {
-        var result: [String: Any] = [:]
-        for (key, value) in dictionary {
-            result[key] = try makeJSONReadyValue(from: value)
+    var model: EpisodeResult? {
+        guard let documentId, let id = Int(documentId) else { return nil }
+        var result = EpisodeResult(id: id, immunityWinners: immunityWinners, votedOut: votedOut)
+        categoryWinners?.forEach { key, values in
+            if let uuid = UUID(uuidString: key) {
+                result.setWinners(values, for: uuid)
+            }
         }
         return result
     }
+}
 
-    func makeJSONReadyValue(from value: Any) throws -> Any {
-        switch value {
-        case let timestamp as Timestamp:
-            return timestamp.dateValue().timeIntervalSince1970
-        case let date as Date:
-            return date.timeIntervalSince1970
-        case let int as Int:
-            return int
-        case let double as Double:
-            return double
-        case let int64 as Int64:
-            return int64
-        case let bool as Bool:
-            return bool
-        case let string as String:
-            return string
-        case let number as NSNumber:
-            return number
-        case let array as [Any]:
-            return try array.map { try makeJSONReadyValue(from: $0) }
-        case let dictionary as [String: Any]:
-            return try dictionary.reduce(into: [String: Any]()) { partialResult, element in
-                partialResult[element.key] = try makeJSONReadyValue(from: element.value)
-            }
-        case is NSNull:
-            return NSNull()
-        case let geoPoint as GeoPoint:
-            return ["latitude": geoPoint.latitude, "longitude": geoPoint.longitude]
-        default:
-            throw FirestoreCodingError.unsupportedValue(value)
+struct UserDocument: Codable {
+    @DocumentID var documentId: String?
+    var displayName: String
+    var avatarAssetName: String
+
+    var model: UserProfile? {
+        guard let documentId else { return nil }
+        return UserProfile(id: documentId, displayName: displayName, avatarAssetName: avatarAssetName)
+    }
+}
+
+struct SeasonPicksDocument: Codable {
+    @DocumentID var documentId: String?
+    var mergePicks: [String]?
+    var finalThreePicks: [String]?
+    var winnerPick: String?
+
+    init() {}
+
+    init(from picks: SeasonPicks) {
+        mergePicks = Array(picks.mergePicks)
+        finalThreePicks = Array(picks.finalThreePicks)
+        winnerPick = picks.winnerPick
+    }
+
+    var model: SeasonPicks? {
+        guard let documentId else { return nil }
+        var picks = SeasonPicks(userId: documentId)
+        if let mergePicks { picks.mergePicks = Set(mergePicks) }
+        if let finalThreePicks { picks.finalThreePicks = Set(finalThreePicks) }
+        picks.winnerPick = winnerPick
+        return picks
+    }
+}
+
+struct WeeklyPicksDocument: Codable {
+    @DocumentID var documentId: String?
+    var remain: [String]?
+    var votedOut: [String]?
+    var immunity: [String]?
+    var categorySelections: [String: [String]]?
+
+    init() {}
+
+    init(from picks: WeeklyPicks) {
+        remain = Array(picks.remain)
+        votedOut = Array(picks.votedOut)
+        immunity = Array(picks.immunity)
+        categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
+            partialResult[entry.key.uuidString] = Array(entry.value)
         }
+    }
+
+    func model(userId: String) -> WeeklyPicks? {
+        guard let documentId, let episodeId = Int(documentId) else { return nil }
+        var picks = WeeklyPicks(userId: userId, episodeId: episodeId)
+        if let remain { picks.remain = Set(remain) }
+        if let votedOut { picks.votedOut = Set(votedOut) }
+        if let immunity { picks.immunity = Set(immunity) }
+        categorySelections?.forEach { key, values in
+            if let uuid = UUID(uuidString: key) {
+                picks.setSelections(Set(values), for: uuid)
+            }
+        }
+        return picks
     }
 }
 #else
+
 final class FirestoreLeagueRepository {
     static let defaultSeasonId = "season-001"
 
@@ -372,9 +417,6 @@ final class FirestoreLeagueRepository {
 
     func saveWeeklyPicks(_ picks: WeeklyPicks) {}
 }
-#endif
-
-// MARK: - Firestore payloads
 
 struct SeasonStateDocument: Codable {
     var activePhaseId: String?
@@ -510,7 +552,7 @@ struct SeasonPicksDocument: Codable {
     }
 
     init(from picks: SeasonPicks) {
-        documentId = picks.userId
+        self.documentId = picks.userId
         mergePicks = Array(picks.mergePicks)
         finalThreePicks = Array(picks.finalThreePicks)
         winnerPick = picks.winnerPick
@@ -533,13 +575,7 @@ struct WeeklyPicksDocument: Codable {
     var immunity: [String]?
     var categorySelections: [String: [String]]?
 
-    init(
-        documentId: String? = nil,
-        remain: [String]? = nil,
-        votedOut: [String]? = nil,
-        immunity: [String]? = nil,
-        categorySelections: [String: [String]]? = nil
-    ) {
+    init(documentId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil) {
         self.documentId = documentId
         self.remain = remain
         self.votedOut = votedOut
@@ -548,7 +584,7 @@ struct WeeklyPicksDocument: Codable {
     }
 
     init(from picks: WeeklyPicks) {
-        documentId = String(picks.episodeId)
+        self.documentId = String(picks.episodeId)
         remain = Array(picks.remain)
         votedOut = Array(picks.votedOut)
         immunity = Array(picks.immunity)
@@ -571,3 +607,5 @@ struct WeeklyPicksDocument: Codable {
         return picks
     }
 }
+
+#endif
