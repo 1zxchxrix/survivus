@@ -2,7 +2,9 @@ import Foundation
 
 #if canImport(FirebaseFirestore) && canImport(FirebaseFirestoreInternalWrapper)
 import FirebaseFirestore
+#if canImport(FirebaseFirestoreSwift)
 import FirebaseFirestoreSwift
+#endif
 
 final class FirestoreLeagueRepository {
     static let defaultSeasonId = "season-001"
