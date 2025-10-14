@@ -170,7 +170,7 @@ private struct ManageContestantsSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Contestants") {
+                Section {
                     if contestants.isEmpty {
                         ContentUnavailableView(
                             "No contestants",
@@ -188,6 +188,8 @@ private struct ManageContestantsSheet: View {
                         .onDelete(perform: deleteContestants)
                         .onMove(perform: moveContestants)
                     }
+                } header: {
+                    Text("Contestants")
                 } footer: {
                     Text("Identifiers are used for scoring and should remain stable once picks are recorded.")
                         .font(.footnote)
