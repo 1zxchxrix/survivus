@@ -120,6 +120,8 @@ struct AdminRoomView: View {
                         }
                     }
                 )
+            } else {
+                EmptyView()
             }
         }
     }
