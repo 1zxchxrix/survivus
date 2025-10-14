@@ -247,28 +247,28 @@ private struct ContestantEditorRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Display name", text: Binding(
-                get: { contestant.wrappedValue.name },
-                set: { newValue in contestant.wrappedValue.updateName(newValue) }
+                get: { contestant.name },
+                set: { newValue in contestant.updateName(newValue) }
             ))
             .textContentType(.name)
 
             TextField("Identifier", text: Binding(
-                get: { contestant.wrappedValue.identifier },
-                set: { newValue in contestant.wrappedValue.updateIdentifier(newValue) }
+                get: { contestant.identifier },
+                set: { newValue in contestant.updateIdentifier(newValue) }
             ))
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
 
             TextField("Tribe (optional)", text: Binding(
-                get: { contestant.wrappedValue.tribe },
-                set: { contestant.wrappedValue.tribe = $0 }
+                get: { contestant.tribe },
+                set: { contestant.tribe = $0 }
             ))
 
-            if contestant.wrappedValue.trimmedName.isEmpty {
+            if contestant.trimmedName.isEmpty {
                 validationMessage("Name is required")
             }
 
-            if contestant.wrappedValue.trimmedIdentifier.isEmpty {
+            if contestant.trimmedIdentifier.isEmpty {
                 validationMessage("Identifier is required")
             } else if isDuplicateId {
                 validationMessage("Identifier must be unique")
