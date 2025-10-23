@@ -81,21 +81,23 @@ struct AllPicksView: View {
 
                         ForEach(usersInDisplayOrder) { user in
                             let isCurrentUser = user.id == app.currentUserId
+                            let isLocked = shouldLockPicks(for: user)
                             let isCollapsed = collapsedUserIds.contains(user.id)
 
                             UserPicksCard(
                                 user: user,
-                                seasonPicks: seasonPicks(for: user),
-                                weeklyPicks: weeklyPicks(for: user),
+                                seasonPicks: isLocked ? nil : seasonPicks(for: user),
+                                weeklyPicks: isLocked ? nil : weeklyPicks(for: user),
                                 contestantsById: contestantsById,
                                 isCurrentUser: isCurrentUser,
+                                isLocked: isLocked,
                                 selectedEpisode: selectedEpisode,
                                 categories: activePhaseCategories,
                                 seasonConfig: app.store.config,
                                 scoringEngine: app.scoring,
-                                isCollapsed: isCurrentUser ? false : isCollapsed,
+                                isCollapsed: isCurrentUser ? false : (isLocked ? false : isCollapsed),
                                 onSubmitWeeklyPicks: isCurrentUser ? { submitWeeklyPicks(for: user) } : nil,
-                                onToggleCollapse: isCurrentUser ? nil : {
+                                onToggleCollapse: (isCurrentUser || isLocked) ? nil : {
                                     withAnimation(.easeInOut) {
                                         if isCollapsed {
                                             collapsedUserIds.remove(user.id)
@@ -206,6 +208,20 @@ private extension AllPicksView {
         return app.store.weeklyPicks[user.id]?[episodeId]
     }
 
+    func shouldLockPicks(for user: UserProfile) -> Bool {
+        guard user.id != app.currentUserId,
+              let currentUserId = app.currentUserId,
+              let weekId = selectedWeek.weekId else {
+            return false
+        }
+
+        guard let picks = app.store.weeklyPicks[currentUserId]?[weekId] else {
+            return true
+        }
+
+        return !picks.isSubmitted
+    }
+
     func submitWeeklyPicks(for user: UserProfile) {
         guard let episode = selectedEpisode else { return }
         app.store.submitWeeklyPicks(for: user.id, episodeId: episode.id)
@@ -241,6 +257,7 @@ private struct UserPicksCard: View {
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
     let isCurrentUser: Bool
+    let isLocked: Bool
     let selectedEpisode: Episode?
     let categories: [PickPhase.Category]
     let seasonConfig: SeasonConfig
@@ -258,6 +275,7 @@ private struct UserPicksCard: View {
         weeklyPicks: WeeklyPicks?,
         contestantsById: [String: Contestant],
         isCurrentUser: Bool,
+        isLocked: Bool,
         selectedEpisode: Episode?,
         categories: [PickPhase.Category],
         seasonConfig: SeasonConfig,
@@ -271,6 +289,7 @@ private struct UserPicksCard: View {
         self.weeklyPicks = weeklyPicks
         self.contestantsById = contestantsById
         self.isCurrentUser = isCurrentUser
+        self.isLocked = isLocked
         self.selectedEpisode = selectedEpisode
         self.categories = categories
         self.seasonConfig = seasonConfig
@@ -284,7 +303,9 @@ private struct UserPicksCard: View {
         VStack(alignment: .leading, spacing: 16) {
             header
 
-            if isCollapsed {
+            if isLocked {
+                lockedNotice
+            } else if isCollapsed {
                 Text("Picks hidden")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -575,7 +596,12 @@ private struct UserPicksCard: View {
 
                 Spacer()
 
-                if let onToggleCollapse {
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .imageScale(.medium)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Picks locked")
+                } else if let onToggleCollapse {
                     Button {
                         onToggleCollapse()
                     } label: {
@@ -594,6 +620,26 @@ private struct UserPicksCard: View {
 }
 
 private extension UserPicksCard {
+    private var lockedNotice: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "lock.fill")
+                .imageScale(.medium)
+                .foregroundStyle(.secondary)
+
+            Text(lockedMessage)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var lockedMessage: String {
+        if let episode = selectedEpisode {
+            return "Submit your picks for \(episode.title) to view others."
+        }
+
+        return "Submit your picks for this week to view others."
+    }
+
     private func selectionLimit(for category: PickPhase.Category, kind: CategoryKind) -> Int? {
         switch kind {
         case .weekly(let panel):
