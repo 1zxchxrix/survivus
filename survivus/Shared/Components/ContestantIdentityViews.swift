@@ -161,10 +161,12 @@ enum StorageURLResolver {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "firebasestorage.googleapis.com"
-        components.path = "/v0/b/\(bucket)/o"
+
+        var percentEncodedPath = "/v0/b/\(bucket)/o"
         if !encodedPath.isEmpty {
-            components.path.append("/\(encodedPath)")
+            percentEncodedPath.append("/\(encodedPath)")
         }
+        components.percentEncodedPath = percentEncodedPath
         components.queryItems = [URLQueryItem(name: "alt", value: "media")]
         return components.url
     }
