@@ -20,11 +20,13 @@ final class AppState: ObservableObject {
             if let id = activePhaseId {
                 activatedPhaseIDs.insert(id)
             }
+            synchronizeSeasonStateWithFirestore()
         }
     }
 
     private var cancellables: Set<AnyCancellable> = []
     private var isStoreObservationActive = false
+    private var isApplyingRemoteUpdate = false
     private let repository: FirestoreLeagueRepository
 
     init(
@@ -89,63 +91,151 @@ final class AppState: ObservableObject {
 
     private func configureFirestoreBindings() {
         repository.observeSeasonConfig { [weak self] config in
-            self?.store.config = config
+            self?.performRemoteUpdate {
+                self?.store.config = config
+            }
         }
 
         repository.observeSeasonState { [weak self] state in
             guard let self else { return }
-            if let activeId = state.activePhaseId.flatMap({ UUID(uuidString: $0) }) {
-                self.activePhaseId = activeId
-            } else {
-                self.activePhaseId = nil
+            self.performRemoteUpdate {
+                if let activeId = state.activePhaseId.flatMap({ UUID(uuidString: $0) }) {
+                    self.activePhaseId = activeId
+                } else {
+                    self.activePhaseId = nil
+                }
+                let activated = state.activatedPhaseIds?.compactMap { UUID(uuidString: $0) } ?? []
+                self.activatedPhaseIDs = Set(activated)
             }
-            let activated = state.activatedPhaseIds?.compactMap { UUID(uuidString: $0) } ?? []
-            self.activatedPhaseIDs = Set(activated)
         }
 
         repository.observePhases { [weak self] documents in
             guard let self else { return }
-            let pairs: [(PickPhase, Int)] = documents.compactMap { document in
-                guard let phaseId = document.phaseId else { return nil }
-                let categories = document.categories.compactMap { $0.model() }
-                let phase = PickPhase(id: phaseId, name: document.name, categories: categories)
-                let sortIndex = document.sortIndex ?? Int.max
-                return (phase, sortIndex)
+            self.performRemoteUpdate {
+                let pairs: [(PickPhase, Int)] = documents.compactMap { document in
+                    guard let phaseId = document.phaseId else { return nil }
+                    let categories = document.categories.compactMap { $0.model() }
+                    let phase = PickPhase(id: phaseId, name: document.name, categories: categories)
+                    let sortIndex = document.sortIndex ?? Int.max
+                    return (phase, sortIndex)
+                }
+                self.phases = pairs.sorted(by: { $0.1 < $1.1 }).map(\.0)
             }
-            self.phases = pairs.sorted(by: { $0.1 < $1.1 }).map(\.0)
         }
 
         repository.observeResults { [weak self] results in
-            self?.store.results = results
+            self?.performRemoteUpdate {
+                self?.store.results = results
+            }
         }
 
         repository.observeUsers { [weak self] users in
             guard let self else { return }
-            self.store.users = users
-            guard !users.isEmpty else {
-                self.currentUserId = ""
-                return
-            }
+            self.performRemoteUpdate {
+                self.store.users = users
+                guard !users.isEmpty else {
+                    self.currentUserId = ""
+                    return
+                }
 
-            if self.currentUserId.isEmpty || !users.contains(where: { $0.id == self.currentUserId }) {
-                self.currentUserId = users.first!.id
+                if self.currentUserId.isEmpty || !users.contains(where: { $0.id == self.currentUserId }) {
+                    self.currentUserId = users.first!.id
+                }
             }
         }
 
         repository.observeSeasonPicks { [weak self] picks in
             guard let self else { return }
-            let dictionary = Dictionary(uniqueKeysWithValues: picks.map { ($0.userId, $0) })
-            self.store.seasonPicks = dictionary
+            self.performRemoteUpdate {
+                let dictionary = Dictionary(uniqueKeysWithValues: picks.map { ($0.userId, $0) })
+                self.store.seasonPicks = dictionary
+            }
         }
 
         repository.observeWeeklyPicks { [weak self] picks in
             guard let self else { return }
-            var grouped: [String: [Int: WeeklyPicks]] = [:]
-            for pick in picks {
-                grouped[pick.userId, default: [:]][pick.episodeId] = pick
+            self.performRemoteUpdate {
+                var grouped: [String: [Int: WeeklyPicks]] = [:]
+                for pick in picks {
+                    grouped[pick.userId, default: [:]][pick.episodeId] = pick
+                }
+                self.store.weeklyPicks = grouped
             }
-            self.store.weeklyPicks = grouped
         }
+    }
+
+    private func performRemoteUpdate(_ updates: () -> Void) {
+        let wasApplying = isApplyingRemoteUpdate
+        isApplyingRemoteUpdate = true
+        updates()
+        isApplyingRemoteUpdate = wasApplying
+    }
+
+    private func synchronizeSeasonStateWithFirestore() {
+        guard !isApplyingRemoteUpdate else { return }
+        repository.updateSeasonState(activePhaseId: activePhaseId, activatedPhaseIds: activatedPhaseIDs)
+    }
+
+    func updateContestants(_ contestants: [Contestant]) {
+        store.config.contestants = contestants
+        persistSeasonConfig()
+    }
+
+    func saveEpisodeResult(_ result: EpisodeResult) {
+        if let index = store.results.firstIndex(where: { $0.id == result.id }) {
+            store.results[index] = result
+        } else {
+            store.results.append(result)
+            store.results.sort(by: { $0.id < $1.id })
+        }
+
+        guard !isApplyingRemoteUpdate else { return }
+        repository.saveEpisodeResult(result)
+    }
+
+    func startNewWeek(activating phase: PickPhase) {
+        let nextWeekId = (store.results.map(\.id).max() ?? 0) + 1
+        let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
+        store.results.append(newResult)
+        store.results.sort(by: { $0.id < $1.id })
+        activePhaseId = phase.id
+
+        guard !isApplyingRemoteUpdate else { return }
+        repository.saveEpisodeResult(newResult)
+    }
+
+    func savePhase(_ phase: PickPhase) {
+        if let index = phases.firstIndex(where: { $0.id == phase.id }) {
+            phases[index] = phase
+        } else {
+            phases.append(phase)
+        }
+
+        guard !isApplyingRemoteUpdate else { return }
+        synchronizePhasesWithFirestore()
+    }
+
+    func deletePhase(withId id: PickPhase.ID) {
+        phases.removeAll { $0.id == id }
+        activatedPhaseIDs.remove(id)
+        if activePhaseId == id {
+            activePhaseId = nil
+        }
+        synchronizeSeasonStateWithFirestore()
+
+        guard !isApplyingRemoteUpdate else { return }
+        repository.deletePhase(withId: id)
+        synchronizePhasesWithFirestore()
+    }
+
+    private func synchronizePhasesWithFirestore() {
+        let enumerated = phases.enumerated().map { (index, phase) in (phase, index) }
+        repository.savePhases(enumerated)
+    }
+
+    private func persistSeasonConfig() {
+        guard !isApplyingRemoteUpdate else { return }
+        repository.saveSeasonConfig(store.config)
     }
 }
 
