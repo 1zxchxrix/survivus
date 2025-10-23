@@ -28,16 +28,20 @@ struct ActiveUserProfileView: View {
         Section {
             VStack(spacing: 16) {
                 Group {
-                    if let assetName = user.avatarAssetName {
+                    if let url = user.avatarURL {
+                        StorageAsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } placeholder: {
+                            avatarPlaceholder(size: 120)
+                        }
+                    } else if let assetName = user.avatarAssetName {
                         Image(assetName)
                             .resizable()
                             .scaledToFill()
                     } else {
-                        Image(systemName: "person.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .padding(24)
-                            .foregroundStyle(.secondary)
+                        avatarPlaceholder(size: 120)
                     }
                 }
                 .frame(width: 120, height: 120)
@@ -56,7 +60,22 @@ struct ActiveUserProfileView: View {
 
 #Preview {
     NavigationStack {
-        ActiveUserProfileView(user: UserProfile(id: "u1", displayName: "Zac", avatarAssetName: "zac"))
+        ActiveUserProfileView(
+            user: UserProfile(
+                id: "u1",
+                displayName: "Zac",
+                avatarAssetName: "zac",
+                avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/zac.png")
+            )
+        )
             .environmentObject(AuthenticationViewModel())
     }
+}
+
+private func avatarPlaceholder(size: CGFloat) -> some View {
+    Image(systemName: "person.fill")
+        .resizable()
+        .scaledToFit()
+        .padding(size * 0.2)
+        .foregroundStyle(.secondary)
 }

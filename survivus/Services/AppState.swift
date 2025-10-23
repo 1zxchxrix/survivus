@@ -255,10 +255,30 @@ extension AppState {
         let config = SeasonConfig.mock()
         let results = (1...2).map { EpisodeResult.mock(episodeId: $0) }
         let users = [
-            UserProfile(id: "u1", displayName: "Zac", avatarAssetName: "zac"),
-            UserProfile(id: "u2", displayName: "Sam", avatarAssetName: "mace"),
-            UserProfile(id: "u3", displayName: "Chris", avatarAssetName: "chris"),
-            UserProfile(id: "u4", displayName: "Liz", avatarAssetName: "liz")
+            UserProfile(
+                id: "u1",
+                displayName: "Zac",
+                avatarAssetName: "zac",
+                avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/zac.png")
+            ),
+            UserProfile(
+                id: "u2",
+                displayName: "Sam",
+                avatarAssetName: "mace",
+                avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/mace.png")
+            ),
+            UserProfile(
+                id: "u3",
+                displayName: "Chris",
+                avatarAssetName: "chris",
+                avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/chris.png")
+            ),
+            UserProfile(
+                id: "u4",
+                displayName: "Liz",
+                avatarAssetName: "liz",
+                avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/liz.png")
+            )
         ]
         let store = MemoryStore(config: config, results: results, users: users)
         store.loadMockPicks()

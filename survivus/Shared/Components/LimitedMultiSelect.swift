@@ -45,8 +45,7 @@ struct LimitedMultiSelect: View {
                     toggleSelection(for: contestant.id)
                 } label: {
                     selectionLabel(
-                        for: contestant.id,
-                        name: contestant.name,
+                        for: contestant,
                         isCurrentlySelected: currentlySelected,
                         selectionRank: currentRank
                     )
@@ -117,10 +116,10 @@ struct LimitedMultiSelect: View {
     }
 
     @ViewBuilder
-    private func selectionLabel(for id: String, name: String, isCurrentlySelected: Bool, selectionRank: Int?) -> some View {
+    private func selectionLabel(for contestant: Contestant, isCurrentlySelected: Bool, selectionRank: Int?) -> some View {
         VStack(spacing: 8) {
             ZStack(alignment: .topTrailing) {
-                ContestantAvatar(imageName: id, size: 72)
+                ContestantAvatar(contestant: contestant, size: 72)
                     .overlay(
                         Circle()
                             .stroke(
@@ -135,7 +134,7 @@ struct LimitedMultiSelect: View {
                 }
             }
 
-            Text(name)
+            Text(contestant.name)
                 .font(.caption)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.primary)

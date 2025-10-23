@@ -618,6 +618,21 @@ private struct UserPicksCard: View {
 
     @ViewBuilder
     private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
+        if let url = user.avatarURL {
+            StorageAsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: {
+                picksAvatarPlaceholder(for: user, size: size)
+            }
+        } else {
+            picksAvatarPlaceholder(for: user, size: size)
+        }
+    }
+
+    @ViewBuilder
+    private func picksAvatarPlaceholder(for user: UserProfile, size: CGFloat) -> some View {
         if let assetName = user.avatarAssetName {
             Image(assetName)
                 .resizable()
@@ -858,7 +873,7 @@ private struct PickSection: View {
                     ForEach(contestants) { contestant in
                         VStack(spacing: 8) {
                             ZStack(alignment: .topTrailing) {
-                                ContestantAvatar(imageName: contestant.id, size: 60)
+                                ContestantAvatar(contestant: contestant, size: 60)
 
                                 if correctContestantIDs.contains(contestant.id) {
                                     checkmarkBadge
