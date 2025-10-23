@@ -258,25 +258,21 @@ extension AppState {
             UserProfile(
                 id: "u1",
                 displayName: "Zac",
-                avatarAssetName: "zac",
                 avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/zac.png")
             ),
             UserProfile(
                 id: "u2",
                 displayName: "Sam",
-                avatarAssetName: "mace",
                 avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/mace.png")
             ),
             UserProfile(
                 id: "u3",
                 displayName: "Chris",
-                avatarAssetName: "chris",
                 avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/chris.png")
             ),
             UserProfile(
                 id: "u4",
                 displayName: "Liz",
-                avatarAssetName: "liz",
                 avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/liz.png")
             )
         ]

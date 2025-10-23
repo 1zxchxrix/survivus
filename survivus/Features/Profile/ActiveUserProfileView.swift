@@ -36,10 +36,6 @@ struct ActiveUserProfileView: View {
                         } placeholder: {
                             avatarPlaceholder(size: 120)
                         }
-                    } else if let assetName = user.avatarAssetName {
-                        Image(assetName)
-                            .resizable()
-                            .scaledToFill()
                     } else {
                         avatarPlaceholder(size: 120)
                     }
@@ -64,7 +60,6 @@ struct ActiveUserProfileView: View {
             user: UserProfile(
                 id: "u1",
                 displayName: "Zac",
-                avatarAssetName: "zac",
                 avatarURL: URL(string: "gs://survivus1514.firebasestorage.app/users/zac.png")
             )
         )
