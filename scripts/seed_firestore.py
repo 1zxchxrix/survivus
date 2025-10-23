@@ -408,12 +408,14 @@ def seed_firestore(client: firestore.Client, season_id: str, *, wipe_first: bool
         picks_ref = season_ref.collection("seasonPicks").document(user_id)
         picks_ref.set(payload, merge=True)
 
-    for user_id, episodes in data["weekly_picks"].items():
-        weekly_ref = season_ref.collection("weeklyPicks").document(user_id)
-        weekly_ref.set({"userId": user_id}, merge=True)
-        for episode_id, picks in episodes.items():
-            episode_ref = weekly_ref.collection("episodes").document(str(episode_id))
-            episode_ref.set(picks, merge=True)
+        for user_id, episodes in data["weekly_picks"].items():
+            weekly_ref = season_ref.collection("weeklyPicks").document(user_id)
+            weekly_ref.set({"userId": user_id}, merge=True)
+            for episode_id, picks in episodes.items():
+                episode_ref = weekly_ref.collection("episodes").document(str(episode_id))
+                payload = dict(picks)
+                payload.setdefault("seasonId", season_id)
+                episode_ref.set(payload, merge=True)
 
 
 def parse_args() -> argparse.Namespace:

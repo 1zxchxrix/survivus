@@ -174,7 +174,6 @@ final class FirestoreLeagueRepository {
     func observeWeeklyPicks(onChange: @escaping @MainActor ([WeeklyPicks]) -> Void) {
         let reference = database
             .collectionGroup("episodes")
-            .whereField("seasonId", isEqualTo: seasonId)
 
         register(reference.addSnapshotListener { snapshot, error in
             if let error {
@@ -183,9 +182,20 @@ final class FirestoreLeagueRepository {
             }
             guard let documents = snapshot?.documents else { return }
             let picks: [WeeklyPicks] = documents.compactMap { document in
+                let episodeCollection = document.reference.parent
+                let userDocument = episodeCollection.parent
+                let weeklyPicksCollection = userDocument?.parent
+                let seasonDocument = weeklyPicksCollection?.parent
+
+                guard
+                    weeklyPicksCollection?.collectionID == "weeklyPicks",
+                    seasonDocument?.documentID == self.seasonId,
+                    let userId = userDocument?.documentID
+                else {
+                    return nil
+                }
                 do {
                     let payload = try document.data(as: WeeklyPicksDocument.self)
-                    guard let userId = document.reference.parent.parent?.documentID else { return nil }
                     return payload.model(userId: userId)
                 } catch {
                     self.logDecodingError(error, context: "WeeklyPicksDocument")
