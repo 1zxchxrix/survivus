@@ -249,6 +249,9 @@ private struct UserPicksCard: View {
     let onSubmitWeeklyPicks: (() -> Void)?
     let onToggleCollapse: (() -> Void)?
 
+    @State private var isHoldToSubmitActive = false
+    @State private var holdToSubmitProgress: Double = 0
+
     init(
         user: UserProfile,
         seasonPicks: SeasonPicks?,
@@ -308,6 +311,14 @@ private struct UserPicksCard: View {
                         Color(red: 0.07, green: 0.19, blue: 0.42),
                         lineWidth: 3
                     )
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if isCurrentUser, isHoldToSubmitActive {
+                HoldProgressBar(progress: holdToSubmitProgress)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
         }
     }
@@ -529,7 +540,9 @@ private struct UserPicksCard: View {
                         SubmitPicksButton(
                             isSubmitted: weeklyPicks?.isSubmitted ?? false,
                             isEnabled: selectedEpisode != nil,
-                            onSubmit: onSubmitWeeklyPicks
+                            onSubmit: onSubmitWeeklyPicks,
+                            isHolding: $isHoldToSubmitActive,
+                            progress: $holdToSubmitProgress
                         )
                     }
                 }
@@ -625,7 +638,13 @@ private struct SubmitPicksButton: View {
     let isEnabled: Bool
     let onSubmit: () -> Void
 
+    @Binding var isHolding: Bool
+    @Binding var progress: Double
+
     @GestureState private var isPressing = false
+
+    private let holdDuration: TimeInterval = 3
+    private let completionDisplayDuration: TimeInterval = 0.3
 
     var body: some View {
         Button(action: {}) {
@@ -640,16 +659,15 @@ private struct SubmitPicksButton: View {
         .disabled(!isEnabled || isSubmitted)
         .accessibilityLabel(isSubmitted ? "Picks submitted" : "Submit picks")
         .accessibilityHint(accessibilityHint)
+        .onChange(of: isPressing) { newValue in
+            if newValue {
+                beginHoldAnimation()
+            }
+        }
     }
 
     private var buttonTitle: String {
-        if isSubmitted {
-            return "Submitted"
-        } else if isPressing {
-            return "Keep Holding..."
-        } else {
-            return "Submit Picks"
-        }
+        isSubmitted ? "Submitted" : "Submit Picks"
     }
 
     private var accessibilityHint: String {
@@ -663,14 +681,75 @@ private struct SubmitPicksButton: View {
     }
 
     private var longPressGesture: some Gesture {
-        LongPressGesture(minimumDuration: 3)
+        LongPressGesture(minimumDuration: holdDuration)
             .updating($isPressing) { currentState, state, _ in
                 state = currentState
             }
             .onEnded { success in
-                guard success, isEnabled, !isSubmitted else { return }
-                onSubmit()
+                let canSubmit = success && isEnabled && !isSubmitted
+
+                if canSubmit {
+                    completeHoldAnimation()
+                    onSubmit()
+                } else {
+                    cancelHoldAnimation()
+                }
             }
+    }
+
+    private func beginHoldAnimation() {
+        guard !isHolding, isEnabled, !isSubmitted else { return }
+
+        isHolding = true
+        progress = 0
+
+        withAnimation(.linear(duration: holdDuration)) {
+            progress = 1
+        }
+    }
+
+    private func cancelHoldAnimation() {
+        guard isHolding else { return }
+
+        isHolding = false
+
+        withAnimation(.easeOut(duration: 0.15)) {
+            progress = 0
+        }
+    }
+
+    private func completeHoldAnimation() {
+        guard isHolding else { return }
+
+        progress = 1
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + completionDisplayDuration) {
+            isHolding = false
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                progress = 0
+            }
+        }
+    }
+}
+
+private struct HoldProgressBar: View {
+    let progress: Double
+
+    var body: some View {
+        GeometryReader { geometry in
+            let clampedProgress = max(0, min(progress, 1))
+            let width = geometry.size.width * CGFloat(clampedProgress)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.accentColor.opacity(0.15))
+
+                Capsule()
+                    .fill(Color.accentColor)
+                    .frame(width: width)
+            }
+        }
+        .frame(height: 4)
     }
 }
 
