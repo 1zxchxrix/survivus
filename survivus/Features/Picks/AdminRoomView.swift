@@ -289,12 +289,21 @@ private struct ContestantDraft: Identifiable, Equatable {
     var identifier: String
     var name: String
     var tribe: String
+    var avatarAssetName: String?
 
-    init(id: UUID = UUID(), identifier: String = "", name: String = "", tribe: String = "", hasCustomIdentifier: Bool = false) {
+    init(
+        id: UUID = UUID(),
+        identifier: String = "",
+        name: String = "",
+        tribe: String = "",
+        avatarAssetName: String? = nil,
+        hasCustomIdentifier: Bool = false
+    ) {
         self.id = id
         self.identifier = identifier
         self.name = name
         self.tribe = tribe
+        self.avatarAssetName = avatarAssetName
         self.hasCustomIdentifier = hasCustomIdentifier
     }
 
@@ -303,6 +312,7 @@ private struct ContestantDraft: Identifiable, Equatable {
             identifier: contestant.id,
             name: contestant.name,
             tribe: contestant.tribe ?? "",
+            avatarAssetName: contestant.avatarAssetName,
             hasCustomIdentifier: true
         )
     }
@@ -336,8 +346,19 @@ private struct ContestantDraft: Identifiable, Equatable {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    var trimmedAvatarAssetName: String? {
+        guard let avatarAssetName else { return nil }
+        let trimmed = avatarAssetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     func makeContestant() -> Contestant {
-        Contestant(id: trimmedIdentifier, name: trimmedName, tribe: trimmedTribe)
+        Contestant(
+            id: trimmedIdentifier,
+            name: trimmedName,
+            tribe: trimmedTribe,
+            avatarAssetName: trimmedAvatarAssetName ?? trimmedIdentifier
+        )
     }
 
     private static func slug(from text: String) -> String {

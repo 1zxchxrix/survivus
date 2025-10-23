@@ -8,6 +8,28 @@ enum StoragePaths {
         URL(string: "\(bucket)/users/\(asset).png") ??
         URL(string: "\(bucket)/users/\(asset).jpg")
     }
+
+    static func contestantAvatarURL(for asset: String) -> URL? {
+        let trimmed = asset.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let absolute = URL(string: trimmed), absolute.scheme != nil {
+            return absolute
+        }
+
+        if trimmed.contains(".") {
+            return URL(string: "\(bucket)/contestants/\(trimmed)")
+        }
+
+        let preferredExtensions = ["jpg", "png"]
+        for fileExtension in preferredExtensions {
+            if let url = URL(string: "\(bucket)/contestants/\(trimmed).\(fileExtension)") {
+                return url
+            }
+        }
+
+        return nil
+    }
 }
 
 @MainActor
