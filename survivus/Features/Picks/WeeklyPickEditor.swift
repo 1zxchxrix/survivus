@@ -93,6 +93,7 @@ struct WeeklyPickEditor: View {
         case let .custom(categoryId):
             picks.setSelections(limited, for: categoryId)
         }
+        picks.isSubmitted = false
         app.store.save(picks)
     }
 

@@ -94,6 +94,7 @@ struct AllPicksView: View {
                                 seasonConfig: app.store.config,
                                 scoringEngine: app.scoring,
                                 isCollapsed: isCurrentUser ? false : isCollapsed,
+                                onSubmitWeeklyPicks: isCurrentUser ? { submitWeeklyPicks(for: user) } : nil,
                                 onToggleCollapse: isCurrentUser ? nil : {
                                     withAnimation(.easeInOut) {
                                         if isCollapsed {
@@ -205,6 +206,11 @@ private extension AllPicksView {
         return app.store.weeklyPicks[user.id]?[episodeId]
     }
 
+    func submitWeeklyPicks(for user: UserProfile) {
+        guard let episode = selectedEpisode else { return }
+        app.store.submitWeeklyPicks(for: user.id, episodeId: episode.id)
+    }
+
     func episode(for episodeId: Int) -> Episode {
         if let configuredEpisode = app.store.config.episodes.first(where: { $0.id == episodeId }) {
             return configuredEpisode
@@ -240,6 +246,7 @@ private struct UserPicksCard: View {
     let seasonConfig: SeasonConfig
     let scoringEngine: ScoringEngine
     let isCollapsed: Bool
+    let onSubmitWeeklyPicks: (() -> Void)?
     let onToggleCollapse: (() -> Void)?
 
     init(
@@ -253,6 +260,7 @@ private struct UserPicksCard: View {
         seasonConfig: SeasonConfig,
         scoringEngine: ScoringEngine,
         isCollapsed: Bool,
+        onSubmitWeeklyPicks: (() -> Void)?,
         onToggleCollapse: (() -> Void)?
     ) {
         self.user = user
@@ -265,6 +273,7 @@ private struct UserPicksCard: View {
         self.seasonConfig = seasonConfig
         self.scoringEngine = scoringEngine
         self.isCollapsed = isCollapsed
+        self.onSubmitWeeklyPicks = onSubmitWeeklyPicks
         self.onToggleCollapse = onToggleCollapse
     }
 
@@ -498,27 +507,46 @@ private struct UserPicksCard: View {
     @ViewBuilder
     private var header: some View {
         if isCurrentUser {
-            NavigationLink {
-                ActiveUserProfileView(user: user)
-            } label: {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 12) {
-                    Image(user.avatarAssetName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 44, height: 44)
-                        .clipShape(Circle())
+                    NavigationLink {
+                        ActiveUserProfileView(user: user)
+                    } label: {
+                        Image(user.avatarAssetName)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 44, height: 44)
+                            .clipShape(Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("View profile")
+                    .accessibilityHint("Open your profile to sign out")
 
+                    Spacer()
+
+                    if let onSubmitWeeklyPicks {
+                        SubmitPicksButton(
+                            isSubmitted: weeklyPicks?.isSubmitted ?? false,
+                            isEnabled: selectedEpisode != nil,
+                            onSubmit: onSubmitWeeklyPicks
+                        )
+                    }
+                }
+
+                NavigationLink {
+                    ActiveUserProfileView(user: user)
+                } label: {
                     Text(user.displayName)
                         .font(.title3)
                         .fontWeight(.semibold)
-
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel("View profile")
+                .accessibilityHint("Open your profile to sign out")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("View profile")
-            .accessibilityHint("Open your profile to sign out")
         } else {
             HStack(spacing: 12) {
                 Image(user.avatarAssetName)
@@ -589,6 +617,60 @@ private extension UserPicksCard {
 
     private func positiveLimit(from value: Int) -> Int? {
         value > 0 ? value : nil
+    }
+}
+
+private struct SubmitPicksButton: View {
+    let isSubmitted: Bool
+    let isEnabled: Bool
+    let onSubmit: () -> Void
+
+    @GestureState private var isPressing = false
+
+    var body: some View {
+        Button(action: {}) {
+            Text(buttonTitle)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(isSubmitted ? Color.green : Color.accentColor)
+        .simultaneousGesture(longPressGesture)
+        .scaleEffect(isPressing ? 0.96 : 1)
+        .disabled(!isEnabled || isSubmitted)
+        .accessibilityLabel(isSubmitted ? "Picks submitted" : "Submit picks")
+        .accessibilityHint(accessibilityHint)
+    }
+
+    private var buttonTitle: String {
+        if isSubmitted {
+            return "Submitted"
+        } else if isPressing {
+            return "Keep Holding..."
+        } else {
+            return "Submit Picks"
+        }
+    }
+
+    private var accessibilityHint: String {
+        if isSubmitted {
+            return "Your picks for this week have already been submitted."
+        } else if isEnabled {
+            return "Press and hold for three seconds to submit this week's picks."
+        } else {
+            return "Select a week to enable submissions."
+        }
+    }
+
+    private var longPressGesture: some Gesture {
+        LongPressGesture(minimumDuration: 3)
+            .updating($isPressing) { currentState, state, _ in
+                state = currentState
+            }
+            .onEnded { success in
+                guard success, isEnabled, !isSubmitted else { return }
+                onSubmit()
+            }
     }
 }
 

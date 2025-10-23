@@ -8,6 +8,7 @@ struct WeeklyPicks: Identifiable, Hashable, Codable {
     var votedOut: Set<String> = []
     var immunity: Set<String> = []
     var categorySelections: [UUID: Set<String>] = [:]
+    var isSubmitted: Bool = false
 
     func selections(for categoryId: UUID) -> Set<String> {
         categorySelections[categoryId] ?? []

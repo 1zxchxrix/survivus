@@ -40,6 +40,13 @@ final class MemoryStore: ObservableObject {
         delegate?.memoryStore(self, didSaveWeeklyPicks: picks)
     }
 
+    func submitWeeklyPicks(for userId: String, episodeId: Int) {
+        var picks = weeklyPicks[userId]?[episodeId] ?? WeeklyPicks(userId: userId, episodeId: episodeId)
+        guard !picks.isSubmitted else { return }
+        picks.isSubmitted = true
+        save(picks)
+    }
+
     func updateSeasonPicks(for userId: String, update: (inout SeasonPicks) -> Void) {
         var picks = seasonPicks[userId] ?? SeasonPicks(userId: userId)
         update(&picks)
