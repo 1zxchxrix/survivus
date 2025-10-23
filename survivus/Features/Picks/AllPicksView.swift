@@ -546,9 +546,7 @@ private struct UserPicksCard: View {
                     NavigationLink {
                         ActiveUserProfileView(user: user)
                     } label: {
-                        Image(user.avatarAssetName)
-                            .resizable()
-                            .scaledToFill()
+                        avatarView(for: user, size: 44)
                             .frame(width: 44, height: 44)
                             .clipShape(Circle())
                             .contentShape(Circle())
@@ -585,9 +583,7 @@ private struct UserPicksCard: View {
             }
         } else {
             HStack(spacing: 12) {
-                Image(user.avatarAssetName)
-                    .resizable()
-                    .scaledToFill()
+                avatarView(for: user, size: 44)
                     .frame(width: 44, height: 44)
                     .clipShape(Circle())
                     .accessibilityHidden(true)
@@ -617,6 +613,21 @@ private struct UserPicksCard: View {
                     .accessibilityHint("Toggle to show or hide picks for \(user.displayName)")
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
+        if let assetName = user.avatarAssetName {
+            Image(assetName)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Image(systemName: "person.fill")
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.3)
+                .foregroundStyle(.secondary)
         }
     }
 }

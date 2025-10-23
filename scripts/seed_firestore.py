@@ -30,6 +30,7 @@ class Contestant:
     id: str
     name: str
     tribe: str | None = None
+    avatar_url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -71,32 +72,45 @@ class EpisodeResult:
     voted_out: List[str]
 
 
-def build_seed_data(season_doc_id: str = SEASON_ID, base_date: dt.datetime | None = None) -> dict:
+def build_seed_data(
+    season_doc_id: str = SEASON_ID,
+    base_date: dt.datetime | None = None,
+    storage_base_url: str | None = None,
+) -> dict:
     """Return the full Firestore payload for the default mock season."""
     if base_date is None:
         base_date = dt.datetime(2024, 2, 7, 0, 0, tzinfo=dt.timezone.utc)
 
+    def storage_url(*path: str, extension: str | None = None) -> str | None:
+        if not storage_base_url:
+            return None
+        filename = path[-1]
+        if extension:
+            filename = f"{filename}.{extension}"
+            path = (*path[:-1], filename)
+        return "/".join([storage_base_url.rstrip("/")] + [segment.strip("/") for segment in path])
+
     contestants = [
-        Contestant("courtney_yates", "Courtney Yates"),
-        Contestant("todd_herzog", "Todd Herzog"),
-        Contestant("boston_rob", "Boston Rob"),
-        Contestant("russell_hantz", "Russell Hantz"),
-        Contestant("john_cochran", "John Cochran"),
-        Contestant("tony_vlachos", "Tony Vlachos"),
-        Contestant("q", "Q"),
-        Contestant("eva_erickson", "Eva Erickson"),
-        Contestant("mitch_guerra", "Mitch Guerra"),
-        Contestant("erik_reichenbach", "Erik Reichenbach"),
-        Contestant("yul_kwon", "Yul Kwon"),
-        Contestant("ozzy_lusth", "Ozzy Lusth"),
-        Contestant("parvati_shallow", "Parvati Shallow"),
-        Contestant("jonathan_penner", "Jonathan Penner"),
-        Contestant("nate_gonzalez", "Nate Gonzalez"),
-        Contestant("chicken_morris", "Chicken Morris"),
-        Contestant("frosti_zernow", "Frosti Zernow"),
-        Contestant("james_clement", "James Clement"),
-        Contestant("denise_martin", "Denise Martin"),
-        Contestant("amanda_kimmel", "Amanda Kimmel"),
+        Contestant("courtney_yates", "Courtney Yates", avatar_url=storage_url("contestants", "courtney_yates", extension="jpg")),
+        Contestant("todd_herzog", "Todd Herzog", avatar_url=storage_url("contestants", "todd_herzog", extension="jpg")),
+        Contestant("boston_rob", "Boston Rob", avatar_url=storage_url("contestants", "boston_rob", extension="jpg")),
+        Contestant("russell_hantz", "Russell Hantz", avatar_url=storage_url("contestants", "russell_hantz", extension="jpg")),
+        Contestant("john_cochran", "John Cochran", avatar_url=storage_url("contestants", "john_cochran", extension="jpg")),
+        Contestant("tony_vlachos", "Tony Vlachos", avatar_url=storage_url("contestants", "tony_vlachos", extension="jpg")),
+        Contestant("q", "Q", avatar_url=storage_url("contestants", "q", extension="jpg")),
+        Contestant("eva_erickson", "Eva Erickson", avatar_url=storage_url("contestants", "eva_erickson", extension="jpg")),
+        Contestant("mitch_guerra", "Mitch Guerra", avatar_url=storage_url("contestants", "mitch_guerra", extension="jpg")),
+        Contestant("erik_reichenbach", "Erik Reichenbach", avatar_url=storage_url("contestants", "erik_reichenbach", extension="jpg")),
+        Contestant("yul_kwon", "Yul Kwon", avatar_url=storage_url("contestants", "yul_kwon", extension="jpg")),
+        Contestant("ozzy_lusth", "Ozzy Lusth", avatar_url=storage_url("contestants", "ozzy_lusth", extension="jpg")),
+        Contestant("parvati_shallow", "Parvati Shallow", avatar_url=storage_url("contestants", "parvati_shallow", extension="jpg")),
+        Contestant("jonathan_penner", "Jonathan Penner", avatar_url=storage_url("contestants", "jonathan_penner", extension="jpg")),
+        Contestant("nate_gonzalez", "Nate Gonzalez", avatar_url=storage_url("contestants", "nate_gonzalez", extension="jpg")),
+        Contestant("chicken_morris", "Chicken Morris", avatar_url=storage_url("contestants", "chicken_morris", extension="jpg")),
+        Contestant("frosti_zernow", "Frosti Zernow", avatar_url=storage_url("contestants", "frosti_zernow", extension="jpg")),
+        Contestant("james_clement", "James Clement", avatar_url=storage_url("contestants", "james_clement", extension="jpg")),
+        Contestant("denise_martin", "Denise Martin", avatar_url=storage_url("contestants", "denise_martin", extension="jpg")),
+        Contestant("amanda_kimmel", "Amanda Kimmel", avatar_url=storage_url("contestants", "amanda_kimmel", extension="jpg")),
     ]
 
     episodes = [
@@ -218,12 +232,23 @@ def build_seed_data(season_doc_id: str = SEASON_ID, base_date: dt.datetime | Non
         ),
     ]
 
-    users = {
-        "u1": {"displayName": "Zac", "avatarAssetName": "zac"},
-        "u2": {"displayName": "Sam", "avatarAssetName": "mace"},
-        "u3": {"displayName": "Chris", "avatarAssetName": "chris"},
-        "u4": {"displayName": "Liz", "avatarAssetName": "liz"},
-    }
+    def user_avatar(name: str) -> str | None:
+        return storage_url("users", name, extension="png")
+
+    users = {}
+    for user_id, (display_name, asset_name) in {
+        "u1": ("Zac", "zac"),
+        "u2": ("Sam", "mace"),
+        "u3": ("Chris", "chris"),
+        "u4": ("Liz", "liz"),
+    }.items():
+        payload = {
+            "displayName": display_name,
+            "avatarAssetName": asset_name,
+        }
+        if (url := user_avatar(asset_name)) is not None:
+            payload["avatarURL"] = url
+        users[user_id] = payload
 
     season_picks = {
         "u1": {
@@ -302,7 +327,15 @@ def build_seed_data(season_doc_id: str = SEASON_ID, base_date: dt.datetime | Non
     config_payload = {
         "seasonId": season_doc_id,
         "name": "Mock Season",
-        "contestants": [contestant.__dict__ for contestant in contestants],
+        "contestants": [
+            {
+                "id": contestant.id,
+                "name": contestant.name,
+                "tribe": contestant.tribe,
+                **({"avatarURL": contestant.avatar_url} if contestant.avatar_url else {}),
+            }
+            for contestant in contestants
+        ],
         "episodes": [
             {
                 "id": episode.id,
@@ -379,11 +412,17 @@ def wipe_season(client: firestore.Client, season_id: str) -> None:
     season_ref.delete()
 
 
-def seed_firestore(client: firestore.Client, season_id: str, *, wipe_first: bool = False) -> None:
+def seed_firestore(
+    client: firestore.Client,
+    season_id: str,
+    *,
+    wipe_first: bool = False,
+) -> None:
     if wipe_first:
         wipe_season(client, season_id)
 
-    data = build_seed_data(season_id)
+    storage_base_url = f"gs://{client.project}.firebasestorage.app" if client.project else None
+    data = build_seed_data(season_id, storage_base_url=storage_base_url)
     season_ref = client.collection("seasons").document(season_id)
     season_ref.set(data["config"], merge=True)
 
