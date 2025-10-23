@@ -136,13 +136,27 @@ final class FirestoreLeagueRepository {
             let users: [UserProfile] = documents.compactMap { document in
                 do {
                     let payload = try document.data(as: UserDocument.self)
-                    return payload.model
+                    return payload.model   // <- UserDocument.model now sets avatarURL
                 } catch {
                     self.logDecodingError(error, context: "UserDocument")
                     return nil
                 }
             }
-            Task { @MainActor in onChange(users.sorted(by: { $0.displayName < $1.displayName })) }
+
+            // 🟡 Add this debug block here
+            #if DEBUG
+            for u in users {
+                if let url = u.avatarURL {
+                    print("[Users] \(u.displayName) avatar → \(url.absoluteString)")
+                } else {
+                    print("[Users] \(u.displayName) has no avatarURL")
+                }
+            }
+            #endif
+
+            Task { @MainActor in
+                onChange(users.sorted(by: { $0.displayName < $1.displayName }))
+            }
         })
     }
 
@@ -504,13 +518,24 @@ struct UserDocument: Codable {
 
     var model: UserProfile? {
         guard let documentId else { return nil }
+
+        // Build avatar URL from asset name if Firestore didn't store a full URL
+        let resolvedURL: URL? = {
+            if let explicit = avatarURL { return explicit }
+            if let asset = avatarAssetName, !asset.isEmpty {
+                return StoragePaths.userAvatarURL(for: asset)
+            }
+            return nil
+        }()
+
         return UserProfile(
             id: documentId,
             displayName: displayName,
             avatarAssetName: avatarAssetName,
-            avatarURL: avatarURL
+            avatarURL: resolvedURL
         )
     }
+
 }
 
 struct SeasonPicksDocument: Codable {
@@ -740,13 +765,24 @@ struct UserDocument: Codable {
 
     var model: UserProfile? {
         guard let documentId else { return nil }
+
+        // Prefer the URL stored in Firestore if present; otherwise build from the asset name.
+        let resolvedURL: URL? = {
+            if let explicit = avatarURL { return explicit }
+            if let asset = avatarAssetName, !asset.isEmpty {
+                return StoragePaths.userAvatarURL(for: asset)   // builds gs://survivus1514.firebasestorage.app/users/<asset>.png (or .jpg fallback)
+            }
+            return nil
+        }()
+
         return UserProfile(
             id: documentId,
             displayName: displayName,
             avatarAssetName: avatarAssetName,
-            avatarURL: avatarURL
+            avatarURL: resolvedURL
         )
     }
+
 }
 
 struct SeasonPicksDocument: Codable {

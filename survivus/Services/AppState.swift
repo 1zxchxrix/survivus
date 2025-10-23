@@ -1,6 +1,15 @@
 import Foundation
 import Combine
 
+enum StoragePaths {
+    static let bucket = "gs://survivus1514.firebasestorage.app"
+
+    static func userAvatarURL(for asset: String) -> URL? {
+        URL(string: "\(bucket)/users/\(asset).png") ??
+        URL(string: "\(bucket)/users/\(asset).jpg")
+    }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     // TODO: When a Core Data-backed persistence layer is introduced, inject a persistent store
