@@ -289,9 +289,7 @@ private struct TablePinnedRow: View {
         HStack(spacing: columnSpacing) {
             HStack(spacing: 8) {
                 if let user {
-                    Image(user.avatarAssetName)
-                        .resizable()
-                        .scaledToFill()
+                    avatarView(for: user, size: avatarSize)
                         .frame(width: avatarSize, height: avatarSize)
                         .clipShape(Circle())
                         .accessibilityHidden(true)
@@ -319,6 +317,22 @@ private struct TablePinnedRow: View {
     }
 
     private var avatarSize: CGFloat { 32 }
+}
+
+private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
+    Group {
+        if let assetName = user.avatarAssetName {
+            Image(assetName)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Image(systemName: "person.fill")
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.3)
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
 private struct TableScrollableRow: View {

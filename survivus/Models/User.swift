@@ -3,7 +3,15 @@ import Foundation
 struct UserProfile: Identifiable, Hashable, Codable {
     let id: String
     var displayName: String
-    var avatarAssetName: String
+    var avatarAssetName: String?
+    var avatarURL: URL?
+
+    init(id: String, displayName: String, avatarAssetName: String? = nil, avatarURL: URL? = nil) {
+        self.id = id
+        self.displayName = displayName
+        self.avatarAssetName = avatarAssetName
+        self.avatarURL = avatarURL
+    }
 }
 
 struct UserScoreBreakdown: Identifiable, Hashable, Codable {

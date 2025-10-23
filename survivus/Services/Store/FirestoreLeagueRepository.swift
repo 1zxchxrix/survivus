@@ -492,11 +492,24 @@ struct EpisodeResultDocument: Codable {
 struct UserDocument: Codable {
     @DocumentID var documentId: String?
     var displayName: String
-    var avatarAssetName: String
+    var avatarAssetName: String?
+    var avatarURL: URL?
+
+    enum CodingKeys: String, CodingKey {
+        case documentId
+        case displayName
+        case avatarAssetName
+        case avatarURL
+    }
 
     var model: UserProfile? {
         guard let documentId else { return nil }
-        return UserProfile(id: documentId, displayName: displayName, avatarAssetName: avatarAssetName)
+        return UserProfile(
+            id: documentId,
+            displayName: displayName,
+            avatarAssetName: avatarAssetName,
+            avatarURL: avatarURL
+        )
     }
 }
 
@@ -715,17 +728,24 @@ struct EpisodeResultDocument: Codable {
 struct UserDocument: Codable {
     var documentId: String?
     var displayName: String
-    var avatarAssetName: String
+    var avatarAssetName: String?
+    var avatarURL: URL?
 
-    init(documentId: String? = nil, displayName: String = "", avatarAssetName: String = "") {
+    init(documentId: String? = nil, displayName: String = "", avatarAssetName: String? = nil, avatarURL: URL? = nil) {
         self.documentId = documentId
         self.displayName = displayName
         self.avatarAssetName = avatarAssetName
+        self.avatarURL = avatarURL
     }
 
     var model: UserProfile? {
         guard let documentId else { return nil }
-        return UserProfile(id: documentId, displayName: displayName, avatarAssetName: avatarAssetName)
+        return UserProfile(
+            id: documentId,
+            displayName: displayName,
+            avatarAssetName: avatarAssetName,
+            avatarURL: avatarURL
+        )
     }
 }
 

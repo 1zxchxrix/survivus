@@ -27,12 +27,22 @@ struct ActiveUserProfileView: View {
     private var profileSection: some View {
         Section {
             VStack(spacing: 16) {
-                Image(user.avatarAssetName)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 120, height: 120)
-                    .clipShape(Circle())
-                    .shadow(radius: 8)
+                Group {
+                    if let assetName = user.avatarAssetName {
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(24)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 120, height: 120)
+                .clipShape(Circle())
+                .shadow(radius: 8)
 
                 Text(user.displayName)
                     .font(.title2)
