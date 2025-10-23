@@ -71,7 +71,10 @@ final class AuthenticationViewModel: ObservableObject {
         var biometricError: NSError?
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &biometricError) {
             let reason = "Authenticate with Face ID to access Survivus."
-            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, evaluateError in
+            context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: reason
+            ) { success, evaluateError in
                 Task { @MainActor in
                     guard !self.isAuthenticated else { return }
 
