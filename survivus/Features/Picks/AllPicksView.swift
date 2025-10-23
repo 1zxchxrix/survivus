@@ -635,7 +635,7 @@ private struct UserPicksCard: View {
 private extension UserPicksCard {
     private var lockedNotice: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "lock.fill")
+            Image(systemName: "eye.slash")
                 .imageScale(.medium)
                 .foregroundStyle(.secondary)
 
