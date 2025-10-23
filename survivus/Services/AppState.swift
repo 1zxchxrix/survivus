@@ -3,10 +3,49 @@ import Combine
 
 enum StoragePaths {
     static let bucket = "gs://survivus1514.firebasestorage.app"
+    private static let bucketURL = URL(string: bucket)
 
     static func userAvatarURL(for asset: String) -> URL? {
-        URL(string: "\(bucket)/users/\(asset).png") ??
-        URL(string: "\(bucket)/users/\(asset).jpg")
+        let trimmed = asset.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let absolute = URL(string: trimmed), absolute.scheme != nil {
+            return absolute
+        }
+
+        let decoded = (trimmed.removingPercentEncoding ?? trimmed)
+            .replacingOccurrences(of: "\\", with: "/")
+
+        var components = decoded
+            .split(separator: "/")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !components.isEmpty else { return nil }
+
+        if let first = components.first,
+           first.caseInsensitiveCompare("users") == .orderedSame {
+            components.removeFirst()
+        }
+
+        guard !components.isEmpty else { return nil }
+
+        var relativeComponents = ["users"] + components
+
+        if let filename = relativeComponents.last, filename.contains(".") {
+            return storageURL(pathComponents: relativeComponents)
+        }
+
+        for fileExtension in ["png", "jpg"] {
+            var candidate = relativeComponents
+            let basename = candidate.removeLast()
+            candidate.append("\(basename).\(fileExtension)")
+            if let url = storageURL(pathComponents: candidate) {
+                return url
+            }
+        }
+
+        return nil
     }
 
     static func contestantAvatarURL(for asset: String) -> URL? {
@@ -17,18 +56,46 @@ enum StoragePaths {
             return absolute
         }
 
-        if trimmed.contains(".") {
-            return URL(string: "\(bucket)/contestants/\(trimmed)")
+        let decoded = (trimmed.removingPercentEncoding ?? trimmed)
+            .replacingOccurrences(of: "\\", with: "/")
+
+        var components = decoded
+            .split(separator: "/")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if let first = components.first,
+           first.caseInsensitiveCompare("contestants") == .orderedSame {
+            components.removeFirst()
+        }
+
+        guard !components.isEmpty else { return nil }
+
+        var relativeComponents = ["contestants"] + components
+
+        if let filename = relativeComponents.last, filename.contains(".") {
+            return storageURL(pathComponents: relativeComponents)
         }
 
         let preferredExtensions = ["jpg", "png"]
         for fileExtension in preferredExtensions {
-            if let url = URL(string: "\(bucket)/contestants/\(trimmed).\(fileExtension)") {
+            var candidate = relativeComponents
+            let basename = candidate.removeLast()
+            candidate.append("\(basename).\(fileExtension)")
+            if let url = storageURL(pathComponents: candidate) {
                 return url
             }
         }
 
         return nil
+    }
+
+    private static func storageURL(pathComponents: [String]) -> URL? {
+        guard let bucketURL else { return nil }
+
+        return pathComponents.reduce(bucketURL) { partialURL, component in
+            partialURL.appendingPathComponent(component)
+        }
     }
 }
 
