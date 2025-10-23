@@ -321,17 +321,36 @@ private struct TablePinnedRow: View {
 
 private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
     Group {
-        if let assetName = user.avatarAssetName {
+        if let url = user.avatarURL {
+            StorageAsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: {
+                avatarPlaceholder(for: user, size: size)
+            }
+        } else if let assetName = user.avatarAssetName {
             Image(assetName)
                 .resizable()
                 .scaledToFill()
         } else {
-            Image(systemName: "person.fill")
-                .resizable()
-                .scaledToFit()
-                .padding(size * 0.3)
-                .foregroundStyle(.secondary)
+            avatarPlaceholder(for: user, size: size)
         }
+    }
+}
+
+@ViewBuilder
+private func avatarPlaceholder(for user: UserProfile, size: CGFloat) -> some View {
+    if let assetName = user.avatarAssetName {
+        Image(assetName)
+            .resizable()
+            .scaledToFill()
+    } else {
+        Image(systemName: "person.fill")
+            .resizable()
+            .scaledToFit()
+            .padding(size * 0.3)
+            .foregroundStyle(.secondary)
     }
 }
 
