@@ -521,6 +521,7 @@ struct WeeklyPicksDocument: Codable {
     var votedOut: [String]?
     var immunity: [String]?
     var categorySelections: [String: [String]]?
+    var isSubmitted: Bool?
 
     init() {}
 
@@ -532,6 +533,7 @@ struct WeeklyPicksDocument: Codable {
         categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
             partialResult[entry.key.uuidString] = Array(entry.value)
         }
+        isSubmitted = picks.isSubmitted
     }
 
     func model(userId: String) -> WeeklyPicks? {
@@ -545,6 +547,7 @@ struct WeeklyPicksDocument: Codable {
                 picks.setSelections(Set(values), for: uuid)
             }
         }
+        picks.isSubmitted = isSubmitted ?? false
         return picks
     }
 }
@@ -753,14 +756,16 @@ struct WeeklyPicksDocument: Codable {
     var votedOut: [String]?
     var immunity: [String]?
     var categorySelections: [String: [String]]?
+    var isSubmitted: Bool?
 
-    init(documentId: String? = nil, seasonId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil) {
+    init(documentId: String? = nil, seasonId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil, isSubmitted: Bool? = nil) {
         self.documentId = documentId
         self.seasonId = seasonId
         self.remain = remain
         self.votedOut = votedOut
         self.immunity = immunity
         self.categorySelections = categorySelections
+        self.isSubmitted = isSubmitted
     }
 
     init(from picks: WeeklyPicks, seasonId: String) {
@@ -772,6 +777,7 @@ struct WeeklyPicksDocument: Codable {
         categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
             partialResult[entry.key.uuidString] = Array(entry.value)
         }
+        isSubmitted = picks.isSubmitted
     }
 
     func model(userId: String) -> WeeklyPicks? {
@@ -785,6 +791,7 @@ struct WeeklyPicksDocument: Codable {
                 picks.setSelections(Set(values), for: uuid)
             }
         }
+        picks.isSubmitted = isSubmitted ?? false
         return picks
     }
 }
