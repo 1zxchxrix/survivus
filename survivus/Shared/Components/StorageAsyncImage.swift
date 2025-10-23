@@ -19,15 +19,12 @@ func configureFirebaseIfNeeded() {
 }
 
 /// Ensure we have an auth user if rules require it (anonymous is fine)
-func ensureAuth(_ completion: @escaping (Error?) -> Void) {
+func ensureAuth(_ completion: @escaping () -> Void) {
     if Auth.auth().currentUser != nil {
-        completion(nil)
+        completion()
         return
     }
-
-    Auth.auth().signInAnonymously { _, error in
-        completion(error)
-    }
+    Auth.auth().signInAnonymously { _, _ in completion() }
 }
 
 final class StorageImageLoader: ObservableObject {
@@ -65,9 +62,6 @@ final class StorageImageLoader: ObservableObject {
         ensureAuth { [weak self] in
             self?.resolveAndFetch(from: url)
         }
-
-        configureFirebaseIfNeeded()
-        resolveAndFetch(from: url, attemptAuth: true)
     }
 
     func cancel() {
@@ -86,7 +80,7 @@ final class StorageImageLoader: ObservableObject {
 
     // MARK: - Core
 
-    private func resolveAndFetch(from url: URL, attemptAuth: Bool) {
+    private func resolveAndFetch(from url: URL) {
         currentURL = url
 
         if url.scheme?.hasPrefix("http") == true {
@@ -104,33 +98,16 @@ final class StorageImageLoader: ObservableObject {
         let objectPath = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
 
         let storage = Storage.storage(url: bucket)
-        let ref: StorageReference
-        if objectPath.isEmpty {
-            ref = storage.reference()
-        } else {
-            ref = storage.reference(withPath: objectPath)
-        }
+        let ref = storage.reference(withPath: objectPath)
 
         ref.downloadURL { [weak self] signedURL, downloadURLError in
-            guard let self else { return }
-
             if let signedURL {
-                self.fetch(url: signedURL)
-                return
-            }
-
-            if attemptAuth, self.shouldRetryAuth(for: downloadURLError) {
-                self.retryWithAuth(for: url)
+                self?.fetch(url: signedURL)
                 return
             }
 
             ref.getMetadata { metadata, metadataError in
                 guard let self else { return }
-
-                if attemptAuth, self.shouldRetryAuth(for: metadataError) {
-                    self.retryWithAuth(for: url)
-                    return
-                }
 
                 if let token = (metadata?.customMetadata?["firebaseStorageDownloadTokens"])
                     ?? (metadata?.dictionaryRepresentation()["downloadTokens"] as? String),
@@ -204,31 +181,6 @@ final class StorageImageLoader: ObservableObject {
                 userInfo: [NSLocalizedDescriptionKey: "Unknown error"]
             )
         }
-    }
-
-    private func retryWithAuth(for url: URL) {
-        ensureAuth { [weak self] authError in
-            guard let self else { return }
-
-            if let authError {
-                self.setError(authError)
-                return
-            }
-
-            if self.currentURL == url {
-                self.resolveAndFetch(from: url, attemptAuth: false)
-            }
-        }
-    }
-
-    private func shouldRetryAuth(for error: Error?) -> Bool {
-        guard let nsError = error as NSError?,
-              nsError.domain == StorageErrorDomain,
-              let code = StorageErrorCode(rawValue: nsError.code) else {
-            return false
-        }
-
-        return code == .unauthenticated || code == .unauthorized
     }
 }
 
