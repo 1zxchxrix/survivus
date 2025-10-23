@@ -624,26 +624,20 @@ private struct UserPicksCard: View {
                     .resizable()
                     .scaledToFill()
             } placeholder: {
-                picksAvatarPlaceholder(for: user, size: size)
+                picksAvatarPlaceholder(size: size)
             }
         } else {
-            picksAvatarPlaceholder(for: user, size: size)
+            picksAvatarPlaceholder(size: size)
         }
     }
 
     @ViewBuilder
-    private func picksAvatarPlaceholder(for user: UserProfile, size: CGFloat) -> some View {
-        if let assetName = user.avatarAssetName {
-            Image(assetName)
-                .resizable()
-                .scaledToFill()
-        } else {
-            Image(systemName: "person.fill")
-                .resizable()
-                .scaledToFit()
-                .padding(size * 0.3)
-                .foregroundStyle(.secondary)
-        }
+    private func picksAvatarPlaceholder(size: CGFloat) -> some View {
+        Image(systemName: "person.fill")
+            .resizable()
+            .scaledToFit()
+            .padding(size * 0.3)
+            .foregroundStyle(.secondary)
     }
 }
 

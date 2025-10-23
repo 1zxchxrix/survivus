@@ -327,31 +327,21 @@ private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
                     .resizable()
                     .scaledToFill()
             } placeholder: {
-                avatarPlaceholder(for: user, size: size)
+                avatarPlaceholder(size: size)
             }
-        } else if let assetName = user.avatarAssetName {
-            Image(assetName)
-                .resizable()
-                .scaledToFill()
         } else {
-            avatarPlaceholder(for: user, size: size)
+            avatarPlaceholder(size: size)
         }
     }
 }
 
 @ViewBuilder
-private func avatarPlaceholder(for user: UserProfile, size: CGFloat) -> some View {
-    if let assetName = user.avatarAssetName {
-        Image(assetName)
-            .resizable()
-            .scaledToFill()
-    } else {
-        Image(systemName: "person.fill")
-            .resizable()
-            .scaledToFit()
-            .padding(size * 0.3)
-            .foregroundStyle(.secondary)
-    }
+private func avatarPlaceholder(size: CGFloat) -> some View {
+    Image(systemName: "person.fill")
+        .resizable()
+        .scaledToFit()
+        .padding(size * 0.3)
+        .foregroundStyle(.secondary)
 }
 
 private struct TableScrollableRow: View {
