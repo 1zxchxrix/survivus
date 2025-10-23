@@ -17,13 +17,28 @@ enum StoragePaths {
             return absolute
         }
 
-        if trimmed.contains(".") {
-            return URL(string: "\(bucket)/contestants/\(trimmed)")
+        var relativePath = trimmed
+        while relativePath.hasPrefix("/") {
+            relativePath.removeFirst()
+        }
+
+        if relativePath.hasPrefix("contestants/") {
+            relativePath.removeFirst("contestants/".count)
+        }
+
+        relativePath = relativePath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !relativePath.isEmpty else { return nil }
+
+        let lastComponent = relativePath.split(separator: "/").last
+        let path = "contestants/\(relativePath)"
+
+        if lastComponent?.contains(".") == true {
+            return URL(string: "\(bucket)/\(path)")
         }
 
         let preferredExtensions = ["jpg", "png"]
         for fileExtension in preferredExtensions {
-            if let url = URL(string: "\(bucket)/contestants/\(trimmed).\(fileExtension)") {
+            if let url = URL(string: "\(bucket)/\(path).\(fileExtension)") {
                 return url
             }
         }
