@@ -39,7 +39,7 @@ final class FirestoreLeagueRepository {
                 let config = try snapshot.data(as: SeasonConfig.self)
                 Task { @MainActor in onChange(config) }
             } catch {
-                logDecodingError(error, context: "SeasonConfig")
+                self.logDecodingError(error, context: "SeasonConfig")
             }
         })
     }
