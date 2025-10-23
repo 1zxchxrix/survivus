@@ -77,10 +77,7 @@ struct AdminRoomView: View {
                     isPresentingSelectPhase = false
                 },
                 onDelete: { phase in
-                    app.phases.removeAll { $0.id == phase.id }
-                    if app.activePhaseId == phase.id {
-                        app.activePhaseId = nil
-                    }
+                    app.deletePhase(withId: phase.id)
                 }
             )
         }
@@ -94,7 +91,7 @@ struct AdminRoomView: View {
         }
         .sheet(isPresented: $isPresentingManageContestants) {
             ManageContestantsSheet(contestants: app.store.config.contestants) { contestants in
-                app.store.config.contestants = contestants
+                app.updateContestants(contestants)
             }
         }
         .sheet(item: $phaseBeingEdited) { phase in
@@ -113,11 +110,7 @@ struct AdminRoomView: View {
                     episodeId: episodeId,
                     existingResult: currentWeekResult,
                     onSave: { result in
-                        if let index = app.store.results.firstIndex(where: { $0.id == result.id }) {
-                            app.store.results[index] = result
-                        } else {
-                            app.store.results.append(result)
-                        }
+                        app.saveEpisodeResult(result)
                     }
                 )
             } else {
@@ -405,19 +398,16 @@ private extension AdminRoomView {
     }
 
     func startNewWeek(activating phase: PickPhase) {
-        let nextWeekId = (app.store.results.map(\.id).max() ?? 0) + 1
-        let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
-        app.store.results.append(newResult)
-        app.activePhaseId = phase.id
+        app.startNewWeek(activating: phase)
     }
 
     func handlePhaseSave(_ phase: PickPhase) {
-        if let index = app.phases.firstIndex(where: { $0.id == phase.id }) {
+        let isUpdatingExisting = app.phases.contains(where: { $0.id == phase.id })
+        if isUpdatingExisting {
             guard !app.hasPhaseEverBeenActive(phase.id) else { return }
-            app.phases[index] = phase
-        } else {
-            app.phases.append(phase)
         }
+
+        app.savePhase(phase)
 
         if app.activePhaseId == phase.id {
             app.activePhaseId = nil

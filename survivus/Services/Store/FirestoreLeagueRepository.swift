@@ -198,6 +198,80 @@ final class FirestoreLeagueRepository {
 
     // MARK: - Writes
 
+    func saveSeasonConfig(_ config: SeasonConfig) {
+        let reference = database.collection("seasons").document(seasonId)
+
+        do {
+            try reference.setData(from: config, merge: true)
+        } catch {
+            logEncodingError(error, context: "SeasonConfig")
+        }
+    }
+
+    func saveEpisodeResult(_ result: EpisodeResult) {
+        let reference = database
+            .collection("seasons")
+            .document(seasonId)
+            .collection("results")
+            .document(String(result.id))
+
+        let payload = EpisodeResultDocument(from: result)
+
+        do {
+            try reference.setData(from: payload, merge: true)
+        } catch {
+            logEncodingError(error, context: "EpisodeResult")
+        }
+    }
+
+    func updateSeasonState(activePhaseId: PickPhase.ID?, activatedPhaseIds: Set<PickPhase.ID>) {
+        let reference = database
+            .collection("seasons")
+            .document(seasonId)
+            .collection("state")
+            .document("current")
+
+        let payload = SeasonStateDocument(activePhaseId: activePhaseId, activatedPhaseIds: activatedPhaseIds)
+
+        do {
+            try reference.setData(from: payload, merge: true)
+        } catch {
+            logEncodingError(error, context: "SeasonState")
+        }
+    }
+
+    func savePhases(_ phases: [(PickPhase, Int)]) {
+        let collection = database
+            .collection("seasons")
+            .document(seasonId)
+            .collection("phases")
+
+        for (phase, sortIndex) in phases {
+            let reference = collection.document(phase.id.uuidString)
+            let payload = PhaseDocument(from: phase, sortIndex: sortIndex)
+
+            do {
+                try reference.setData(from: payload, merge: true)
+            } catch {
+                logEncodingError(error, context: "PhaseDocument")
+            }
+        }
+    }
+
+    func deletePhase(withId id: PickPhase.ID) {
+        let reference = database
+            .collection("seasons")
+            .document(seasonId)
+            .collection("phases")
+            .document(id.uuidString)
+
+        reference.delete { error in
+            if let error {
+                self.logSnapshotError(error, context: "DeletePhase")
+            }
+        }
+    }
+
     func saveSeasonPicks(_ picks: SeasonPicks) {
         let reference = database
             .collection("seasons")
@@ -263,6 +337,21 @@ final class FirestoreLeagueRepository {
 struct SeasonStateDocument: Codable {
     var activePhaseId: String?
     var activatedPhaseIds: [String]?
+
+    init() {
+        self.activePhaseId = nil
+        self.activatedPhaseIds = nil
+    }
+
+    init(activePhaseId: PickPhase.ID?, activatedPhaseIds: Set<PickPhase.ID>) {
+        self.activePhaseId = activePhaseId?.uuidString
+        self.activatedPhaseIds = activatedPhaseIds.isEmpty ? nil : activatedPhaseIds.map(\.uuidString)
+    }
+
+    init(activePhaseId: String?, activatedPhaseIds: [String]?) {
+        self.activePhaseId = activePhaseId
+        self.activatedPhaseIds = activatedPhaseIds
+    }
 }
 
 struct PhaseDocument: Codable {
@@ -281,6 +370,22 @@ struct PhaseDocument: Codable {
         }
         return nil
     }
+
+    init(id: String? = nil, name: String, sortIndex: Int? = nil, categories: [PhaseCategoryDocument]) {
+        self.id = id
+        self.name = name
+        self.sortIndex = sortIndex
+        self.categories = categories
+    }
+
+    init(from phase: PickPhase, sortIndex: Int) {
+        self.init(
+            id: phase.id.uuidString,
+            name: phase.name,
+            sortIndex: sortIndex,
+            categories: phase.categories.map(PhaseCategoryDocument.init)
+        )
+    }
 }
 
 struct PhaseCategoryDocument: Codable {
@@ -290,6 +395,33 @@ struct PhaseCategoryDocument: Codable {
     var totalPicks: Int
     var pointsPerCorrectPick: Int?
     var isLocked: Bool
+
+    init(
+        id: String,
+        name: String,
+        columnId: String,
+        totalPicks: Int,
+        pointsPerCorrectPick: Int?,
+        isLocked: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.columnId = columnId
+        self.totalPicks = totalPicks
+        self.pointsPerCorrectPick = pointsPerCorrectPick
+        self.isLocked = isLocked
+    }
+
+    init(from category: PickPhase.Category) {
+        self.init(
+            id: category.id.uuidString,
+            name: category.name,
+            columnId: category.columnId,
+            totalPicks: category.totalPicks,
+            pointsPerCorrectPick: category.pointsPerCorrectPick,
+            isLocked: category.isLocked
+        )
+    }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
@@ -309,6 +441,31 @@ struct EpisodeResultDocument: Codable {
     var immunityWinners: [String]
     var votedOut: [String]
     var categoryWinners: [String: [String]]?
+
+    init(
+        documentId: String? = nil,
+        immunityWinners: [String],
+        votedOut: [String],
+        categoryWinners: [String: [String]]? = nil
+    ) {
+        self.documentId = documentId
+        self.immunityWinners = immunityWinners
+        self.votedOut = votedOut
+        self.categoryWinners = categoryWinners
+    }
+
+    init(from result: EpisodeResult) {
+        let encodedCategories = result.categoryWinners.reduce(into: [String: [String]]()) { partialResult, entry in
+            partialResult[entry.key.uuidString] = entry.value
+        }
+
+        self.init(
+            documentId: String(result.id),
+            immunityWinners: result.immunityWinners,
+            votedOut: result.votedOut,
+            categoryWinners: encodedCategories.isEmpty ? nil : encodedCategories
+        )
+    }
 
     var model: EpisodeResult? {
         guard let documentId, let id = Int(documentId) else { return nil }
@@ -400,6 +557,16 @@ final class FirestoreLeagueRepository {
 
     func invalidate() {}
 
+    func saveSeasonConfig(_ config: SeasonConfig) {}
+
+    func saveEpisodeResult(_ result: EpisodeResult) {}
+
+    func updateSeasonState(activePhaseId: PickPhase.ID?, activatedPhaseIds: Set<PickPhase.ID>) {}
+
+    func savePhases(_ phases: [(PickPhase, Int)]) {}
+
+    func deletePhase(withId id: PickPhase.ID) {}
+
     func observeSeasonConfig(onChange: @escaping @MainActor (SeasonConfig) -> Void) {}
 
     func observeSeasonState(onChange: @escaping @MainActor (SeasonStateDocument) -> Void) {}
@@ -423,7 +590,17 @@ struct SeasonStateDocument: Codable {
     var activePhaseId: String?
     var activatedPhaseIds: [String]?
 
-    init(activePhaseId: String? = nil, activatedPhaseIds: [String]? = nil) {
+    init() {
+        self.activePhaseId = nil
+        self.activatedPhaseIds = nil
+    }
+
+    init(activePhaseId: PickPhase.ID?, activatedPhaseIds: Set<PickPhase.ID>) {
+        self.activePhaseId = activePhaseId?.uuidString
+        self.activatedPhaseIds = activatedPhaseIds.isEmpty ? nil : activatedPhaseIds.map(\.uuidString)
+    }
+
+    init(activePhaseId: String?, activatedPhaseIds: [String]?) {
         self.activePhaseId = activePhaseId
         self.activatedPhaseIds = activatedPhaseIds
     }
