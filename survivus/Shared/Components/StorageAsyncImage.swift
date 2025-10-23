@@ -52,13 +52,18 @@ final class StorageImageLoader: ObservableObject {
         let scheme = url.scheme?.lowercased()
 
         if scheme?.hasPrefix("http") == true {
-            resolveAndFetch(from: url, attemptAuth: false)
+            resolveAndFetch(from: url)
             return
         }
 
         guard scheme == "gs" else {
-            resolveAndFetch(from: url, attemptAuth: false)
+            resolveAndFetch(from: url)
             return
+        }
+
+        configureFirebaseIfNeeded()
+        ensureAuth { [weak self] in
+            self?.resolveAndFetch(from: url)
         }
 
         configureFirebaseIfNeeded()
