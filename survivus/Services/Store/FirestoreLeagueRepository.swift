@@ -173,9 +173,8 @@ final class FirestoreLeagueRepository {
 
     func observeWeeklyPicks(onChange: @escaping @MainActor ([WeeklyPicks]) -> Void) {
         let reference = database
-            .collection("seasons")
-            .document(seasonId)
             .collectionGroup("episodes")
+            .whereField("seasonId", isEqualTo: seasonId)
 
         register(reference.addSnapshotListener { snapshot, error in
             if let error {
@@ -223,7 +222,7 @@ final class FirestoreLeagueRepository {
             .collection("episodes")
             .document(String(picks.episodeId))
 
-        let payload = WeeklyPicksDocument(from: picks)
+        let payload = WeeklyPicksDocument(from: picks, seasonId: seasonId)
         do {
             try reference.setData(from: payload, merge: true)
         } catch {
@@ -360,6 +359,7 @@ struct SeasonPicksDocument: Codable {
 
 struct WeeklyPicksDocument: Codable {
     @DocumentID var documentId: String?
+    var seasonId: String?
     var remain: [String]?
     var votedOut: [String]?
     var immunity: [String]?
@@ -367,7 +367,8 @@ struct WeeklyPicksDocument: Codable {
 
     init() {}
 
-    init(from picks: WeeklyPicks) {
+    init(from picks: WeeklyPicks, seasonId: String) {
+        self.seasonId = seasonId
         remain = Array(picks.remain)
         votedOut = Array(picks.votedOut)
         immunity = Array(picks.immunity)
@@ -570,21 +571,24 @@ struct SeasonPicksDocument: Codable {
 
 struct WeeklyPicksDocument: Codable {
     var documentId: String?
+    var seasonId: String?
     var remain: [String]?
     var votedOut: [String]?
     var immunity: [String]?
     var categorySelections: [String: [String]]?
 
-    init(documentId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil) {
+    init(documentId: String? = nil, seasonId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil) {
         self.documentId = documentId
+        self.seasonId = seasonId
         self.remain = remain
         self.votedOut = votedOut
         self.immunity = immunity
         self.categorySelections = categorySelections
     }
 
-    init(from picks: WeeklyPicks) {
+    init(from picks: WeeklyPicks, seasonId: String) {
         self.documentId = String(picks.episodeId)
+        self.seasonId = seasonId
         remain = Array(picks.remain)
         votedOut = Array(picks.votedOut)
         immunity = Array(picks.immunity)
