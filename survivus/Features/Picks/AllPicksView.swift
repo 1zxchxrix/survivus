@@ -209,8 +209,10 @@ private extension AllPicksView {
     }
 
     func shouldLockPicks(for user: UserProfile) -> Bool {
-        guard user.id != app.currentUserId,
-              let currentUserId = app.currentUserId,
+        let currentUserId = app.currentUserId
+
+        guard user.id != currentUserId,
+              !currentUserId.isEmpty,
               let weekId = selectedWeek.weekId else {
             return false
         }
