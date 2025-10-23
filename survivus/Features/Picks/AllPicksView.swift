@@ -514,7 +514,7 @@ private struct UserPicksCard: View {
         guard case let .weekly(panel) = kind,
               let episode = selectedEpisode,
               let result = scoringEngine.resultsByEpisode[episode.id],
-              let weeklyPicks
+              let weeklyPicks = self.weeklyPicks
         else {
             return []
         }
