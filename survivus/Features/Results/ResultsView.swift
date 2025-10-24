@@ -75,7 +75,7 @@ private struct ContestantResultRow: View {
                 .font(.subheadline)
                 .fontWeight(.semibold)
             ForEach(contestants) { contestant in
-                ContestantNameLabel(contestant: contestant, avatarSize: 22, labelFont: .subheadline)
+                ContestantNameLabel(contestant: contestant, avatarSize: 22, font: .subheadline)
             }
         }
         .padding(.top, 2)

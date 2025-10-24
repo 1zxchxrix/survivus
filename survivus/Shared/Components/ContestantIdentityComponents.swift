@@ -63,13 +63,19 @@ struct ContestantAvatar: View {
 struct ContestantNameLabel: View {
     let contestant: Contestant
     var avatarSize: CGFloat = 24
-    var labelFont: Font = .body
+    var font: Font = .body
+
+    init(contestant: Contestant, avatarSize: CGFloat = 24, font: Font = .body) {
+        self.contestant = contestant
+        self.avatarSize = avatarSize
+        self.font = font
+    }
 
     var body: some View {
         HStack(spacing: 8) {
             ContestantAvatar(contestant: contestant, size: avatarSize)
             Text(contestant.name)
-                .font(labelFont)
+                .font(font)
                 .foregroundStyle(.primary)
         }
     }
@@ -78,7 +84,7 @@ struct ContestantNameLabel: View {
 #Preview("ContestantNameLabel") {
     VStack(alignment: .leading, spacing: 12) {
         ContestantNameLabel(contestant: Contestant(id: "courtney_yates", name: "Courtney Yates"))
-        ContestantNameLabel(contestant: Contestant(id: "john_cochran", name: "John Cochran"), avatarSize: 30, labelFont: .title3)
+        ContestantNameLabel(contestant: Contestant(id: "john_cochran", name: "John Cochran"), avatarSize: 30, font: .title3)
     }
     .padding()
 }
