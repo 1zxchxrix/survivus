@@ -74,4 +74,7 @@ extension Contestant {
         try container.encodeIfPresent(avatarAssetName, forKey: .avatarAssetName)
         try container.encodeIfPresent(avatarURL, forKey: .avatarURL)
     }
+    
 }
+
+
