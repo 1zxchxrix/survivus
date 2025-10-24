@@ -90,6 +90,8 @@ final class AppState: ObservableObject {
         self.activePhaseId = nil
         self.repository = repository ?? FirestoreLeagueRepository(seasonId: seasonId)
         configureStoreObservation()
+        prefetchContestantAvatars(initialStore.config.contestants)
+        prefetchUserAvatars(initialStore.users)
         isStoreObservationActive = true
 
         if connectToFirestore {
@@ -139,6 +141,7 @@ final class AppState: ObservableObject {
         repository.observeSeasonConfig { [weak self] config in
             self?.performRemoteUpdate {
                 self?.store.config = config
+                self?.prefetchContestantAvatars(config.contestants)
             }
         }
 
@@ -179,6 +182,7 @@ final class AppState: ObservableObject {
             guard let self else { return }
             self.performRemoteUpdate {
                 self.store.users = users
+                self.prefetchUserAvatars(users)
                 guard !users.isEmpty else {
                     self.currentUserId = ""
                     return
@@ -224,6 +228,7 @@ final class AppState: ObservableObject {
 
     func updateContestants(_ contestants: [Contestant]) {
         store.config.contestants = contestants
+        prefetchContestantAvatars(contestants)
         persistSeasonConfig()
     }
 
@@ -282,6 +287,16 @@ final class AppState: ObservableObject {
     private func persistSeasonConfig() {
         guard !isApplyingRemoteUpdate else { return }
         repository.saveSeasonConfig(store.config)
+    }
+
+    private func prefetchContestantAvatars(_ contestants: [Contestant]) {
+        let urls = contestants.compactMap(\.avatarURL)
+        StorageImagePrefetcher.shared.prefetch(urls: urls)
+    }
+
+    private func prefetchUserAvatars(_ users: [UserProfile]) {
+        let urls = users.compactMap(\.avatarURL)
+        StorageImagePrefetcher.shared.prefetch(urls: urls)
     }
 }
 
