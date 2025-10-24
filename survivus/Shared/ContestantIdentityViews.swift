@@ -59,22 +59,6 @@ struct ContestantAvatar: View {
     }
 }
 
-/// Convenience view that displays a contestant avatar beside their name.
-struct ContestantNameLabel: View {
-    let contestant: Contestant
-    var avatarSize: CGFloat = 24
-    var font: Font = .body
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ContestantAvatar(contestant: contestant, size: avatarSize)
-            Text(contestant.name)
-                .font(font)
-                .foregroundStyle(.primary)
-        }
-    }
-}
-
 #Preview("ContestantNameLabel") {
     VStack(alignment: .leading, spacing: 12) {
         ContestantNameLabel(contestant: Contestant(id: "courtney_yates", name: "Courtney Yates"))
