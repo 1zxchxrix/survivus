@@ -13,6 +13,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct SurvivusApp: App {
     @StateObject private var app = AppState()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
+    init() {
+        // Make URLSession caching actually useful for images
+        let mem = 50 * 1024 * 1024   // 50 MB
+        let disk = 200 * 1024 * 1024 // 200 MB
+        URLCache.shared = URLCache(memoryCapacity: mem, diskCapacity: disk, directory: nil)
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

@@ -9,14 +9,11 @@ struct Contestant: Identifiable, Hashable, Codable {
 
     var avatarURL: URL? {
         get {
-            if let explicitAvatarURL {
-                return explicitAvatarURL
-            }
+            if let explicitAvatarURL { return explicitAvatarURL }
 
-            guard let asset = avatarAssetName?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !asset.isEmpty else {
-                return nil
-            }
+            // NEW: fall back to the contestant id when no asset name is provided
+            let asset = (avatarAssetName?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { !$0.isEmpty ? $0 : nil }
+                ?? id
 
             return StoragePaths.contestantAvatarURL(for: asset)
         }
@@ -24,6 +21,7 @@ struct Contestant: Identifiable, Hashable, Codable {
             explicitAvatarURL = newValue
         }
     }
+
 
     init(
         id: String,

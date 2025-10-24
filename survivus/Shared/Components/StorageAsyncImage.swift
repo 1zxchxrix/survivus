@@ -27,6 +27,24 @@ func ensureAuth(_ completion: @escaping () -> Void) {
     Auth.auth().signInAnonymously { _, _ in completion() }
 }
 
+// MARK: - Tiny caches
+
+private final class _ImageCache {
+    static let shared = NSCache<NSString, PlatformImage>()
+}
+
+private final class _ResolvedURLCache {
+    static let shared = NSCache<NSString, NSURL>()
+}
+
+/// Normalizes a gs:// key like "gs://bucket/contestants/amanda_kimmel.jpg"
+private func _gsKey(for url: URL) -> NSString? {
+    guard url.scheme == "gs", let host = url.host else { return nil }
+    let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    return NSString(string: "gs://\(host)/\(path)")
+}
+
+
 final class StorageImageLoader: ObservableObject {
     @Published var image: PlatformImage?
     @Published var error: Error?
@@ -35,6 +53,19 @@ final class StorageImageLoader: ObservableObject {
     private var currentURL: URL?
 
     func load(from url: URL) {
+        
+        if let cached = _ImageCache.shared.object(forKey: (url.absoluteString as NSString)) {
+                self.image = cached
+                self.currentURL = url
+                return
+            }
+            if let key = _gsKey(for: url),
+               let cached = _ImageCache.shared.object(forKey: key) {
+                self.image = cached
+                self.currentURL = url
+                return
+            }
+        
         if currentURL == url, image != nil {
             return
         }
@@ -83,14 +114,26 @@ final class StorageImageLoader: ObservableObject {
     private func resolveAndFetch(from url: URL) {
         currentURL = url
 
+        // ✅ Fast-path: reuse previously-resolved https for this gs://
+        if let key = _gsKey(for: url),
+           let mapped = _ResolvedURLCache.shared.object(forKey: key) {
+            fetch(url: mapped as URL)
+            return
+        }
+
+        // If it's already http(s), fetch directly
         if url.scheme?.hasPrefix("http") == true {
             fetch(url: url)
             return
         }
 
+        // Must be gs://<bucket>/<object>
         guard url.scheme == "gs", let host = url.host else {
-            setError(NSError(domain: "StorageImageLoader", code: -2,
-                             userInfo: [NSLocalizedDescriptionKey: "Unsupported URL: \(url)"]))
+            setError(NSError(
+                domain: "StorageImageLoader",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "Unsupported URL: \(url)"]
+            ))
             return
         }
 
@@ -100,23 +143,39 @@ final class StorageImageLoader: ObservableObject {
         let storage = Storage.storage(url: bucket)
         let ref = storage.reference(withPath: objectPath)
 
+        // 1) Try signed URL
         ref.downloadURL { [weak self] signedURL, downloadURLError in
             if let signedURL {
+                // ✅ Remember gs -> https mapping
+                if let key = _gsKey(for: url) {
+                    _ResolvedURLCache.shared.setObject(signedURL as NSURL, forKey: key)
+                }
                 self?.fetch(url: signedURL)
                 return
             }
 
+            // 2) Try REST URL with token (from metadata)
             ref.getMetadata { metadata, metadataError in
                 guard let self else { return }
 
                 if let token = (metadata?.customMetadata?["firebaseStorageDownloadTokens"])
                     ?? (metadata?.dictionaryRepresentation()["downloadTokens"] as? String),
                    let downloadURL = self.restURL(host: host, objectPath: objectPath, token: token) {
+
+                    // ✅ Remember gs -> https mapping
+                    if let key = _gsKey(for: url) {
+                        _ResolvedURLCache.shared.setObject(downloadURL as NSURL, forKey: key)
+                    }
                     self.fetch(url: downloadURL)
                     return
                 }
 
+                // 3) Try REST URL without token (public object)
                 if let downloadURL = self.restURL(host: host, objectPath: objectPath, token: nil) {
+                    // ✅ Remember gs -> https mapping
+                    if let key = _gsKey(for: url) {
+                        _ResolvedURLCache.shared.setObject(downloadURL as NSURL, forKey: key)
+                    }
                     self.fetch(url: downloadURL)
                 } else {
                     self.setError(metadataError ?? downloadURLError)
@@ -159,6 +218,14 @@ final class StorageImageLoader: ObservableObject {
 
                 if let data, let image = PlatformImage(data: data) {
                     self.image = image
+
+                    // ✅ Cache by final https URL
+                    _ImageCache.shared.setObject(image, forKey: (url.absoluteString as NSString))
+
+                    // ✅ And by the original gs:// key (if any)
+                    if let current = self.currentURL, let key = _gsKey(for: current) {
+                        _ImageCache.shared.setObject(image, forKey: key)
+                    }
                 } else {
                     self.error = error ?? NSError(
                         domain: "StorageImageLoader",
