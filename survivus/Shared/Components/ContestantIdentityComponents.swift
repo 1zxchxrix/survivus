@@ -11,6 +11,11 @@ struct ContestantAvatar: View {
     let contestant: Contestant
     var size: CGFloat = 28
 
+    init(contestant: Contestant, size: CGFloat = 28) {
+        self.contestant = contestant
+        self.size = size
+    }
+
     private var isVotedOut: Bool { votedOutContestantIDs.contains(contestant.id) }
 
     var body: some View {
