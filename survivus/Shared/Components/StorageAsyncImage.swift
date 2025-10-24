@@ -51,21 +51,25 @@ final class StorageImageLoader: ObservableObject {
 
     private var task: URLSessionDataTask?
     private var currentURL: URL?
+    private var completion: ((Result<PlatformImage, Error>) -> Void)?
 
-    func load(from url: URL) {
-        
+    func load(from url: URL, completion: ((Result<PlatformImage, Error>) -> Void)? = nil) {
+        self.completion = completion
+
         if let cached = _ImageCache.shared.object(forKey: (url.absoluteString as NSString)) {
-                self.image = cached
-                self.currentURL = url
-                return
-            }
-            if let key = _gsKey(for: url),
-               let cached = _ImageCache.shared.object(forKey: key) {
-                self.image = cached
-                self.currentURL = url
-                return
-            }
-        
+            self.image = cached
+            self.currentURL = url
+            complete(with: .success(cached))
+            return
+        }
+        if let key = _gsKey(for: url),
+           let cached = _ImageCache.shared.object(forKey: key) {
+            self.image = cached
+            self.currentURL = url
+            complete(with: .success(cached))
+            return
+        }
+
         if currentURL == url, image != nil {
             return
         }
@@ -110,6 +114,14 @@ final class StorageImageLoader: ObservableObject {
     }
 
     // MARK: - Core
+
+    private func complete(with result: Result<PlatformImage, Error>) {
+        guard let completion else { return }
+        self.completion = nil
+        DispatchQueue.main.async {
+            completion(result)
+        }
+    }
 
     private func resolveAndFetch(from url: URL) {
         currentURL = url
@@ -226,12 +238,16 @@ final class StorageImageLoader: ObservableObject {
                     if let current = self.currentURL, let key = _gsKey(for: current) {
                         _ImageCache.shared.setObject(image, forKey: key)
                     }
+
+                    self.complete(with: .success(image))
                 } else {
-                    self.error = error ?? NSError(
+                    let resolvedError = error ?? NSError(
                         domain: "StorageImageLoader",
                         code: -1,
                         userInfo: [NSLocalizedDescriptionKey: "Failed to load image"]
                     )
+                    self.error = resolvedError
+                    self.complete(with: .failure(resolvedError))
                 }
             }
         }
@@ -242,12 +258,70 @@ final class StorageImageLoader: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.task = nil
-            self.error = error ?? NSError(
+            let resolved = error ?? NSError(
                 domain: "StorageImageLoader",
                 code: -3,
                 userInfo: [NSLocalizedDescriptionKey: "Unknown error"]
             )
+            self.error = resolved
+            self.complete(with: .failure(resolved))
         }
+    }
+}
+
+final class StorageImagePrefetcher {
+    static let shared = StorageImagePrefetcher()
+
+    private let queue = DispatchQueue(label: "StorageImagePrefetcher")
+    private var activeLoaders: [NSString: StorageImageLoader] = [:]
+
+    func prefetch(urls: [URL]) {
+        guard !urls.isEmpty else { return }
+
+        queue.async { [weak self] in
+            guard let self else { return }
+
+            var seen = Set<String>()
+
+            for url in urls {
+                let absolute = url.absoluteString
+                guard !absolute.isEmpty else { continue }
+
+                let insertion = seen.insert(absolute)
+                guard insertion.inserted else { continue }
+
+                if self.isCached(url: url) {
+                    continue
+                }
+
+                let key = NSString(string: absolute)
+                if self.activeLoaders[key] != nil { continue }
+
+                let loader = StorageImageLoader()
+                self.activeLoaders[key] = loader
+
+                DispatchQueue.main.async {
+                    loader.load(from: url) { [weak self] _ in
+                        guard let self else { return }
+                        self.queue.async {
+                            self.activeLoaders.removeValue(forKey: key)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func isCached(url: URL) -> Bool {
+        if _ImageCache.shared.object(forKey: (url.absoluteString as NSString)) != nil {
+            return true
+        }
+
+        if let key = _gsKey(for: url), _ImageCache.shared.object(forKey: key) != nil {
+            return true
+        }
+
+        return false
     }
 }
 
