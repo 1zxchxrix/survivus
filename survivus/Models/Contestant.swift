@@ -5,7 +5,25 @@ struct Contestant: Identifiable, Hashable, Codable {
     var name: String
     var tribe: String?
     var avatarAssetName: String?
-    var avatarURL: URL?
+    private var explicitAvatarURL: URL?
+
+    var avatarURL: URL? {
+        get {
+            if let explicitAvatarURL {
+                return explicitAvatarURL
+            }
+
+            guard let asset = avatarAssetName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !asset.isEmpty else {
+                return nil
+            }
+
+            return StoragePaths.contestantAvatarURL(for: asset)
+        }
+        set {
+            explicitAvatarURL = newValue
+        }
+    }
 
     init(
         id: String,
@@ -18,15 +36,7 @@ struct Contestant: Identifiable, Hashable, Codable {
         self.name = name
         self.tribe = tribe
         self.avatarAssetName = avatarAssetName
-
-        if let explicitURL = avatarURL {
-            self.avatarURL = explicitURL
-        } else if let asset = avatarAssetName?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !asset.isEmpty {
-            self.avatarURL = StoragePaths.contestantAvatarURL(for: asset)
-        } else {
-            self.avatarURL = nil
-        }
+        self.explicitAvatarURL = avatarURL
     }
 }
 
