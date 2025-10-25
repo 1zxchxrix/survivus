@@ -336,7 +336,7 @@ private struct UserPicksCard: View {
                     )
             }
         }
-        .overlay(alignment: .topLeading) {
+        .overlay(alignment: .top) {
             if isCurrentUser, isHoldToSubmitActive {
                 HoldProgressBar(progress: holdToSubmitProgress)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -764,6 +764,13 @@ private struct SubmitPicksButton: View {
         .onChange(of: isPressing) { newValue in
             if newValue {
                 beginHoldAnimation()
+            } else if isHolding && progress < 0.999 {
+                cancelHoldAnimation()
+            }
+        }
+        .onChange(of: isSubmitted) { newValue in
+            if newValue {
+                cancelHoldAnimation()
             }
         }
     }
@@ -870,6 +877,7 @@ private struct HoldProgressBar: View {
             let clampedProgress = max(0, min(progress, 1))
             let totalWidth = geometry.size.width * 0.9
             let width = totalWidth * CGFloat(clampedProgress)
+
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color.accentColor.opacity(0.15))
@@ -879,7 +887,8 @@ private struct HoldProgressBar: View {
                     .fill(Color.accentColor)
                     .frame(width: width, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: totalWidth, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .frame(height: 4)
     }
