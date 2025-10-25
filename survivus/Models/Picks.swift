@@ -29,4 +29,5 @@ struct SeasonPicks: Identifiable, Hashable, Codable {
     var mergePicks: Set<String> = []
     var finalThreePicks: Set<String> = []
     var winnerPick: String?
+    var mergePicksLocked: Bool = false
 }

@@ -8,12 +8,18 @@ struct MergePickEditor: View {
     var body: some View {
         let config = app.store.config
         let userId = app.currentUserId
-        let disabled = picksLocked(for: config.episodes.first)
+        let seasonPicks = app.store.seasonPicks[userId]
+        let mergeLocked = seasonPicks?.mergePicksLocked == true
+        let disabled = mergeLocked || picksLocked(for: config.episodes.first)
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if disabled {
-                    LockPill(text: "Locked for \(config.episodes.first?.title ?? "Episode")")
+                    if mergeLocked {
+                        LockPill(text: "Locked after submission")
+                    } else {
+                        LockPill(text: "Locked for \(config.episodes.first?.title ?? "Episode")")
+                    }
                 } else {
                     Text("Choose up to three players you think will reach the merge.")
                         .font(.subheadline)

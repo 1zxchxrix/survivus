@@ -45,11 +45,34 @@ final class MemoryStore: ObservableObject {
         guard !picks.isSubmitted else { return }
         picks.isSubmitted = true
         save(picks)
+
+        if let firstEpisodeId = config.episodes.sorted(by: { $0.id < $1.id }).first?.id,
+           episodeId == firstEpisodeId {
+            lockMergePicks(for: userId)
+        }
     }
 
     func updateSeasonPicks(for userId: String, update: (inout SeasonPicks) -> Void) {
         var picks = seasonPicks[userId] ?? SeasonPicks(userId: userId)
+        let originalMergePicks = picks.mergePicks
+        let wasLocked = picks.mergePicksLocked
+
         update(&picks)
+        if wasLocked {
+            picks.mergePicks = originalMergePicks
+        }
+        picks.mergePicksLocked = wasLocked || picks.mergePicksLocked
+
+        seasonPicks[userId] = picks
+        objectWillChange.send()
+        delegate?.memoryStore(self, didUpdateSeasonPicks: picks)
+    }
+
+    func lockMergePicks(for userId: String) {
+        var picks = seasonPicks[userId] ?? SeasonPicks(userId: userId)
+        guard !picks.mergePicksLocked else { return }
+
+        picks.mergePicksLocked = true
         seasonPicks[userId] = picks
         objectWillChange.send()
         delegate?.memoryStore(self, didUpdateSeasonPicks: picks)
