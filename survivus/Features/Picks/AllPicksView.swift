@@ -499,7 +499,7 @@ private struct UserPicksCard: View {
         case let .weekly(panel):
             switch panel {
             case .remain:
-                return contestants(for: weeklyPicks?.remain ?? Set<String>(), limit: limit)
+                return Array(contestantsById.values).sorted { $0.name < $1.name }
             case .votedOut:
                 return contestants(for: weeklyPicks?.votedOut ?? Set<String>(), limit: limit)
             case .immunity:
@@ -515,8 +515,7 @@ private struct UserPicksCard: View {
     private func correctContestantIDs(for category: PickPhase.Category, kind: CategoryKind) -> Set<String> {
         guard case let .weekly(panel) = kind,
               let episode = selectedEpisode,
-              let result = scoringEngine.resultsByEpisode[episode.id],
-              let weeklyPicks = self.weeklyPicks
+              let result = scoringEngine.resultsByEpisode[episode.id]
         else {
             return []
         }
@@ -525,12 +524,16 @@ private struct UserPicksCard: View {
 
         switch panel {
         case .remain:
-            return weeklyPicks.remain.subtracting(votedOutIds)
+            let allContestantIds = Set(contestantsById.keys)
+            return allContestantIds.subtracting(votedOutIds)
         case .votedOut:
+            guard let weeklyPicks = self.weeklyPicks else { return [] }
             return weeklyPicks.votedOut.intersection(votedOutIds)
         case .immunity:
+            guard let weeklyPicks = self.weeklyPicks else { return [] }
             return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
         case let .custom(categoryId):
+            guard let weeklyPicks = self.weeklyPicks else { return [] }
             let winners = Set(result.winners(for: categoryId))
             guard !winners.isEmpty else { return [] }
             let selections = weeklyPicks.selections(for: categoryId)
