@@ -562,6 +562,7 @@ struct SeasonPicksDocument: Codable {
     var mergePicks: [String]?
     var finalThreePicks: [String]?
     var winnerPick: String?
+    var mergePicksLocked: Bool?
 
     init() {}
 
@@ -569,6 +570,7 @@ struct SeasonPicksDocument: Codable {
         mergePicks = Array(picks.mergePicks)
         finalThreePicks = Array(picks.finalThreePicks)
         winnerPick = picks.winnerPick
+        mergePicksLocked = picks.mergePicksLocked
     }
 
     var model: SeasonPicks? {
@@ -577,6 +579,7 @@ struct SeasonPicksDocument: Codable {
         if let mergePicks { picks.mergePicks = Set(mergePicks) }
         if let finalThreePicks { picks.finalThreePicks = Set(finalThreePicks) }
         picks.winnerPick = winnerPick
+        if let mergePicksLocked { picks.mergePicksLocked = mergePicksLocked }
         return picks
     }
 }
@@ -811,12 +814,20 @@ struct SeasonPicksDocument: Codable {
     var mergePicks: [String]?
     var finalThreePicks: [String]?
     var winnerPick: String?
+    var mergePicksLocked: Bool?
 
-    init(documentId: String? = nil, mergePicks: [String]? = nil, finalThreePicks: [String]? = nil, winnerPick: String? = nil) {
+    init(
+        documentId: String? = nil,
+        mergePicks: [String]? = nil,
+        finalThreePicks: [String]? = nil,
+        winnerPick: String? = nil,
+        mergePicksLocked: Bool? = nil
+    ) {
         self.documentId = documentId
         self.mergePicks = mergePicks
         self.finalThreePicks = finalThreePicks
         self.winnerPick = winnerPick
+        self.mergePicksLocked = mergePicksLocked
     }
 
     init(from picks: SeasonPicks) {
@@ -824,6 +835,7 @@ struct SeasonPicksDocument: Codable {
         mergePicks = Array(picks.mergePicks)
         finalThreePicks = Array(picks.finalThreePicks)
         winnerPick = picks.winnerPick
+        mergePicksLocked = picks.mergePicksLocked
     }
 
     var model: SeasonPicks? {
@@ -832,6 +844,7 @@ struct SeasonPicksDocument: Codable {
         if let mergePicks { picks.mergePicks = Set(mergePicks) }
         if let finalThreePicks { picks.finalThreePicks = Set(finalThreePicks) }
         picks.winnerPick = winnerPick
+        if let mergePicksLocked { picks.mergePicksLocked = mergePicksLocked }
         return picks
     }
 }

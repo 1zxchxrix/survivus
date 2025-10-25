@@ -255,21 +255,25 @@ def build_seed_data(
             "mergePicks": ["q", "eva_erickson", "tony_vlachos", "john_cochran"],
             "finalThreePicks": ["eva_erickson", "tony_vlachos", "john_cochran"],
             "winnerPick": "tony_vlachos",
+            "mergePicksLocked": True,
         },
         "u2": {
             "mergePicks": ["parvati_shallow", "john_cochran", "boston_rob", "courtney_yates"],
             "finalThreePicks": ["john_cochran", "parvati_shallow", "ozzy_lusth"],
             "winnerPick": "john_cochran",
+            "mergePicksLocked": True,
         },
         "u3": {
             "mergePicks": ["john_cochran", "ozzy_lusth", "russell_hantz", "denise_martin"],
             "finalThreePicks": ["ozzy_lusth", "denise_martin", "eva_erickson"],
             "winnerPick": "denise_martin",
+            "mergePicksLocked": True,
         },
         "u4": {
             "mergePicks": ["amanda_kimmel", "yul_kwon", "erik_reichenbach", "chicken_morris"],
             "finalThreePicks": ["amanda_kimmel", "yul_kwon", "jonathan_penner"],
             "winnerPick": "amanda_kimmel",
+            "mergePicksLocked": True,
         },
     }
 
