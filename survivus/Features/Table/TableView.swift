@@ -11,6 +11,7 @@ struct TableView: View {
         let activeColumnIDs = activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
         let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
         let columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated] + dynamicColumns
+        let legendEntries = columns.map(\.legendEntry)
         let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
             phase.categories.map { ($0.id, $0) }
         })
@@ -68,7 +69,7 @@ struct TableView: View {
         .sorted { $0.total > $1.total }
 
         return NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 ScrollView(.vertical) {
                     Group {
                         if scrollableColumns.isEmpty {
@@ -111,17 +112,24 @@ struct TableView: View {
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
-            }
-            
-                HStack {
-                    Spacer()
-                    NavigationLink {
-                        ScoreDetailsView()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Details >")
-                            Image(systemName: "chevron.right")
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Spacer()
+                        NavigationLink {
+                            ScoreDetailsView()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("Details >")
+                                Image(systemName: "chevron.right")
+                            }
                         }
+                    }
+
+                    if !legendEntries.isEmpty {
+                        Text(legendEntries.joined(separator: "\n"))
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.horizontal, tableHorizontalPadding)
@@ -157,12 +165,15 @@ struct TableView: View {
                 let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
                 guard !trimmedId.isEmpty, !seenIds.contains(trimmedId) else { continue }
                 seenIds.insert(trimmedId)
+                let metric = TableColumnDefinition.Metric(category: category)
+                let legendDescription = TableColumnDefinition.legendDescription(for: metric, category: category)
                 result.append(
                     TableColumnDefinition(
                         id: trimmedId,
                         title: trimmedId,
                         width: 48,
-                        metric: TableColumnDefinition.Metric(category: category),
+                        metric: metric,
+                        legendDescription: legendDescription,
                         isActive: activeColumnIDs.contains(trimmedId),
                         isPinned: false
                     )
@@ -419,8 +430,13 @@ private struct TableColumnDefinition: Identifiable, Hashable {
     let title: String
     let width: CGFloat
     let metric: Metric?
+    let legendDescription: String
     let isActive: Bool
     let isPinned: Bool
+
+    var legendEntry: String {
+        "\(id): \(legendDescription)"
+    }
 
     func displayValue(for breakdown: UserScoreBreakdown) -> String {
         guard isActive else { return "-" }
@@ -462,6 +478,7 @@ private extension TableColumnDefinition {
         title: "Wk",
         width: 40,
         metric: .weeks,
+        legendDescription: "Weeks participated",
         isActive: true,
         isPinned: false
     )
@@ -471,8 +488,42 @@ private extension TableColumnDefinition {
         title: "Pts",
         width: 52,
         metric: .total,
+        legendDescription: "Total points",
         isActive: true,
         isPinned: true
     )
+
+    static func legendDescription(for metric: Metric?, category: PickPhase.Category?) -> String {
+        let trimmedCategoryName = category?.name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        switch metric {
+        case .weeks:
+            return "Weeks participated"
+        case .votedOut:
+            return "Voted out points"
+        case .remain:
+            return "Remain points"
+        case .immunity:
+            return "Immunity points"
+        case .merge:
+            return "Merge track points"
+        case .finalThree:
+            return "Final three track points"
+        case .winner:
+            return "Winner points"
+        case .total:
+            return "Total points"
+        case .custom:
+            if let name = trimmedCategoryName, !name.isEmpty {
+                return name
+            }
+            return "Custom scoring"
+        case nil:
+            if let name = trimmedCategoryName, !name.isEmpty {
+                return name
+            }
+            return "Custom scoring"
+        }
+    }
 }
 
