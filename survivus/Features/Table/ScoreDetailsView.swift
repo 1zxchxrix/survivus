@@ -248,6 +248,7 @@ private struct ScoreDetailsModel {
     let contestantsById: [String: Contestant]
     let weeks: [Week]
 
+    @MainActor
     init(app: AppState) {
         let store = app.store
         let scoring = app.scoring
