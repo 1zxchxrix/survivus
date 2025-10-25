@@ -743,6 +743,7 @@ private struct SubmitPicksButton: View {
     @Binding var progress: Double
 
     @GestureState private var isPressing = false
+    @State private var holdTask: Task<Void, Never>?
 
     private let holdDuration: TimeInterval = 3
     private let completionDisplayDuration: TimeInterval = 0.3
@@ -803,15 +804,13 @@ private struct SubmitPicksButton: View {
 
         isHolding = true
         progress = 0
-
-        withAnimation(.linear(duration: holdDuration)) {
-            progress = 1
-        }
+        startHoldProgressTask()
     }
 
     private func cancelHoldAnimation() {
         guard isHolding else { return }
 
+        stopHoldProgressTask()
         isHolding = false
 
         withAnimation(.easeOut(duration: 0.15)) {
@@ -822,6 +821,7 @@ private struct SubmitPicksButton: View {
     private func completeHoldAnimation() {
         guard isHolding else { return }
 
+        stopHoldProgressTask()
         progress = 1
 
         DispatchQueue.main.asyncAfter(deadline: .now() + completionDisplayDuration) {
@@ -832,6 +832,34 @@ private struct SubmitPicksButton: View {
             }
         }
     }
+
+    private func startHoldProgressTask() {
+        stopHoldProgressTask()
+
+        holdTask = Task {
+            let startDate = Date()
+
+            while !Task.isCancelled {
+                let elapsed = Date().timeIntervalSince(startDate)
+                let newProgress = min(elapsed / holdDuration, 1)
+
+                await MainActor.run {
+                    progress = newProgress
+                }
+
+                if newProgress >= 1 {
+                    break
+                }
+
+                try? await Task.sleep(nanoseconds: 16_666_667)
+            }
+        }
+    }
+
+    private func stopHoldProgressTask() {
+        holdTask?.cancel()
+        holdTask = nil
+    }
 }
 
 private struct HoldProgressBar: View {
@@ -840,15 +868,18 @@ private struct HoldProgressBar: View {
     var body: some View {
         GeometryReader { geometry in
             let clampedProgress = max(0, min(progress, 1))
-            let width = geometry.size.width * CGFloat(clampedProgress)
+            let totalWidth = geometry.size.width * 0.9
+            let width = totalWidth * CGFloat(clampedProgress)
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(Color.accentColor.opacity(0.15))
+                    .frame(width: totalWidth, alignment: .leading)
 
                 Capsule()
                     .fill(Color.accentColor)
-                    .frame(width: width)
+                    .frame(width: width, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(height: 4)
     }
