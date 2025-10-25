@@ -53,13 +53,14 @@ final class MemoryStore: ObservableObject {
     }
 
     func submitWeeklyPicks(for userId: String, episodeId: Int) {
+        let hasSubmittedPreviously = weeklyPicks[userId]?.values.contains { $0.isSubmitted } ?? false
+
         var picks = weeklyPicks[userId]?[episodeId] ?? WeeklyPicks(userId: userId, episodeId: episodeId)
         guard !picks.isSubmitted else { return }
         picks.isSubmitted = true
         save(picks)
 
-        if let firstEpisodeId = config.episodes.sorted(by: { $0.id < $1.id }).first?.id,
-           episodeId == firstEpisodeId {
+        if !hasSubmittedPreviously {
             lockMergePicks(for: userId)
         }
     }
