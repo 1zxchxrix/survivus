@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct ScoreDetailsView: View {
@@ -46,34 +47,43 @@ struct ScoreDetailsView: View {
                         users: model.users
                     )
 
-                    Divider()
-
                     ForEach(Array(week.categories.enumerated()), id: \.element.id) { index, category in
-                        HStack(alignment: .top, spacing: 12) {
-                            Text(category.title)
-                                .font(.subheadline)
-                                .frame(width: labelWidth, alignment: .leading)
-                                .multilineTextAlignment(.leading)
+                        let rowBackground = index.isMultiple(of: 2) ? Color(.tertiarySystemGroupedBackground) : Color.clear
 
-                            ForEach(model.users) { user in
-                                Text(
-                                    picksText(
-                                        for: category,
-                                        user: user,
-                                        week: week,
-                                        contestantsById: model.contestantsById
+                        HStack(alignment: .top, spacing: 0) {
+                            tableCell(
+                                width: labelWidth,
+                                showTrailingDivider: !model.users.isEmpty
+                            ) {
+                                Text(category.name)
+                                    .font(.subheadline)
+                                    .multilineTextAlignment(.leading)
+                            }
+
+                            ForEach(Array(model.users.enumerated()), id: \.element.id) { userIndex, user in
+                                tableCell(
+                                    width: userColumnWidth,
+                                    showTrailingDivider: userIndex != model.users.count - 1
+                                ) {
+                                    Text(
+                                        picksText(
+                                            for: category,
+                                            user: user,
+                                            week: week,
+                                            contestantsById: model.contestantsById
+                                        )
                                     )
-                                )
-                                .font(.subheadline)
-                                .frame(width: userColumnWidth, alignment: .leading)
-                                .multilineTextAlignment(.leading)
+                                    .font(.subheadline)
+                                    .multilineTextAlignment(.leading)
+                                }
                             }
                         }
-                        .padding(.vertical, 8)
-                        .background(index.isMultiple(of: 2) ? Color(.tertiarySystemGroupedBackground) : Color.clear)
+                        .background(rowBackground)
+                        .overlay(alignment: .bottom) {
+                            Color(.separator)
+                                .frame(height: 1)
+                        }
                     }
-
-                    Divider()
 
                     summaryRow(
                         title: "Weekly Total",
@@ -82,7 +92,8 @@ struct ScoreDetailsView: View {
                         labelWidth: labelWidth,
                         userColumnWidth: userColumnWidth,
                         users: model.users,
-                        emphasize: true
+                        emphasize: true,
+                        showBottomDivider: true
                     )
 
                     summaryRow(
@@ -91,7 +102,8 @@ struct ScoreDetailsView: View {
                         week: week,
                         labelWidth: labelWidth,
                         userColumnWidth: userColumnWidth,
-                        users: model.users
+                        users: model.users,
+                        showBottomDivider: true
                     )
 
                     summaryRow(
@@ -101,13 +113,18 @@ struct ScoreDetailsView: View {
                         labelWidth: labelWidth,
                         userColumnWidth: userColumnWidth,
                         users: model.users,
-                        emphasize: true
+                        emphasize: true,
+                        showBottomDivider: false
                     )
                 }
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(Color(.secondarySystemBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color(.separator), lineWidth: 1)
                 )
             }
 
@@ -124,18 +141,35 @@ struct ScoreDetailsView: View {
         userColumnWidth: CGFloat,
         users: [UserProfile]
     ) -> some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            Text("Category")
-                .font(.footnote.weight(.semibold))
-                .frame(width: labelWidth, alignment: .leading)
-
-            ForEach(users) { user in
-                Text(user.displayName)
+        HStack(spacing: 0) {
+            tableCell(
+                width: labelWidth,
+                showTrailingDivider: !users.isEmpty,
+                verticalPadding: 10
+            ) {
+                Text("Category")
                     .font(.footnote.weight(.semibold))
-                    .frame(width: userColumnWidth, alignment: .leading)
+                    .multilineTextAlignment(.leading)
+            }
+
+            ForEach(Array(users.enumerated()), id: \.element.id) { index, user in
+                tableCell(
+                    width: userColumnWidth,
+                    showTrailingDivider: index != users.count - 1,
+                    verticalPadding: 10
+                ) {
+                    Text(user.displayName)
+                        .font(.footnote.weight(.semibold))
+                        .multilineTextAlignment(.leading)
+                }
             }
         }
         .foregroundStyle(.secondary)
+        .background(Color(.secondarySystemBackground))
+        .overlay(alignment: .bottom) {
+            Color(.separator)
+                .frame(height: 1)
+        }
     }
 
     private func summaryRow(
@@ -145,24 +179,59 @@ struct ScoreDetailsView: View {
         labelWidth: CGFloat,
         userColumnWidth: CGFloat,
         users: [UserProfile],
-        emphasize: Bool = false
+        emphasize: Bool = false,
+        showBottomDivider: Bool
     ) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(title)
-                .font(.body)
-                .fontWeight(emphasize ? .semibold : .regular)
-                .frame(width: labelWidth, alignment: .leading)
-
-            ForEach(users) { user in
-                let value = week.summaries[user.id]?[keyPath: keyPath] ?? 0
-                Text("\(value)")
+        HStack(alignment: .center, spacing: 0) {
+            tableCell(
+                width: labelWidth,
+                showTrailingDivider: !users.isEmpty
+            ) {
+                Text(title)
                     .font(.body)
                     .fontWeight(emphasize ? .semibold : .regular)
-                    .monospacedDigit()
-                    .frame(width: userColumnWidth, alignment: .leading)
+            }
+
+            ForEach(Array(users.enumerated()), id: \.element.id) { index, user in
+                let value = week.summaries[user.id]?[keyPath: keyPath] ?? 0
+                tableCell(
+                    width: userColumnWidth,
+                    showTrailingDivider: index != users.count - 1
+                ) {
+                    Text("\(value)")
+                        .font(.body)
+                        .fontWeight(emphasize ? .semibold : .regular)
+                        .monospacedDigit()
+                }
             }
         }
-        .padding(.vertical, 8)
+        .overlay(alignment: .bottom) {
+            if showBottomDivider {
+                Color(.separator)
+                    .frame(height: 1)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tableCell<Content: View>(
+        width: CGFloat,
+        alignment: Alignment = .leading,
+        showTrailingDivider: Bool,
+        verticalPadding: CGFloat = 8,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .frame(width: width, alignment: alignment)
+            .padding(.vertical, verticalPadding)
+            .padding(.horizontal, 12)
+            .overlay(alignment: .trailing) {
+                if showTrailingDivider {
+                    Color(.separator)
+                        .frame(width: 1)
+                        .frame(maxHeight: .infinity)
+                }
+            }
     }
 
     private func picksText(
@@ -172,30 +241,57 @@ struct ScoreDetailsView: View {
         contestantsById: [String: Contestant]
     ) -> String {
         guard let picks = week.picksByUser[user.id] else { return "—" }
+        let pointsByPick = category.pointsByPick(for: user.id)
 
         switch category.kind {
         case .remain:
-            return formattedNames(for: picks.remain, contestantsById: contestantsById)
+            return formattedNames(
+                for: picks.remain,
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
         case .votedOut:
-            return formattedNames(for: picks.votedOut, contestantsById: contestantsById)
+            return formattedNames(
+                for: picks.votedOut,
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
         case .immunity:
-            return formattedNames(for: picks.immunity, contestantsById: contestantsById)
+            return formattedNames(
+                for: picks.immunity,
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
         case let .custom(id):
-            return formattedNames(for: picks.selections(for: id), contestantsById: contestantsById)
+            return formattedNames(
+                for: picks.selections(for: id),
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
         }
     }
 
     private func formattedNames(
         for ids: Set<String>,
-        contestantsById: [String: Contestant]
+        contestantsById: [String: Contestant],
+        pointsById: [String: Int] = [:]
     ) -> String {
         guard !ids.isEmpty else { return "—" }
 
-        let names = ids
-            .map { contestantsById[$0]?.name ?? $0 }
-            .sorted()
+        let entries: [(display: String, sortKey: String)] = ids.map { id in
+            let name = contestantsById[id]?.name ?? id
+            if let points = pointsById[id], points > 0 {
+                return ("\(name) (\(points))", name)
+            } else {
+                return (name, name)
+            }
+        }
 
-        return names.joined(separator: "\n")
+        let sorted = entries.sorted { lhs, rhs in
+            lhs.sortKey.localizedCaseInsensitiveCompare(rhs.sortKey) == .orderedAscending
+        }
+
+        return sorted.map(\.display).joined(separator: "\n")
     }
 }
 
@@ -205,9 +301,17 @@ private struct ScoreDetailsModel {
             let kind: CategoryKind
             let name: String
             let pointsText: String
+            let correctPicksByUser: [String: Set<String>]
+            let pointsPerCorrectPick: Int?
 
             var id: String { kind.id }
-            var title: String { "\(name) (\(pointsText))" }
+
+            func pointsByPick(for userId: String) -> [String: Int] {
+                guard let perPick = pointsPerCorrectPick, perPick > 0 else { return [:] }
+                guard let picks = correctPicksByUser[userId], !picks.isEmpty else { return [:] }
+
+                return Dictionary(uniqueKeysWithValues: picks.map { ($0, perPick) })
+            }
         }
 
         struct SummaryValues {
@@ -369,13 +473,54 @@ private struct ScoreDetailsModel {
                 }
             }
 
+            let phase = scoring.phase(for: episode)
+            let immunityPoints = phase == .preMerge ? 1 : 3
+            let votedOutSet = Set(result.votedOut)
+            let immunityWinnerSet = Set(result.immunityWinners)
+            let customWinnerSets = result.categoryWinners.mapValues { Set($0) }
+
+            var correctRemainByUser: [String: Set<String>] = [:]
+            var correctVotedOutByUser: [String: Set<String>] = [:]
+            var correctImmunityByUser: [String: Set<String>] = [:]
+            var correctCustomByCategory: [UUID: [String: Set<String>]] = [:]
+
+            for (userId, picks) in picksByUser {
+                let remainHits = picks.remain.subtracting(votedOutSet)
+                if !remainHits.isEmpty {
+                    correctRemainByUser[userId] = remainHits
+                }
+
+                let votedOutHits = picks.votedOut.intersection(votedOutSet)
+                if !votedOutHits.isEmpty {
+                    correctVotedOutByUser[userId] = votedOutHits
+                }
+
+                let immunityHits = picks.immunity.intersection(immunityWinnerSet)
+                if !immunityHits.isEmpty {
+                    correctImmunityByUser[userId] = immunityHits
+                }
+
+                for (categoryId, selections) in picks.categorySelections {
+                    let winners = customWinnerSets[categoryId] ?? []
+                    let hits = selections.intersection(winners)
+                    if !hits.isEmpty {
+                        var userMap = correctCustomByCategory[categoryId, default: [:]]
+                        userMap[userId] = hits
+                        correctCustomByCategory[categoryId] = userMap
+                    }
+                }
+            }
+
             let categories = makeCategories(
-                for: episode,
                 result: result,
                 picksByUser: picksByUser,
                 phases: phases,
                 categoriesById: categoriesById,
-                scoring: scoring
+                immunityPoints: immunityPoints,
+                correctRemainByUser: correctRemainByUser,
+                correctVotedOutByUser: correctVotedOutByUser,
+                correctImmunityByUser: correctImmunityByUser,
+                correctCustomByCategory: correctCustomByCategory
             )
 
             var summaries: [String: Week.SummaryValues] = [:]
@@ -444,38 +589,45 @@ private struct ScoreDetailsModel {
     }
 
     private static func makeCategories(
-        for episode: Episode,
         result: EpisodeResult,
         picksByUser: [String: WeeklyPicks],
         phases: [PickPhase],
         categoriesById: [UUID: PickPhase.Category],
-        scoring: ScoringEngine
+        immunityPoints: Int,
+        correctRemainByUser: [String: Set<String>],
+        correctVotedOutByUser: [String: Set<String>],
+        correctImmunityByUser: [String: Set<String>],
+        correctCustomByCategory: [UUID: [String: Set<String>]]
     ) -> [Week.Category] {
         var categories: [Week.Category] = []
-        let phase = scoring.phase(for: episode)
 
         categories.append(
             Week.Category(
                 kind: .remain,
-                name: "Who Will Remain",
-                pointsText: "1"
+                name: "Remain",
+                pointsText: "1",
+                correctPicksByUser: correctRemainByUser,
+                pointsPerCorrectPick: 1
             )
         )
 
         categories.append(
             Week.Category(
                 kind: .votedOut,
-                name: "Who Will Be Voted Out",
-                pointsText: "3"
+                name: "Voted out",
+                pointsText: "3",
+                correctPicksByUser: correctVotedOutByUser,
+                pointsPerCorrectPick: 3
             )
         )
 
-        let immunityPoints = phase == .preMerge ? 1 : 3
         categories.append(
             Week.Category(
                 kind: .immunity,
-                name: "Who Will Have Immunity",
-                pointsText: "\(immunityPoints)"
+                name: "Immunity",
+                pointsText: "\(immunityPoints)",
+                correctPicksByUser: correctImmunityByUser,
+                pointsPerCorrectPick: immunityPoints
             )
         )
 
@@ -501,12 +653,16 @@ private struct ScoreDetailsModel {
 
                 let name = displayName(for: category)
                 let pointsText = category.pointsPerCorrectPick.map(String.init) ?? "—"
+                let pointsPerPick = category.pointsPerCorrectPick.flatMap { $0 > 0 ? $0 : nil }
+                let correctPicks = correctCustomByCategory[category.id] ?? [:]
 
                 categories.append(
                     Week.Category(
                         kind: .custom(category.id),
                         name: name,
-                        pointsText: pointsText
+                        pointsText: pointsText,
+                        correctPicksByUser: correctPicks,
+                        pointsPerCorrectPick: pointsPerPick
                     )
                 )
                 remaining.remove(category.id)
@@ -521,20 +677,27 @@ private struct ScoreDetailsModel {
 
                 let name = displayName(for: category)
                 let pointsText = category.pointsPerCorrectPick.map(String.init) ?? "—"
+                let pointsPerPick = category.pointsPerCorrectPick.flatMap { $0 > 0 ? $0 : nil }
+                let correctPicks = correctCustomByCategory[id] ?? [:]
 
                 categories.append(
                     Week.Category(
                         kind: .custom(id),
                         name: name,
-                        pointsText: pointsText
+                        pointsText: pointsText,
+                        correctPicksByUser: correctPicks,
+                        pointsPerCorrectPick: pointsPerPick
                     )
                 )
             } else {
+                let correctPicks = correctCustomByCategory[id] ?? [:]
                 categories.append(
                     Week.Category(
                         kind: .custom(id),
                         name: "Category",
-                        pointsText: "—"
+                        pointsText: "—",
+                        correctPicksByUser: correctPicks,
+                        pointsPerCorrectPick: nil
                     )
                 )
             }
