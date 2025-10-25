@@ -5,7 +5,8 @@ struct TableView: View {
     var body: some View {
         let config = app.store.config
         let scoring = app.scoring
-        let lastEpisodeWithResult = app.store.results.map { $0.id }.max() ?? 0
+        let recordedResults = app.store.results.filter(\.hasRecordedResults)
+        let lastEpisodeWithResult = recordedResults.map { $0.id }.max() ?? 0
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
         let activeColumnIDs = activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
         let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
@@ -13,6 +14,8 @@ struct TableView: View {
         let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
             phase.categories.map { ($0.id, $0) }
         })
+        let episodesById = Dictionary(uniqueKeysWithValues: config.episodes.map { ($0.id, $0) })
+        let scoredEpisodeIds = recordedResults.map(\.id).sorted()
         let pinnedColumns = columns.filter { $0.isPinned }
         let scrollableColumns = columns.filter { !$0.isPinned }
         let nameColumnWidth: CGFloat = 120
@@ -31,8 +34,9 @@ struct TableView: View {
             var weeksParticipated = 0
             var categoryPoints: [String: Int] = [:]
 
-            for episode in config.episodes where episode.id <= lastEpisodeWithResult {
-                if let picks = app.store.weeklyPicks[user.id]?[episode.id] {
+            for episodeId in scoredEpisodeIds {
+                let episode = episodesById[episodeId] ?? Episode(id: episodeId)
+                if let picks = app.store.weeklyPicks[user.id]?[episodeId] {
                     weeksParticipated += 1
                     let score = scoring.score(weekly: picks, episode: episode, categoriesById: categoriesById)
                     votedOutPoints += score.votedOut
