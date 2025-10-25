@@ -499,7 +499,7 @@ private struct UserPicksCard: View {
         case let .weekly(panel):
             switch panel {
             case .remain:
-                return Array(contestantsById.values).sorted { $0.name < $1.name }
+                return contestants(for: weeklyPicks?.remain ?? Set<String>(), limit: limit)
             case .votedOut:
                 return contestants(for: weeklyPicks?.votedOut ?? Set<String>(), limit: limit)
             case .immunity:
@@ -524,8 +524,8 @@ private struct UserPicksCard: View {
 
         switch panel {
         case .remain:
-            let allContestantIds = Set(contestantsById.keys)
-            return allContestantIds.subtracting(votedOutIds)
+            guard let weeklyPicks = self.weeklyPicks else { return [] }
+            return weeklyPicks.remain.subtracting(votedOutIds)
         case .votedOut:
             guard let weeklyPicks = self.weeklyPicks else { return [] }
             return weeklyPicks.votedOut.intersection(votedOutIds)
