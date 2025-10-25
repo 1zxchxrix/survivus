@@ -515,7 +515,8 @@ private struct UserPicksCard: View {
     private func correctContestantIDs(for category: PickPhase.Category, kind: CategoryKind) -> Set<String> {
         guard case let .weekly(panel) = kind,
               let episode = selectedEpisode,
-              let result = scoringEngine.resultsByEpisode[episode.id]
+              let result = scoringEngine.resultsByEpisode[episode.id],
+              result.hasRecordedResults
         else {
             return []
         }
