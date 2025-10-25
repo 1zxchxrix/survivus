@@ -69,9 +69,11 @@ struct ScoringEngine {
     func mergeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {
         guard !seasonPicks.mergePicks.isEmpty else { return 0 }
         var pts = 0
+        var eliminated: Set<String> = []
         for id in episodeIds(upTo: episodeId) {
             guard let res = resultsByEpisode[id] else { continue }
-            let alive = seasonPicks.mergePicks.subtracting(res.votedOut)
+            eliminated.formUnion(res.votedOut)
+            let alive = seasonPicks.mergePicks.subtracting(eliminated)
             pts += alive.count
         }
         return pts
@@ -80,9 +82,11 @@ struct ScoringEngine {
     func finalThreeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {
         guard !seasonPicks.finalThreePicks.isEmpty else { return 0 }
         var pts = 0
+        var eliminated: Set<String> = []
         for id in episodeIds(upTo: episodeId) {
             guard let res = resultsByEpisode[id] else { continue }
-            let alive = seasonPicks.finalThreePicks.subtracting(res.votedOut)
+            eliminated.formUnion(res.votedOut)
+            let alive = seasonPicks.finalThreePicks.subtracting(eliminated)
             pts += alive.count
         }
         return pts
