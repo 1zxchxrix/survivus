@@ -8,7 +8,7 @@ struct TableView: View {
         let recordedResults = app.store.results.filter(\.hasRecordedResults)
         let lastEpisodeWithResult = recordedResults.map { $0.id }.max() ?? 0
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
-        let activeColumnIDs = self.makeActiveColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
+        let activeColumnIDs = makeActiveColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
         let dynamicColumns = makeDynamicColumns(from: app.phases, activeColumnIDs: activeColumnIDs)
         var columnDefinitions: [TableColumnDefinition] = [
             TableColumnDefinition.totalPoints,
@@ -145,51 +145,49 @@ struct TableView: View {
 
 }
 
-fileprivate extension TableView {
-    func makeActiveColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
-        var result: Set<String> = []
+private func makeActiveColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
+    var result: Set<String> = []
 
-        for phase in phases where activatedPhaseIDs.contains(phase.id) {
-            for category in phase.categories {
-                let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                guard !trimmedId.isEmpty else { continue }
-                result.insert(trimmedId)
-            }
+    for phase in phases where activatedPhaseIDs.contains(phase.id) {
+        for category in phase.categories {
+            let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !trimmedId.isEmpty else { continue }
+            result.insert(trimmedId)
         }
-
-        return result
     }
 
-    func makeDynamicColumns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
-        var seenIds: Set<String> = [
-            TableColumnDefinition.weeksParticipated.id.uppercased(),
-            TableColumnDefinition.totalPoints.id.uppercased()
-        ]
-        var result: [TableColumnDefinition] = []
+    return result
+}
 
-        for phase in phases {
-            for category in phase.categories {
-                let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                guard !trimmedId.isEmpty, !seenIds.contains(trimmedId) else { continue }
-                seenIds.insert(trimmedId)
-                let metric = TableColumnDefinition.Metric(category: category)
-                let legendDescription = TableColumnDefinition.legendDescription(for: metric, category: category)
-                result.append(
-                    TableColumnDefinition(
-                        id: trimmedId,
-                        title: trimmedId,
-                        width: 48,
-                        metric: metric,
-                        legendDescription: legendDescription,
-                        isActive: activeColumnIDs.contains(trimmedId),
-                        isPinned: false
-                    )
+private func makeDynamicColumns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
+    var seenIds: Set<String> = [
+        TableColumnDefinition.weeksParticipated.id.uppercased(),
+        TableColumnDefinition.totalPoints.id.uppercased()
+    ]
+    var result: [TableColumnDefinition] = []
+
+    for phase in phases {
+        for category in phase.categories {
+            let trimmedId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !trimmedId.isEmpty, !seenIds.contains(trimmedId) else { continue }
+            seenIds.insert(trimmedId)
+            let metric = TableColumnDefinition.Metric(category: category)
+            let legendDescription = TableColumnDefinition.legendDescription(for: metric, category: category)
+            result.append(
+                TableColumnDefinition(
+                    id: trimmedId,
+                    title: trimmedId,
+                    width: 48,
+                    metric: metric,
+                    legendDescription: legendDescription,
+                    isActive: activeColumnIDs.contains(trimmedId),
+                    isPinned: false
                 )
-            }
+            )
         }
-
-        return result
     }
+
+    return result
 }
 
 private struct TablePinnedSection: View {
