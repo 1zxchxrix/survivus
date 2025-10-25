@@ -74,6 +74,8 @@ final class AppState: ObservableObject {
     private var isStoreObservationActive = false
     private var isApplyingRemoteUpdate = false
     private let repository: FirestoreLeagueRepository
+    private var cachedContestantAvatarFingerprints: [Contestant.ID: String] = [:]
+    private var cachedUserAvatarFingerprints: [UserProfile.ID: String] = [:]
 
     init(
         seasonId: String = FirestoreLeagueRepository.defaultSeasonId,
@@ -299,12 +301,54 @@ final class AppState: ObservableObject {
     }
 
     private func prefetchContestantAvatars(_ contestants: [Contestant]) {
-        let urls = contestants.compactMap(\.avatarURL)
+        var urls: [URL] = []
+        var fingerprints: [Contestant.ID: String] = [:]
+
+        for contestant in contestants {
+            let fingerprint = contestant.avatarURL?.absoluteString ?? ""
+            fingerprints[contestant.id] = fingerprint
+
+            if let previous = cachedContestantAvatarFingerprints[contestant.id],
+               previous != fingerprint {
+                if let url = contestant.avatarURL {
+                    StorageImageCache.invalidate(url: url)
+                } else if let previousURL = URL(string: previous) {
+                    StorageImageCache.invalidate(url: previousURL)
+                }
+            }
+
+            if let url = contestant.avatarURL {
+                urls.append(url)
+            }
+        }
+
+        cachedContestantAvatarFingerprints = fingerprints
         StorageImagePrefetcher.shared.prefetch(urls: urls)
     }
 
     private func prefetchUserAvatars(_ users: [UserProfile]) {
-        let urls = users.compactMap(\.avatarURL)
+        var urls: [URL] = []
+        var fingerprints: [UserProfile.ID: String] = [:]
+
+        for user in users {
+            let fingerprint = user.avatarURL?.absoluteString ?? ""
+            fingerprints[user.id] = fingerprint
+
+            if let previous = cachedUserAvatarFingerprints[user.id],
+               previous != fingerprint {
+                if let url = user.avatarURL {
+                    StorageImageCache.invalidate(url: url)
+                } else if let previousURL = URL(string: previous) {
+                    StorageImageCache.invalidate(url: previousURL)
+                }
+            }
+
+            if let url = user.avatarURL {
+                urls.append(url)
+            }
+        }
+
+        cachedUserAvatarFingerprints = fingerprints
         StorageImagePrefetcher.shared.prefetch(urls: urls)
     }
 }
