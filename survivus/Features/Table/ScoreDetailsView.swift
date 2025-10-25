@@ -33,8 +33,14 @@ struct ScoreDetailsView: View {
     @ViewBuilder
     private func weekSection(for week: ScoreDetailsModel.Week, in model: ScoreDetailsModel) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(week.title)
-                .font(.title3.weight(.semibold))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(week.title)
+                    .font(.title3.weight(.semibold))
+
+                Text("– \(week.phaseName)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
             ScrollView(.horizontal, showsIndicators: false) {
                 let labelWidth: CGFloat = 160
@@ -341,6 +347,7 @@ private struct ScoreDetailsModel {
 
         let id: Int
         let title: String
+        let phaseName: String
         let categories: [Category]
         let picksByUser: [String: WeeklyPicks]
         let mergePicksByUser: [String: Set<String>]
@@ -485,6 +492,15 @@ private struct ScoreDetailsModel {
         var previousMergeTotals: [String: Int] = [:]
         var previousFinalTotals: [String: Int] = [:]
         var previousWinnerTotals: [String: Int] = [:]
+        let phaseInfoByCategoryId: [UUID: (name: String, order: Int)] = {
+            var mapping: [UUID: (name: String, order: Int)] = [:]
+            for (index, phase) in phases.enumerated() {
+                for category in phase.categories {
+                    mapping[category.id] = (phase.name, index)
+                }
+            }
+            return mapping
+        }()
         let seasonsByUser: [String: SeasonPicks] = Dictionary(uniqueKeysWithValues: orderedUsers.map { user in
             (user.id, store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id))
         })
@@ -578,6 +594,8 @@ private struct ScoreDetailsModel {
             )
 
             var summaries: [String: Week.SummaryValues] = [:]
+            var awardedFinalPoints = false
+            var awardedWinnerPoints = false
 
             for user in orderedUsers {
                 let userId = user.id
@@ -606,11 +624,13 @@ private struct ScoreDetailsModel {
                 let finalToDate = scoring.finalThreeTrackPoints(for: userId, upTo: episode.id, seasonPicks: season)
                 let finalPrev = previousFinalTotals[userId] ?? 0
                 let finalWeekly = finalToDate - finalPrev
+                if finalWeekly > 0 { awardedFinalPoints = true }
                 previousFinalTotals[userId] = finalToDate
 
                 let winnerToDate = scoring.winnerPoints(seasonPicks: season, finalResult: scoring.resultsByEpisode[episode.id])
                 let winnerPrev = previousWinnerTotals[userId] ?? 0
                 let winnerWeekly = max(0, winnerToDate - winnerPrev)
+                if winnerWeekly > 0 { awardedWinnerPoints = true }
                 previousWinnerTotals[userId] = winnerToDate
 
                 let weeklyTotal = baseWeeklyPoints + mergeWeekly + finalWeekly + winnerWeekly
@@ -625,6 +645,14 @@ private struct ScoreDetailsModel {
                 )
             }
 
+            let phaseDisplayName = phaseName(
+                for: categories,
+                defaultPhase: phase,
+                phases: phases,
+                phaseInfoByCategoryId: phaseInfoByCategoryId,
+                hasFinalPoints: awardedFinalPoints || awardedWinnerPoints
+            )
+
             let votedOutNames = result.votedOut.map { id -> String in
                 let fullName = contestantsById[id]?.name ?? id
                 return shortenedDisplayName(for: fullName)
@@ -634,6 +662,7 @@ private struct ScoreDetailsModel {
                 Week(
                     id: episode.id,
                     title: episode.title,
+                    phaseName: phaseDisplayName,
                     categories: categories,
                     picksByUser: picksByUser,
                     mergePicksByUser: mergeSelectionsByUser,
@@ -645,7 +674,64 @@ private struct ScoreDetailsModel {
             eliminatedContestantIds = eliminatedThroughCurrentEpisode
         }
 
-        return weeks
+        return weeks.sorted(by: { $0.id > $1.id })
+    }
+
+    private static func phaseName(
+        for categories: [Week.Category],
+        defaultPhase: Phase,
+        phases: [PickPhase],
+        phaseInfoByCategoryId: [UUID: (name: String, order: Int)],
+        hasFinalPoints: Bool
+    ) -> String {
+        let candidates: [(order: Int, name: String)] = categories.compactMap { category in
+            if case let .custom(id) = category.kind, let info = phaseInfoByCategoryId[id] {
+                return (info.order, info.name)
+            }
+            return nil
+        }
+
+        if let selected = candidates.sorted(by: { $0.order < $1.order }).last {
+            return selected.name
+        }
+
+        return fallbackPhaseName(for: defaultPhase, phases: phases, hasFinalPoints: hasFinalPoints)
+    }
+
+    private static func fallbackPhaseName(
+        for defaultPhase: Phase,
+        phases: [PickPhase],
+        hasFinalPoints: Bool
+    ) -> String {
+        if hasFinalPoints {
+            if let finalsPhase = phases.first(where: { phase in
+                phase.name.range(of: "final", options: .caseInsensitive) != nil
+            }) {
+                return finalsPhase.name
+            }
+            return "Finale"
+        }
+
+        switch defaultPhase {
+        case .preMerge:
+            if let match = phases.first(where: { phase in
+                let name = phase.name
+                return name.range(of: "pre", options: .caseInsensitive) != nil &&
+                    name.range(of: "merge", options: .caseInsensitive) != nil
+            }) {
+                return match.name
+            }
+            return "Pre-merge"
+        case .postMerge:
+            if let match = phases.first(where: { phase in
+                let name = phase.name
+                return name.range(of: "post", options: .caseInsensitive) != nil &&
+                    name.range(of: "merge", options: .caseInsensitive) != nil
+            }) {
+                return match.name
+            }
+            return "Post-merge"
+        }
     }
 
     private static func makeCategories(
