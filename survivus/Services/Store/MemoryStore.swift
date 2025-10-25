@@ -40,6 +40,18 @@ final class MemoryStore: ObservableObject {
         delegate?.memoryStore(self, didSaveWeeklyPicks: picks)
     }
 
+    func isWeeklyPicksLocked(for userId: String, episodeId: Int) -> Bool {
+        guard let picksByEpisode = weeklyPicks[userId] else { return false }
+
+        let submittedEpisodeIds = picksByEpisode.values
+            .filter(\.isSubmitted)
+            .map(\.episodeId)
+
+        guard let highestSubmitted = submittedEpisodeIds.max() else { return false }
+
+        return episodeId <= highestSubmitted
+    }
+
     func submitWeeklyPicks(for userId: String, episodeId: Int) {
         var picks = weeklyPicks[userId]?[episodeId] ?? WeeklyPicks(userId: userId, episodeId: episodeId)
         guard !picks.isSubmitted else { return }

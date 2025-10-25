@@ -11,7 +11,7 @@ struct MergePickEditor: View {
         let seasonPicks = app.store.seasonPicks[userId]
         let mergeLocked = seasonPicks?.mergePicksLocked == true
         let firstEpisode = config.episodes.sorted(by: { $0.id < $1.id }).first
-        let episodeLocked = firstEpisode.map { picksLocked(for: $0) } ?? false
+        let episodeLocked = firstEpisode.map { picksLocked(for: $0, userId: userId, store: app.store) } ?? false
         let disabled = mergeLocked || episodeLocked
 
         ScrollView {
