@@ -353,31 +353,31 @@ private struct TablePinnedRow: View {
     }
 
     private var avatarSize: CGFloat { 32 }
-}
 
-private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
-    Group {
-        if let url = user.avatarURL {
-            StorageAsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
+    private func avatarView(for user: UserProfile, size: CGFloat) -> some View {
+        Group {
+            if let url = user.avatarURL {
+                StorageAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } placeholder: {
+                    avatarPlaceholder(size: size)
+                }
+            } else {
                 avatarPlaceholder(size: size)
             }
-        } else {
-            avatarPlaceholder(size: size)
         }
     }
-}
 
-@ViewBuilder
-private func avatarPlaceholder(size: CGFloat) -> some View {
-    Image(systemName: "person.fill")
-        .resizable()
-        .scaledToFit()
-        .padding(size * 0.3)
-        .foregroundStyle(.secondary)
+    @ViewBuilder
+    private func avatarPlaceholder(size: CGFloat) -> some View {
+        Image(systemName: "person.fill")
+            .resizable()
+            .scaledToFit()
+            .padding(size * 0.3)
+            .foregroundStyle(.secondary)
+    }
 }
 
 private struct TableScrollableRow: View {
