@@ -24,7 +24,7 @@ struct InsertResultsSheet: View {
         self.existingResult = existingResult
         self.onSave = onSave
 
-        let insertableCategories = phase.categories.filter { !$0.isLocked }
+        let insertableCategories = phase.categories.filter { !$0.isLocked && !$0.matchesRemainCategory }
 
         var initialSelections = Dictionary(
             uniqueKeysWithValues: insertableCategories.map { ($0.id, Set<String>()) }
@@ -101,7 +101,7 @@ struct InsertResultsSheet: View {
     }
 
     private var insertableCategories: [PickPhase.Category] {
-        phase.categories.filter { !$0.isLocked }
+        phase.categories.filter { !$0.isLocked && !$0.matchesRemainCategory }
     }
 
     @ViewBuilder
