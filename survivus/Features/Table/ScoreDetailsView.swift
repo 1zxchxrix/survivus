@@ -519,6 +519,7 @@ private struct ScoreDetailsModel {
             let votedOutSet = Set(result.votedOut)
             let immunityWinnerSet = Set(result.immunityWinners)
             let customWinnerSets = result.categoryWinners.mapValues { Set($0) }
+            let eliminatedThroughCurrentEpisode = eliminatedContestantIds.union(votedOutSet)
 
             var correctRemainByUser: [String: Set<String>] = [:]
             var correctVotedOutByUser: [String: Set<String>] = [:]
@@ -526,7 +527,7 @@ private struct ScoreDetailsModel {
             var correctCustomByCategory: [UUID: [String: Set<String>]] = [:]
 
             for (userId, picks) in picksByUser {
-                let remainHits = picks.remain.subtracting(votedOutSet)
+                let remainHits = picks.remain.subtracting(eliminatedThroughCurrentEpisode)
                 if !remainHits.isEmpty {
                     correctRemainByUser[userId] = remainHits
                 }
@@ -551,8 +552,6 @@ private struct ScoreDetailsModel {
                     }
                 }
             }
-
-            let eliminatedThroughCurrentEpisode = eliminatedContestantIds.union(result.votedOut)
 
             var mergeAliveByUser: [String: Set<String>] = [:]
             if hasMergePicks {
