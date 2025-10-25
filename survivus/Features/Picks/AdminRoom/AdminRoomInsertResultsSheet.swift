@@ -108,8 +108,6 @@ struct InsertResultsSheet: View {
     private func categoryCard(for category: PickPhase.Category) -> some View {
         let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = displayName.isEmpty ? "Untitled Category" : displayName
-        let limit = max(category.totalPicks, 1)
-
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title)
@@ -121,14 +119,14 @@ struct InsertResultsSheet: View {
                 }
             }
 
-            Text("Select up to \(limit) contestant\(limit == 1 ? "" : "s").")
+            Text("Select all contestants that match the result for this category.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             LimitedMultiSelect(
                 all: contestants,
                 selection: binding(for: category),
-                max: limit,
+                max: nil,
                 disabled: category.isLocked
             )
 
