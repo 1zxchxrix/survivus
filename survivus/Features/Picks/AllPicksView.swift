@@ -517,7 +517,8 @@ private struct UserPicksCard: View {
         case .seasonMerge:
             guard let seasonPicks = self.seasonPicks,
                   let episode = selectedEpisode,
-                  hasRecordedResults(upTo: episode.id)
+                  let currentResults = scoringEngine.resultsByEpisode[episode.id],
+                  currentResults.hasRecordedResults
             else {
                 return []
             }
@@ -557,10 +558,6 @@ private struct UserPicksCard: View {
                 return selections.intersection(winners)
             }
         }
-    }
-
-    private func hasRecordedResults(upTo episodeId: Int) -> Bool {
-        scoringEngine.resultsByEpisode.contains { $0.key <= episodeId && $0.value.hasRecordedResults }
     }
 
     private func eliminatedContestantIDs(upTo episodeId: Int) -> Set<String> {
