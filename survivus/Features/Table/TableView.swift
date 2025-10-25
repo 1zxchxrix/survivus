@@ -8,7 +8,7 @@ struct TableView: View {
         let recordedResults = app.store.results.filter(\.hasRecordedResults)
         let lastEpisodeWithResult = recordedResults.map { $0.id }.max() ?? 0
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
-        let activeColumnIDs = activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
+        let activeColumnIDs = self.activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
         let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
         var columns: [TableColumnDefinition] = [
             TableColumnDefinition.totalPoints,
