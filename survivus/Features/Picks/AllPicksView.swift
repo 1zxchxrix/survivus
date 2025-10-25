@@ -513,34 +513,62 @@ private struct UserPicksCard: View {
     }
 
     private func correctContestantIDs(for category: PickPhase.Category, kind: CategoryKind) -> Set<String> {
-        guard case let .weekly(panel) = kind,
-              let episode = selectedEpisode,
-              let result = scoringEngine.resultsByEpisode[episode.id],
-              result.hasRecordedResults
-        else {
-            return []
-        }
+        switch kind {
+        case .seasonMerge:
+            guard let seasonPicks = self.seasonPicks,
+                  let episode = selectedEpisode,
+                  hasRecordedResults(upTo: episode.id)
+            else {
+                return []
+            }
 
-        switch panel {
-        case .remain:
-            guard !result.votedOut.isEmpty,
-                  let weeklyPicks = self.weeklyPicks else { return [] }
-            let votedOutIds = Set(result.votedOut)
-            return weeklyPicks.remain.subtracting(votedOutIds)
-        case .votedOut:
-            let votedOutIds = Set(result.votedOut)
-            guard let weeklyPicks = self.weeklyPicks else { return [] }
-            return weeklyPicks.votedOut.intersection(votedOutIds)
-        case .immunity:
-            guard let weeklyPicks = self.weeklyPicks else { return [] }
-            return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
-        case let .custom(categoryId):
-            guard let weeklyPicks = self.weeklyPicks else { return [] }
-            let winners = Set(result.winners(for: categoryId))
-            guard !winners.isEmpty else { return [] }
-            let selections = weeklyPicks.selections(for: categoryId)
-            return selections.intersection(winners)
+            let eliminated = eliminatedContestantIDs(upTo: episode.id)
+            return seasonPicks.mergePicks.subtracting(eliminated)
+
+        case .seasonFinalThree, .seasonWinner, .unknown:
+            return []
+
+        case let .weekly(panel):
+            guard let episode = selectedEpisode,
+                  let result = scoringEngine.resultsByEpisode[episode.id],
+                  result.hasRecordedResults
+            else {
+                return []
+            }
+
+            switch panel {
+            case .remain:
+                guard !result.votedOut.isEmpty,
+                      let weeklyPicks = self.weeklyPicks else { return [] }
+                let votedOutIds = Set(result.votedOut)
+                return weeklyPicks.remain.subtracting(votedOutIds)
+            case .votedOut:
+                let votedOutIds = Set(result.votedOut)
+                guard let weeklyPicks = self.weeklyPicks else { return [] }
+                return weeklyPicks.votedOut.intersection(votedOutIds)
+            case .immunity:
+                guard let weeklyPicks = self.weeklyPicks else { return [] }
+                return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
+            case let .custom(categoryId):
+                guard let weeklyPicks = self.weeklyPicks else { return [] }
+                let winners = Set(result.winners(for: categoryId))
+                guard !winners.isEmpty else { return [] }
+                let selections = weeklyPicks.selections(for: categoryId)
+                return selections.intersection(winners)
+            }
         }
+    }
+
+    private func hasRecordedResults(upTo episodeId: Int) -> Bool {
+        scoringEngine.resultsByEpisode.contains { $0.key <= episodeId && $0.value.hasRecordedResults }
+    }
+
+    private func eliminatedContestantIDs(upTo episodeId: Int) -> Set<String> {
+        scoringEngine.resultsByEpisode
+            .filter { $0.key <= episodeId && $0.value.hasRecordedResults }
+            .reduce(into: Set<String>()) { result, entry in
+                result.formUnion(entry.value.votedOut)
+            }
     }
 
     @ViewBuilder
