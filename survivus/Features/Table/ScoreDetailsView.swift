@@ -37,7 +37,7 @@ struct ScoreDetailsView: View {
                 .font(.title3.weight(.semibold))
 
             ScrollView(.horizontal, showsIndicators: false) {
-                let labelWidth: CGFloat = 220
+                let labelWidth: CGFloat = 160
                 let userColumnWidth: CGFloat = 140
 
                 VStack(spacing: 0) {
@@ -58,6 +58,7 @@ struct ScoreDetailsView: View {
                                 Text(category.name)
                                     .font(.subheadline)
                                     .multilineTextAlignment(.leading)
+                                    .lineLimit(1)
                             }
 
                             ForEach(Array(model.users.enumerated()), id: \.element.id) { userIndex, user in
@@ -161,6 +162,7 @@ struct ScoreDetailsView: View {
                     Text(user.displayName)
                         .font(.footnote.weight(.semibold))
                         .multilineTextAlignment(.leading)
+                        .lineLimit(1)
                 }
             }
         }
@@ -262,6 +264,12 @@ struct ScoreDetailsView: View {
                 contestantsById: contestantsById,
                 pointsById: pointsByPick
             )
+        case .merge:
+            return formattedNames(
+                for: category.correctPicksByUser[user.id] ?? [],
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
         case let .custom(id):
             return formattedNames(
                 for: picks.selections(for: id),
@@ -280,10 +288,11 @@ struct ScoreDetailsView: View {
 
         let entries: [(display: String, sortKey: String)] = ids.map { id in
             let name = contestantsById[id]?.name ?? id
+            let shortName = shortenedDisplayName(for: name)
             if let points = pointsById[id], points > 0 {
-                return ("\(name) (\(points))", name)
+                return ("\(shortName) (\(points))", name)
             } else {
-                return (name, name)
+                return (shortName, name)
             }
         }
 
@@ -293,6 +302,7 @@ struct ScoreDetailsView: View {
 
         return sorted.map(\.display).joined(separator: "\n")
     }
+
 }
 
 private struct ScoreDetailsModel {
@@ -332,6 +342,7 @@ private struct ScoreDetailsModel {
         case remain
         case votedOut
         case immunity
+        case merge
         case custom(UUID)
 
         var id: String {
@@ -342,6 +353,8 @@ private struct ScoreDetailsModel {
                 return "votedOut"
             case .immunity:
                 return "immunity"
+            case .merge:
+                return "merge"
             case let .custom(id):
                 return "custom-\(id.uuidString)"
             }
@@ -462,6 +475,11 @@ private struct ScoreDetailsModel {
         var previousMergeTotals: [String: Int] = [:]
         var previousFinalTotals: [String: Int] = [:]
         var previousWinnerTotals: [String: Int] = [:]
+        let seasonsByUser: [String: SeasonPicks] = Dictionary(uniqueKeysWithValues: orderedUsers.map { user in
+            (user.id, store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id))
+        })
+        let hasMergePicks = seasonsByUser.values.contains { !$0.mergePicks.isEmpty }
+        var eliminatedContestantIds: Set<String> = []
 
         for result in sortedResults {
             let episode = episodesById[result.id] ?? Episode(id: result.id)
@@ -511,12 +529,26 @@ private struct ScoreDetailsModel {
                 }
             }
 
+            let eliminatedThroughCurrentEpisode = eliminatedContestantIds.union(result.votedOut)
+
+            var mergeAliveByUser: [String: Set<String>] = [:]
+            if hasMergePicks {
+                for (userId, season) in seasonsByUser {
+                    let alive = season.mergePicks.subtracting(eliminatedThroughCurrentEpisode)
+                    if !alive.isEmpty {
+                        mergeAliveByUser[userId] = alive
+                    }
+                }
+            }
+
             let categories = makeCategories(
                 result: result,
                 picksByUser: picksByUser,
                 phases: phases,
                 categoriesById: categoriesById,
                 immunityPoints: immunityPoints,
+                includeMergeCategory: hasMergePicks,
+                mergeAliveByUser: mergeAliveByUser,
                 correctRemainByUser: correctRemainByUser,
                 correctVotedOutByUser: correctVotedOutByUser,
                 correctImmunityByUser: correctImmunityByUser,
@@ -527,7 +559,7 @@ private struct ScoreDetailsModel {
 
             for user in orderedUsers {
                 let userId = user.id
-                let season = store.seasonPicks[userId] ?? SeasonPicks(userId: userId)
+                let season = seasonsByUser[userId] ?? SeasonPicks(userId: userId)
                 let breakdown: WeeklyScoreBreakdown
 
                 if let picks = picksByUser[userId] {
@@ -571,7 +603,10 @@ private struct ScoreDetailsModel {
                 )
             }
 
-            let votedOutNames = result.votedOut.map { contestantsById[$0]?.name ?? $0 }
+            let votedOutNames = result.votedOut.map { id -> String in
+                let fullName = contestantsById[id]?.name ?? id
+                return shortenedDisplayName(for: fullName)
+            }
 
             weeks.append(
                 Week(
@@ -583,6 +618,8 @@ private struct ScoreDetailsModel {
                     votedOutNames: votedOutNames
                 )
             )
+
+            eliminatedContestantIds = eliminatedThroughCurrentEpisode
         }
 
         return weeks
@@ -594,6 +631,8 @@ private struct ScoreDetailsModel {
         phases: [PickPhase],
         categoriesById: [UUID: PickPhase.Category],
         immunityPoints: Int,
+        includeMergeCategory: Bool,
+        mergeAliveByUser: [String: Set<String>],
         correctRemainByUser: [String: Set<String>],
         correctVotedOutByUser: [String: Set<String>],
         correctImmunityByUser: [String: Set<String>],
@@ -630,6 +669,18 @@ private struct ScoreDetailsModel {
                 pointsPerCorrectPick: immunityPoints
             )
         )
+
+        if includeMergeCategory {
+            categories.append(
+                Week.Category(
+                    kind: .merge,
+                    name: "Mergers",
+                    pointsText: "1",
+                    correctPicksByUser: mergeAliveByUser,
+                    pointsPerCorrectPick: 1
+                )
+            )
+        }
 
         var customCategoryIds = Set(result.categoryWinners.keys)
         for picks in picksByUser.values {
@@ -715,6 +766,22 @@ private struct ScoreDetailsModel {
         let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines)
         return columnId.isEmpty ? "Category" : columnId
     }
+}
+
+private func shortenedDisplayName(for fullName: String) -> String {
+    let components = fullName
+        .split(whereSeparator: { $0.isWhitespace })
+        .map(String.init)
+
+    guard let first = components.first else {
+        return fullName
+    }
+
+    guard let last = components.last, last != first, let initial = last.first else {
+        return first
+    }
+
+    return "\(first) \(String(initial))."
 }
 
 #Preview {
