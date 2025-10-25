@@ -33,6 +33,7 @@ extension CategoryPreset {
         CategoryPreset(name: "Mergers", columnId: "MG", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: true),
         CategoryPreset(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false),
         CategoryPreset(name: "Voted out", columnId: "VO", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false),
+        CategoryPreset(name: "Remains", columnId: "RM", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: false),
         CategoryPreset(name: "Carried", columnId: "CA", totalPicks: 1, pointsPerCorrectPick: 10, isLocked: false),
         CategoryPreset(name: "Fire", columnId: "FI", totalPicks: 2, pointsPerCorrectPick: 10, isLocked: false),
         CategoryPreset(name: "Fire Winner", columnId: "FW", totalPicks: 1, pointsPerCorrectPick: 15, isLocked: false),
