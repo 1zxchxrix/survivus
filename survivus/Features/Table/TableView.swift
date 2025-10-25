@@ -143,7 +143,10 @@ struct TableView: View {
         }
     }
 
-    private func activeColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
+}
+
+private extension TableView {
+    func activeColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
         var result: Set<String> = []
 
         for phase in phases where activatedPhaseIDs.contains(phase.id) {
@@ -157,7 +160,7 @@ struct TableView: View {
         return result
     }
 
-    private func columns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
+    func columns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
         var seenIds: Set<String> = [
             TableColumnDefinition.weeksParticipated.id.uppercased(),
             TableColumnDefinition.totalPoints.id.uppercased()
