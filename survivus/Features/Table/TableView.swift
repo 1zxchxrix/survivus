@@ -10,7 +10,8 @@ struct TableView: View {
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
         let activeColumnIDs = activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
         let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
-        let columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated] + dynamicColumns
+        var columns: [TableColumnDefinition] = [.totalPoints, .weeksParticipated]
+        columns.append(contentsOf: dynamicColumns)
         let legendEntries = columns.map(\.legendEntry)
         let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
             phase.categories.map { ($0.id, $0) }
