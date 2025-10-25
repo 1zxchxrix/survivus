@@ -32,7 +32,7 @@ struct WeeklyPickEditor: View {
         let phase = app.scoring.phase(for: episode)
         let caps = (phase == .preMerge) ? config.weeklyPickCapsPreMerge : config.weeklyPickCapsPostMerge
         let limit = phaseCategoryLimit(for: panel) ?? selectionLimit(for: panel, caps: caps)
-        let locked = picksLocked(for: episode)
+        let locked = picksLocked(for: episode, userId: userId, store: app.store)
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
