@@ -10,15 +10,17 @@ struct MergePickEditor: View {
         let userId = app.currentUserId
         let seasonPicks = app.store.seasonPicks[userId]
         let mergeLocked = seasonPicks?.mergePicksLocked == true
-        let disabled = mergeLocked || picksLocked(for: config.episodes.first)
+        let firstEpisode = config.episodes.sorted(by: { $0.id < $1.id }).first
+        let episodeLocked = firstEpisode.map { picksLocked(for: $0) } ?? false
+        let disabled = mergeLocked || episodeLocked
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if disabled {
                     if mergeLocked {
                         LockPill(text: "Locked after submission")
-                    } else {
-                        LockPill(text: "Locked for \(config.episodes.first?.title ?? "Episode")")
+                    } else if let episode = firstEpisode {
+                        LockPill(text: "Locked for \(episode.title)")
                     }
                 } else {
                     Text("Choose up to three players you think will reach the merge.")
