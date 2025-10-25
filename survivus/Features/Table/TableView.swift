@@ -8,21 +8,21 @@ struct TableView: View {
         let recordedResults = app.store.results.filter(\.hasRecordedResults)
         let lastEpisodeWithResult = recordedResults.map { $0.id }.max() ?? 0
         let usersById = Dictionary(uniqueKeysWithValues: app.store.users.map { ($0.id, $0) })
-        let activeColumnIDs = self.activeColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
-        let dynamicColumns = columns(from: app.phases, activeColumnIDs: activeColumnIDs)
-        var columns: [TableColumnDefinition] = [
+        let activeColumnIDs = self.makeActiveColumnIDs(from: app.phases, activatedPhaseIDs: app.activatedPhaseIDs)
+        let dynamicColumns = makeDynamicColumns(from: app.phases, activeColumnIDs: activeColumnIDs)
+        var columnDefinitions: [TableColumnDefinition] = [
             TableColumnDefinition.totalPoints,
             TableColumnDefinition.weeksParticipated
         ]
-        columns.append(contentsOf: dynamicColumns)
-        let legendEntries = columns.map(\.legendEntry)
+        columnDefinitions.append(contentsOf: dynamicColumns)
+        let legendEntries = columnDefinitions.map(\.legendEntry)
         let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
             phase.categories.map { ($0.id, $0) }
         })
         let episodesById = Dictionary(uniqueKeysWithValues: config.episodes.map { ($0.id, $0) })
         let scoredEpisodeIds = recordedResults.map(\.id).sorted()
-        let pinnedColumns = columns.filter { $0.isPinned }
-        let scrollableColumns = columns.filter { !$0.isPinned }
+        let pinnedColumns = columnDefinitions.filter { $0.isPinned }
+        let scrollableColumns = columnDefinitions.filter { !$0.isPinned }
         let nameColumnWidth: CGFloat = 120
         let columnSpacing: CGFloat = 4
         let tableHorizontalPadding: CGFloat = 12
@@ -146,7 +146,7 @@ struct TableView: View {
 }
 
 fileprivate extension TableView {
-    func activeColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
+    func makeActiveColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
         var result: Set<String> = []
 
         for phase in phases where activatedPhaseIDs.contains(phase.id) {
@@ -160,7 +160,7 @@ fileprivate extension TableView {
         return result
     }
 
-    func columns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
+    func makeDynamicColumns(from phases: [PickPhase], activeColumnIDs: Set<String>) -> [TableColumnDefinition] {
         var seenIds: Set<String> = [
             TableColumnDefinition.weeksParticipated.id.uppercased(),
             TableColumnDefinition.totalPoints.id.uppercased()
