@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// A grid-based multi-select control that limits how many contestants can be chosen.
+/// A grid-based multi-select control that optionally limits how many contestants can be chosen.
 ///
 /// Provide the complete list of contestants with a binding to the set of selected
-/// contestant identifiers. The view enforces the `max` limit and optionally allows
-/// disabling user interaction.
+/// contestant identifiers. When `max` is provided the view enforces that limit and
+/// optionally allows disabling user interaction.
 struct LimitedMultiSelect: View {
     
     let all: [Contestant]
     @Binding var selection: Set<String>
-    let max: Int
+    var max: Int? = nil
     var disabled: Bool = false
     
     private let columns: [GridItem] = [
@@ -78,12 +78,17 @@ struct LimitedMultiSelect: View {
         if isSelected(id) {
             selection = selectionRemovingNormalizedMatches(of: id)
             selectionOrder.removeAll { $0 == id }
-        } else if normalizedSelection.count < max {
+        } else if canSelectMore {
             selection = selectionRemovingNormalizedMatches(of: id)
             selection.insert(id)
             selectionOrder.removeAll { $0 == id }
             selectionOrder.append(id)
         }
+    }
+
+    private var canSelectMore: Bool {
+        guard let max else { return true }
+        return normalizedSelection.count < max
     }
 
     private func selectionRemovingNormalizedMatches(of id: String) -> Set<String> {
