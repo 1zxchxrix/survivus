@@ -55,12 +55,9 @@ struct ScoreDetailsView: View {
                                 width: labelWidth,
                                 showTrailingDivider: !model.users.isEmpty
                             ) {
-                                let label: String
-                                if category.pointsText.isEmpty {
-                                    label = category.name
-                                } else {
-                                    label = "\(category.name) (\(category.pointsText))"
-                                }
+                                let label = category.pointsText.isEmpty
+                                    ? category.name
+                                    : "\(category.name) (\(category.pointsText))"
 
                                 Text(label)
                                     .font(.subheadline)
