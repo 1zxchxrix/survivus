@@ -526,4 +526,3 @@ private extension TableColumnDefinition {
         }
     }
 }
-
