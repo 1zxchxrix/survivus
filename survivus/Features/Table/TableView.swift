@@ -398,26 +398,6 @@ private struct TableScrollableRow: View {
 }
 
 private struct TableColumnDefinition: Identifiable, Hashable {
-    static let weeksParticipated = TableColumnDefinition(
-        id: "Wk",
-        title: "Wk",
-        width: 40,
-        metric: .weeks,
-        legendDescription: "Weeks participated",
-        isActive: true,
-        isPinned: false
-    )
-
-    static let totalPoints = TableColumnDefinition(
-        id: "Pts",
-        title: "Pts",
-        width: 52,
-        metric: .total,
-        legendDescription: "Total points",
-        isActive: true,
-        isPinned: true
-    )
-
     enum Metric: Hashable {
         case weeks
         case votedOut
@@ -497,6 +477,26 @@ private struct TableColumnDefinition: Identifiable, Hashable {
 }
 
 private extension TableColumnDefinition {
+    static let weeksParticipated = TableColumnDefinition(
+        id: "Wk",
+        title: "Wk",
+        width: 40,
+        metric: .weeks,
+        legendDescription: "Weeks participated",
+        isActive: true,
+        isPinned: false
+    )
+
+    static let totalPoints = TableColumnDefinition(
+        id: "Pts",
+        title: "Pts",
+        width: 52,
+        metric: .total,
+        legendDescription: "Total points",
+        isActive: true,
+        isPinned: true
+    )
+
     static func legendDescription(for metric: Metric?, category: PickPhase.Category?) -> String {
         let trimmedCategoryName = category?.name.trimmingCharacters(in: .whitespacesAndNewlines)
 
