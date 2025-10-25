@@ -25,8 +25,14 @@ struct ScoringEngine {
         guard let result = resultsByEpisode[episode.id] else {
             return WeeklyScoreBreakdown(votedOut: 0, remain: 0, immunity: 0, categoryPointsByColumnId: [:])
         }
+        let priorEliminations: Set<String> = resultsByEpisode
+            .filter { $0.key < episode.id }
+            .reduce(into: Set<String>()) { partialResult, entry in
+                partialResult.formUnion(entry.value.votedOut)
+            }
         let votedOutHits = weekly.votedOut.intersection(result.votedOut).count
-        let remainHits = weekly.remain.filter { !result.votedOut.contains($0) }.count
+        let eligibleRemain = weekly.remain.subtracting(priorEliminations)
+        let remainHits = eligibleRemain.subtracting(Set(result.votedOut)).count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
         let phase = phase(for: episode)
         let immunityPts = (phase == .preMerge) ? immunityHits * 1 : immunityHits * 3
