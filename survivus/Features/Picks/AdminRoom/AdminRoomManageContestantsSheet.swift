@@ -559,6 +559,7 @@ private enum ContestantAvatarUploader {
                         let metadata = StorageMetadata()
                         metadata.contentType = "image/jpeg"
                         _ = try await reference.putDataAsync(data, metadata: metadata)
+                        StorageImageCache.invalidateContestantAvatar(named: normalized)
                         continuation.resume(returning: normalized)
                     } catch {
                         continuation.resume(throwing: error)

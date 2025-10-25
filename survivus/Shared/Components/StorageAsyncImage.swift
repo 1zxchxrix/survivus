@@ -37,6 +37,47 @@ private final class _ResolvedURLCache {
     static let shared = NSCache<NSString, NSURL>()
 }
 
+enum StorageImageCache {
+    static func invalidate(url: URL?) {
+        guard let url else { return }
+        invalidate(url: url)
+    }
+
+    static func invalidate(url: URL) {
+        let absoluteKey = NSString(string: url.absoluteString)
+        _ImageCache.shared.removeObject(forKey: absoluteKey)
+
+        if let gsKey = _gsKey(for: url) {
+            _ImageCache.shared.removeObject(forKey: gsKey)
+
+            if let resolved = _ResolvedURLCache.shared.object(forKey: gsKey) {
+                let resolvedKey = NSString(string: (resolved as URL).absoluteString)
+                _ImageCache.shared.removeObject(forKey: resolvedKey)
+            }
+
+            _ResolvedURLCache.shared.removeObject(forKey: gsKey)
+        }
+    }
+
+    static func invalidate(urls: [URL]) {
+        urls.forEach { invalidate(url: $0) }
+    }
+
+    static func invalidateContestantAvatar(named assetName: String) {
+        let trimmed = assetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let url = StoragePaths.contestantAvatarURL(for: trimmed) else { return }
+        invalidate(url: url)
+    }
+
+    static func invalidateUserAvatar(named assetName: String) {
+        let trimmed = assetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let url = StoragePaths.userAvatarURL(for: trimmed) else { return }
+        invalidate(url: url)
+    }
+}
+
 /// Normalizes a gs:// key like "gs://bucket/contestants/amanda_kimmel.jpg"
 private func _gsKey(for url: URL) -> NSString? {
     guard url.scheme == "gs", let host = url.host else { return nil }
