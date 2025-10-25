@@ -145,7 +145,7 @@ struct TableView: View {
 
 }
 
-private extension TableView {
+fileprivate extension TableView {
     func activeColumnIDs(from phases: [PickPhase], activatedPhaseIDs: Set<PickPhase.ID>) -> Set<String> {
         var result: Set<String> = []
 
