@@ -55,7 +55,14 @@ struct ScoreDetailsView: View {
                                 width: labelWidth,
                                 showTrailingDivider: !model.users.isEmpty
                             ) {
-                                Text(category.name)
+                                let label: String
+                                if category.pointsText.isEmpty {
+                                    label = category.name
+                                } else {
+                                    label = "\(category.name) (\(category.pointsText))"
+                                }
+
+                                Text(label)
                                     .font(.subheadline)
                                     .multilineTextAlignment(.leading)
                                     .lineLimit(1)
@@ -242,35 +249,40 @@ struct ScoreDetailsView: View {
         week: ScoreDetailsModel.Week,
         contestantsById: [String: Contestant]
     ) -> String {
-        guard let picks = week.picksByUser[user.id] else { return "—" }
+        let weeklyPicks = week.picksByUser[user.id]
         let pointsByPick = category.pointsByPick(for: user.id)
 
         switch category.kind {
+        case .merge:
+            let selections = week.mergePicksByUser[user.id] ?? []
+            return formattedNames(
+                for: selections,
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
         case .remain:
+            guard let picks = weeklyPicks else { return "—" }
             return formattedNames(
                 for: picks.remain,
                 contestantsById: contestantsById,
                 pointsById: pointsByPick
             )
         case .votedOut:
+            guard let picks = weeklyPicks else { return "—" }
             return formattedNames(
                 for: picks.votedOut,
                 contestantsById: contestantsById,
                 pointsById: pointsByPick
             )
         case .immunity:
+            guard let picks = weeklyPicks else { return "—" }
             return formattedNames(
                 for: picks.immunity,
                 contestantsById: contestantsById,
                 pointsById: pointsByPick
             )
-        case .merge:
-            return formattedNames(
-                for: category.correctPicksByUser[user.id] ?? [],
-                contestantsById: contestantsById,
-                pointsById: pointsByPick
-            )
         case let .custom(id):
+            guard let picks = weeklyPicks else { return "—" }
             return formattedNames(
                 for: picks.selections(for: id),
                 contestantsById: contestantsById,
@@ -334,6 +346,7 @@ private struct ScoreDetailsModel {
         let title: String
         let categories: [Category]
         let picksByUser: [String: WeeklyPicks]
+        let mergePicksByUser: [String: Set<String>]
         let summaries: [String: SummaryValues]
         let votedOutNames: [String]
     }
@@ -479,6 +492,19 @@ private struct ScoreDetailsModel {
             (user.id, store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id))
         })
         let hasMergePicks = seasonsByUser.values.contains { !$0.mergePicks.isEmpty }
+        let mergeSelectionsByUser: [String: Set<String>] = {
+            guard hasMergePicks else { return [:] }
+
+            var selections: [String: Set<String>] = [:]
+            for (userId, season) in seasonsByUser {
+                let picks = season.mergePicks
+                if !picks.isEmpty {
+                    selections[userId] = picks
+                }
+            }
+
+            return selections
+        }()
         var eliminatedContestantIds: Set<String> = []
 
         for result in sortedResults {
@@ -614,6 +640,7 @@ private struct ScoreDetailsModel {
                     title: episode.title,
                     categories: categories,
                     picksByUser: picksByUser,
+                    mergePicksByUser: mergeSelectionsByUser,
                     summaries: summaries,
                     votedOutNames: votedOutNames
                 )
