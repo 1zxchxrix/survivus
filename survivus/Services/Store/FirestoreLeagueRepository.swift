@@ -3,6 +3,9 @@ import Foundation
 #if canImport(FirebaseFirestore) && canImport(FirebaseFirestoreInternalWrapper)
 import FirebaseFirestore
 import FirebaseFirestoreSwift
+#if canImport(FirebaseStorage)
+import FirebaseStorage
+#endif
 
 final class FirestoreLeagueRepository {
     static let defaultSeasonId = "season-001"
@@ -328,6 +331,22 @@ final class FirestoreLeagueRepository {
         }
     }
 
+    func deleteContestantAvatars(for urls: [URL]) {
+#if canImport(FirebaseStorage)
+        guard !urls.isEmpty else { return }
+
+        let storage = Storage.storage(url: StoragePaths.bucket)
+        for url in urls {
+            let reference = storage.reference(forURL: url.absoluteString)
+            reference.delete { error in
+                if let error {
+                    self.logSnapshotError(error, context: "DeleteContestantAvatar")
+                }
+            }
+        }
+#endif
+    }
+
     // MARK: - Helpers
 
     @discardableResult
@@ -635,6 +654,8 @@ final class FirestoreLeagueRepository {
     func saveSeasonPicks(_ picks: SeasonPicks) {}
 
     func saveWeeklyPicks(_ picks: WeeklyPicks) {}
+
+    func deleteContestantAvatars(for urls: [URL]) {}
 }
 
 struct SeasonStateDocument: Codable {

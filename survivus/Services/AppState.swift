@@ -227,9 +227,18 @@ final class AppState: ObservableObject {
     }
 
     func updateContestants(_ contestants: [Contestant]) {
+        let previous = store.config.contestants
         store.config.contestants = contestants
         prefetchContestantAvatars(contestants)
         persistSeasonConfig()
+
+        guard !isApplyingRemoteUpdate else { return }
+
+        let removed = previous.filter { previousContestant in
+            !contestants.contains(where: { $0.id == previousContestant.id })
+        }
+        let urls = removed.compactMap(\.avatarURL)
+        repository.deleteContestantAvatars(for: urls)
     }
 
     func saveEpisodeResult(_ result: EpisodeResult) {
