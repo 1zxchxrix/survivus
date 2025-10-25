@@ -94,14 +94,10 @@ struct ScoringEngine {
 
 private extension ScoringEngine {
     func episodeIds(upTo upperBound: Int) -> [Int] {
-        let ids: [Int]
-        if config.episodes.isEmpty {
-            ids = Array(resultsByEpisode.keys)
-        } else {
-            ids = config.episodes.map(\.id)
-        }
+        var idSet = Set(config.episodes.map(\.id))
+        idSet.formUnion(resultsByEpisode.keys)
 
-        return ids
+        return idSet
             .filter { $0 <= upperBound }
             .sorted()
     }
