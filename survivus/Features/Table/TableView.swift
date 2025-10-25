@@ -116,7 +116,7 @@ struct TableView: View {
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Spacer()
                         NavigationLink {
@@ -132,10 +132,12 @@ struct TableView: View {
                     if !legendEntries.isEmpty {
                         Text(legendEntries.joined(separator: "\n"))
                             .font(.footnote)
+                            .fontWeight(.semibold)
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .padding(.top, 12)
                 .padding(.horizontal, tableHorizontalPadding)
                 .padding(.bottom, 16)
             }
