@@ -521,13 +521,14 @@ private struct UserPicksCard: View {
             return []
         }
 
-        let votedOutIds = Set(result.votedOut)
-
         switch panel {
         case .remain:
-            guard let weeklyPicks = self.weeklyPicks else { return [] }
+            guard !result.votedOut.isEmpty,
+                  let weeklyPicks = self.weeklyPicks else { return [] }
+            let votedOutIds = Set(result.votedOut)
             return weeklyPicks.remain.subtracting(votedOutIds)
         case .votedOut:
+            let votedOutIds = Set(result.votedOut)
             guard let weeklyPicks = self.weeklyPicks else { return [] }
             return weeklyPicks.votedOut.intersection(votedOutIds)
         case .immunity:
