@@ -59,6 +59,14 @@ struct EpisodeResult: Identifiable, Hashable, Codable {
 }
 
 extension EpisodeResult {
+    var hasRecordedResults: Bool {
+        if !immunityWinners.isEmpty || !votedOut.isEmpty {
+            return true
+        }
+
+        return categoryWinners.contains { !$0.value.isEmpty }
+    }
+
     func winners(for categoryId: UUID) -> [String] {
         categoryWinners[categoryId] ?? []
     }
