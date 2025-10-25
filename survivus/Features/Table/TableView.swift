@@ -68,10 +68,11 @@ struct TableView: View {
         .sorted { $0.total > $1.total }
 
         return NavigationStack {
-            ScrollView(.vertical) {
-                Group {
-                    if scrollableColumns.isEmpty {
-                        TablePinnedSection(
+            VStack(alignment: .leading, spacing: 16) {
+                ScrollView(.vertical) {
+                    Group {
+                        if scrollableColumns.isEmpty {
+                            TablePinnedSection(
                             pinnedColumns: pinnedColumns,
                             breakdowns: breakdowns,
                             usersById: usersById,
@@ -110,6 +111,21 @@ struct TableView: View {
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.systemGroupedBackground))
+            }
+            
+                HStack {
+                    Spacer()
+                    NavigationLink {
+                        ScoreDetailsView()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Details >")
+                            Image(systemName: "chevron.right")
+                        }
+                    }
+                }
+                .padding(.horizontal, tableHorizontalPadding)
+                .padding(.bottom, 16)
             }
             .navigationTitle("Table")
         }
