@@ -475,9 +475,6 @@ private struct TableColumnDefinition: Identifiable, Hashable {
             return breakdown.points(forColumnId: columnId)
         }
     }
-}
-
-fileprivate extension TableColumnDefinition {
     static let weeksParticipated = TableColumnDefinition(
         id: "Wk",
         title: "Wk",
