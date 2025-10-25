@@ -477,7 +477,7 @@ private struct TableColumnDefinition: Identifiable, Hashable {
     }
 }
 
-private extension TableColumnDefinition {
+fileprivate extension TableColumnDefinition {
     static let weeksParticipated = TableColumnDefinition(
         id: "Wk",
         title: "Wk",
