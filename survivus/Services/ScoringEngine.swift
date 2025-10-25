@@ -63,11 +63,10 @@ struct ScoringEngine {
     func mergeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {
         guard !seasonPicks.mergePicks.isEmpty else { return 0 }
         var pts = 0
-        for ep in config.episodes where ep.id <= episodeId {
-            if let res = resultsByEpisode[ep.id] {
-                let alive = seasonPicks.mergePicks.subtracting(res.votedOut)
-                pts += alive.count
-            }
+        for id in episodeIds(upTo: episodeId) {
+            guard let res = resultsByEpisode[id] else { continue }
+            let alive = seasonPicks.mergePicks.subtracting(res.votedOut)
+            pts += alive.count
         }
         return pts
     }
@@ -75,11 +74,10 @@ struct ScoringEngine {
     func finalThreeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {
         guard !seasonPicks.finalThreePicks.isEmpty else { return 0 }
         var pts = 0
-        for ep in config.episodes where ep.id <= episodeId {
-            if let res = resultsByEpisode[ep.id] {
-                let alive = seasonPicks.finalThreePicks.subtracting(res.votedOut)
-                pts += alive.count
-            }
+        for id in episodeIds(upTo: episodeId) {
+            guard let res = resultsByEpisode[id] else { continue }
+            let alive = seasonPicks.finalThreePicks.subtracting(res.votedOut)
+            pts += alive.count
         }
         return pts
     }
@@ -91,5 +89,20 @@ struct ScoringEngine {
 
     func soleSurvivorId(finalResult: EpisodeResult?) -> String? {
         return nil
+    }
+}
+
+private extension ScoringEngine {
+    func episodeIds(upTo upperBound: Int) -> [Int] {
+        let ids: [Int]
+        if config.episodes.isEmpty {
+            ids = Array(resultsByEpisode.keys)
+        } else {
+            ids = config.episodes.map(\.id)
+        }
+
+        return ids
+            .filter { $0 <= upperBound }
+            .sorted()
     }
 }
