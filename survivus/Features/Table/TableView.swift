@@ -123,7 +123,7 @@ struct TableView: View {
                             ScoreDetailsView()
                         } label: {
                             HStack(spacing: 4) {
-                                Text("Details >")
+                                Text("Details")
                                 Image(systemName: "chevron.right")
                             }
                         }
