@@ -10,6 +10,7 @@ struct InsertResultsSheet: View {
     let onSave: (EpisodeResult) -> Void
 
     @State private var selections: [PickPhase.Category.ID: Set<String>]
+    @State private var pendingResult: EpisodeResult?
 
     init(
         phase: PickPhase,
@@ -88,13 +89,29 @@ struct InsertResultsSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let result = buildEpisodeResult()
-                        onSave(result)
-                        dismiss()
+                        pendingResult = buildEpisodeResult()
                     }
                     .disabled(insertableCategories.isEmpty || contestants.isEmpty)
                 }
             }
+        }
+        .sheet(item: $pendingResult) { result in
+            InsertResultsConfirmationView(
+                phaseName: phase.name,
+                result: result,
+                categories: insertableCategories,
+                contestants: contestants,
+                onCancel: {
+                    pendingResult = nil
+                },
+                onConfirm: {
+                    onSave(result)
+                    pendingResult = nil
+                    dismiss()
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationCornerRadius(28)
         }
         .presentationDetents([.fraction(0.85)])
         .presentationCornerRadius(28)
@@ -106,8 +123,7 @@ struct InsertResultsSheet: View {
 
     @ViewBuilder
     private func categoryCard(for category: PickPhase.Category) -> some View {
-        let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = displayName.isEmpty ? "Untitled Category" : displayName
+        let title = displayTitle(for: category)
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title)
@@ -172,6 +188,103 @@ struct InsertResultsSheet: View {
 
     private func sortedSelection(for category: PickPhase.Category) -> [String] {
         Array(selections[category.id] ?? []).sorted()
+    }
+
+    private func displayTitle(for category: PickPhase.Category) -> String {
+        let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return displayName.isEmpty ? "Untitled Category" : displayName
+    }
+}
+
+private struct InsertResultsConfirmationView: View {
+    let phaseName: String
+    let result: EpisodeResult
+    let categories: [PickPhase.Category]
+    let contestants: [Contestant]
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    private struct CategorySummary: Identifiable {
+        let id: PickPhase.Category.ID
+        let title: String
+        let contestants: [Contestant]
+    }
+
+    private var contestantsById: [String: Contestant] {
+        Dictionary(uniqueKeysWithValues: contestants.map { ($0.id, $0) })
+    }
+
+    private var summaries: [CategorySummary] {
+        categories.compactMap { category in
+            let winners = result.winners(for: category.id)
+            let contestants = winners.compactMap { contestantsById[$0] }
+            guard !contestants.isEmpty else { return nil }
+
+            return CategorySummary(
+                id: category.id,
+                title: displayTitle(for: category),
+                contestants: contestants
+            )
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Confirm results")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        Text("The following contestants will be recorded for \(phaseName).")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if summaries.isEmpty {
+                        Text("No contestants were selected for this week's results.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 20) {
+                            ForEach(summaries) { summary in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(summary.title)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ForEach(summary.contestants) { contestant in
+                                            ContestantNameLabel(
+                                                contestant: contestant,
+                                                avatarSize: 22,
+                                                font: .subheadline
+                                            )
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Submit results")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Back", action: onCancel)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Submit", action: onConfirm)
+                }
+            }
+        }
+    }
+
+    private func displayTitle(for category: PickPhase.Category) -> String {
+        let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return displayName.isEmpty ? "Untitled Category" : displayName
     }
 }
 
