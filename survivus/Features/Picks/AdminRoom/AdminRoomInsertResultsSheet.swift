@@ -198,11 +198,19 @@ struct InsertResultsSheet: View {
             return "No contestants were selected for this week's results."
         }
 
-        return categorySummaries.joined(separator: "\n")
+        return categorySummaries.joined(separator: "\n\n")
     }
 
     private func contestantName(for id: String) -> String? {
-        contestants.first(where: { $0.id == id })?.name
+        guard let fullName = contestants.first(where: { $0.id == id })?.name else {
+            return nil
+        }
+
+        if let firstName = fullName.split(whereSeparator: { $0.isWhitespace }).first {
+            return String(firstName)
+        }
+
+        return fullName
     }
 
     private func displayTitle(for category: PickPhase.Category) -> String {
