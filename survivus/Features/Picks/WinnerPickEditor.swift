@@ -2,11 +2,13 @@ import SwiftUI
 
 struct WinnerPickEditor: View {
     @EnvironmentObject var app: AppState
+    @Environment(\.votedOutContestantIDs) private var votedOutContestantIDs
 
     var body: some View {
         let config = app.store.config
         let userId = app.currentUserId
         let enable = config.episodes.count >= 2
+        let eligibleContestants = config.contestants.filter { !votedOutContestantIDs.contains($0.id) }
 
         Form {
             Section {
@@ -19,7 +21,7 @@ struct WinnerPickEditor: View {
                     }
                 )) {
                     Text("—").tag("")
-                    ForEach(app.store.config.contestants) { contestant in
+                    ForEach(eligibleContestants) { contestant in
                         Text(contestant.name).tag(contestant.id)
                     }
                 }
@@ -32,5 +34,12 @@ struct WinnerPickEditor: View {
             }
         }
         .navigationTitle("Sole Survivor")
+        .onChange(of: votedOutContestantIDs) { eliminated in
+            guard let current = app.store.seasonPicks[userId]?.winnerPick,
+                  eliminated.contains(current) else { return }
+            app.store.updateSeasonPicks(for: userId) { picks in
+                picks.winnerPick = nil
+            }
+        }
     }
 }
