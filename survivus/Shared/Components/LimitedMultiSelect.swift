@@ -7,11 +7,13 @@ import SwiftUI
 /// optionally allows disabling user interaction.
 struct LimitedMultiSelect: View {
     
+    @Environment(\.votedOutContestantIDs) private var votedOutContestantIDs
+
     let all: [Contestant]
     @Binding var selection: Set<String>
     var max: Int? = nil
     var disabled: Bool = false
-    
+
     private let columns: [GridItem] = [
         GridItem(.adaptive(minimum: 96), spacing: 16, alignment: .top)
     ]
@@ -26,7 +28,15 @@ struct LimitedMultiSelect: View {
             return true
         }
     }
-    
+
+    private var eligibleContestants: [Contestant] {
+        uniqueContestants.filter { !votedOutContestantIDs.contains($0.id) }
+    }
+
+    private var eligibleContestantIDs: Set<String> {
+        Set(eligibleContestants.map(\.id))
+    }
+
     private var normalizedSelection: Set<String> {
         Set(
             selection
@@ -37,7 +47,7 @@ struct LimitedMultiSelect: View {
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 16) {
-            ForEach(uniqueContestants, id: \.id) { contestant in
+            ForEach(eligibleContestants, id: \.id) { contestant in
                 let currentlySelected = isSelected(contestant.id)
                 let currentRank = selectionRank(for: contestant.id)
 
@@ -62,9 +72,15 @@ struct LimitedMultiSelect: View {
             .contentShape(Rectangle())
             .opacity(disabled ? 0.6 : 1)
         }
-        .onAppear { syncSelectionOrder(with: normalizedSelection) }
+        .onAppear {
+            syncSelectionOrder(with: normalizedSelection)
+            enforceEligibility()
+        }
         .onChange(of: normalizedSelectionSorted) { _ in
             syncSelectionOrder(with: normalizedSelection)
+        }
+        .onChange(of: votedOutContestantIDs) { _ in
+            enforceEligibility()
         }
     }
 
@@ -105,7 +121,7 @@ struct LimitedMultiSelect: View {
 
     private func syncSelectionOrder(with selection: Set<String>) {
         var updatedOrder = selectionOrder.filter { selection.contains($0) }
-        let orderedIds = uniqueContestants.map(\.id).filter { selection.contains($0) }
+        let orderedIds = eligibleContestants.map(\.id).filter { selection.contains($0) }
         for id in orderedIds where !updatedOrder.contains(id) {
             updatedOrder.append(id)
         }
@@ -113,6 +129,14 @@ struct LimitedMultiSelect: View {
         if updatedOrder != selectionOrder {
             selectionOrder = updatedOrder
         }
+    }
+
+    private func enforceEligibility() {
+        let filtered = normalizedSelection.intersection(eligibleContestantIDs)
+        guard filtered != normalizedSelection else { return }
+
+        selection = filtered
+        selectionOrder.removeAll { !filtered.contains($0) }
     }
 
     private func selectionRank(for id: String) -> Int? {
