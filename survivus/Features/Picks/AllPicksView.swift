@@ -356,15 +356,25 @@ private struct UserPicksCard: View {
         if isCurrentUser {
             switch kind {
             case .seasonMerge:
-                NavigationLink {
-                    MergePickEditor()
-                } label: {
+                let mergeLocked = seasonPicks?.mergePicksLocked == true
+
+                if mergeLocked {
                     PickSection(
                         title: title,
                         contestants: contestants,
-                        isInteractive: true,
                         correctContestantIDs: correctContestantIDs
                     )
+                } else {
+                    NavigationLink {
+                        MergePickEditor()
+                    } label: {
+                        PickSection(
+                            title: title,
+                            contestants: contestants,
+                            isInteractive: true,
+                            correctContestantIDs: correctContestantIDs
+                        )
+                    }
                 }
             case .seasonFinalThree:
                 NavigationLink {
