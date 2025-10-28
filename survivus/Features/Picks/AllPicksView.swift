@@ -389,7 +389,9 @@ private struct UserPicksCard: View {
                     )
                 }
             case let .weekly(panel):
-                if let episode = selectedEpisode {
+                let canEditWeeklyPicks = !(weeklyPicks?.isSubmitted ?? false)
+
+                if let episode = selectedEpisode, canEditWeeklyPicks {
                     NavigationLink {
                         WeeklyPickEditor(episode: episode, panel: panel)
                     } label: {
