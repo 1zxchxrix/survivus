@@ -106,7 +106,7 @@ struct AdminRoomView: View {
             if let episodeId = currentWeekId {
                 InsertResultsSheet(
                     phase: phase,
-                    contestants: app.store.config.contestants,
+                    contestants: app.activeContestants(beforeEpisodeId: episodeId),
                     episodeId: episodeId,
                     existingResult: currentWeekResult,
                     onSave: { result in

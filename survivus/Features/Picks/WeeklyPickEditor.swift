@@ -33,6 +33,7 @@ struct WeeklyPickEditor: View {
         let caps = (phase == .preMerge) ? config.weeklyPickCapsPreMerge : config.weeklyPickCapsPostMerge
         let limit = phaseCategoryLimit(for: panel) ?? selectionLimit(for: panel, caps: caps)
         let locked = picksLocked(for: episode, userId: userId, store: app.store)
+        let contestants = availableContestants()
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -45,7 +46,7 @@ struct WeeklyPickEditor: View {
                 }
 
                 LimitedMultiSelect(
-                    all: config.contestants,
+                    all: contestants,
                     selection: Binding(
                         get: { selection(for: panel) },
                         set: { newValue in updateSelection(newValue, limit: limit, locked: locked) }
@@ -61,28 +62,37 @@ struct WeeklyPickEditor: View {
         .onAppear { loadPicks(for: userId) }
         .onChange(of: episode.id) { _ in loadPicks(for: userId) }
         .onChange(of: app.currentUserId) { newValue in loadPicks(for: newValue) }
+        .onChange(of: app.store.results) { _ in loadPicks(for: app.currentUserId) }
+        .onChange(of: app.store.config.contestants) { _ in loadPicks(for: app.currentUserId) }
     }
 
     private func loadPicks(for userId: String) {
-        picks = app.store.picks(for: userId, episodeId: episode.id)
+        var loaded = app.store.picks(for: userId, episodeId: episode.id)
+        let allowedIds = availableContestantIDs()
+        if pruneInvalidSelections(in: &loaded, allowedIds: allowedIds) {
+            app.store.save(loaded)
+        }
+        picks = loaded
     }
 
     private func selection(for panel: WeeklyPickPanel) -> Set<String> {
+        let allowedIds = availableContestantIDs()
         switch panel {
         case .remain:
-            return picks.remain
+            return picks.remain.intersection(allowedIds)
         case .votedOut:
-            return picks.votedOut
+            return picks.votedOut.intersection(allowedIds)
         case .immunity:
-            return picks.immunity
+            return picks.immunity.intersection(allowedIds)
         case let .custom(categoryId):
-            return picks.selections(for: categoryId)
+            return picks.selections(for: categoryId).intersection(allowedIds)
         }
     }
 
     private func updateSelection(_ newValue: Set<String>, limit: Int, locked: Bool) {
         guard !locked else { return }
-        let limited = Set(newValue.prefix(limit))
+        let allowedIds = availableContestantIDs()
+        let limited = Set(newValue.prefix(limit)).intersection(allowedIds)
         switch panel {
         case .remain:
             picks.remain = limited
@@ -184,5 +194,53 @@ struct WeeklyPickEditor: View {
         }
 
         return nil
+    }
+
+    private func availableContestants() -> [Contestant] {
+        app.activeContestants(beforeEpisodeId: episode.id)
+    }
+
+    private func availableContestantIDs() -> Set<String> {
+        app.activeContestantIDs(beforeEpisodeId: episode.id)
+    }
+
+    private func pruneInvalidSelections(in picks: inout WeeklyPicks, allowedIds: Set<String>) -> Bool {
+        var didChange = false
+
+        let remain = picks.remain.intersection(allowedIds)
+        if remain != picks.remain {
+            picks.remain = remain
+            didChange = true
+        }
+
+        let votedOut = picks.votedOut.intersection(allowedIds)
+        if votedOut != picks.votedOut {
+            picks.votedOut = votedOut
+            didChange = true
+        }
+
+        let immunity = picks.immunity.intersection(allowedIds)
+        if immunity != picks.immunity {
+            picks.immunity = immunity
+            didChange = true
+        }
+
+        var updatedCategorySelections: [UUID: Set<String>] = [:]
+        for (categoryId, selection) in picks.categorySelections {
+            let filtered = selection.intersection(allowedIds)
+            if !filtered.isEmpty {
+                updatedCategorySelections[categoryId] = filtered
+            }
+
+            if filtered != selection {
+                didChange = true
+            }
+        }
+
+        if updatedCategorySelections != picks.categorySelections {
+            picks.categorySelections = updatedCategorySelections
+        }
+
+        return didChange
     }
 }

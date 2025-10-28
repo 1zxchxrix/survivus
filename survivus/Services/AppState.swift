@@ -114,6 +114,24 @@ final class AppState: ObservableObject {
         Set(store.results.flatMap(\.votedOut))
     }
 
+    func eliminatedContestantIDs(beforeEpisodeId episodeId: Int?) -> Set<String> {
+        guard let episodeId else {
+            return votedOutContestantIDs
+        }
+
+        let priorResults = store.results.filter { $0.id < episodeId }
+        return Set(priorResults.flatMap(\.votedOut))
+    }
+
+    func activeContestants(beforeEpisodeId episodeId: Int? = nil) -> [Contestant] {
+        let eliminated = eliminatedContestantIDs(beforeEpisodeId: episodeId)
+        return store.config.contestants.filter { !eliminated.contains($0.id) }
+    }
+
+    func activeContestantIDs(beforeEpisodeId episodeId: Int? = nil) -> Set<String> {
+        Set(activeContestants(beforeEpisodeId: episodeId).map(\.id))
+    }
+
     var activePhase: PickPhase? {
         guard let activePhaseId else { return nil }
         return phases.first(where: { $0.id == activePhaseId })

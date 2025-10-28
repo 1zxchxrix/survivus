@@ -47,6 +47,11 @@ struct InsertResultsSheet: View {
             }
         }
 
+        let allowedIds = Set(contestants.map(\.id))
+        if !allowedIds.isEmpty {
+            initialSelections = initialSelections.mapValues { $0.intersection(allowedIds) }
+        }
+
         _selections = State(initialValue: initialSelections)
     }
 
@@ -104,6 +109,10 @@ struct InsertResultsSheet: View {
         phase.categories.filter { !$0.isLocked && !$0.matchesRemainCategory }
     }
 
+    private var allowedContestantIDs: Set<String> {
+        Set(contestants.map(\.id))
+    }
+
     @ViewBuilder
     private func categoryCard(for category: PickPhase.Category) -> some View {
         let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -146,8 +155,19 @@ struct InsertResultsSheet: View {
 
     private func binding(for category: PickPhase.Category) -> Binding<Set<String>> {
         Binding(
-            get: { selections[category.id] ?? Set<String>() },
-            set: { selections[category.id] = $0 }
+            get: {
+                let allowed = allowedContestantIDs
+                return (selections[category.id] ?? Set<String>()).intersection(allowed)
+            },
+            set: { newValue in
+                let allowed = allowedContestantIDs
+                let filtered = newValue.intersection(allowed)
+                if filtered.isEmpty {
+                    selections.removeValue(forKey: category.id)
+                } else {
+                    selections[category.id] = filtered
+                }
+            }
         )
     }
 
