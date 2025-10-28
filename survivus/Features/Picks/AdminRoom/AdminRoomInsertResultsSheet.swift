@@ -10,6 +10,7 @@ struct InsertResultsSheet: View {
     let onSave: (EpisodeResult) -> Void
 
     @State private var selections: [PickPhase.Category.ID: Set<String>]
+    @State private var pendingResult: EpisodeResult?
 
     init(
         phase: PickPhase,
@@ -88,13 +89,22 @@ struct InsertResultsSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let result = buildEpisodeResult()
-                        onSave(result)
-                        dismiss()
+                        pendingResult = buildEpisodeResult()
                     }
                     .disabled(insertableCategories.isEmpty || contestants.isEmpty)
                 }
             }
+        }
+        .alert(item: $pendingResult) { result in
+            Alert(
+                title: Text("Submit Results?"),
+                message: Text(confirmationMessage(for: result)),
+                primaryButton: .default(Text("Submit")) {
+                    onSave(result)
+                    dismiss()
+                },
+                secondaryButton: .cancel()
+            )
         }
         .presentationDetents([.fraction(0.85)])
         .presentationCornerRadius(28)
@@ -106,8 +116,7 @@ struct InsertResultsSheet: View {
 
     @ViewBuilder
     private func categoryCard(for category: PickPhase.Category) -> some View {
-        let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = displayName.isEmpty ? "Untitled Category" : displayName
+        let title = displayTitle(for: category)
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(title)
@@ -172,6 +181,33 @@ struct InsertResultsSheet: View {
 
     private func sortedSelection(for category: PickPhase.Category) -> [String] {
         Array(selections[category.id] ?? []).sorted()
+    }
+
+    private func confirmationMessage(for result: EpisodeResult) -> String {
+        let categorySummaries = insertableCategories.compactMap { category -> String? in
+            let winners = result.winners(for: category.id)
+            guard !winners.isEmpty else { return nil }
+
+            let names = winners.map { contestantName(for: $0) ?? $0 }
+
+            let title = displayTitle(for: category)
+            return "\(title): \(names.joined(separator: ", "))"
+        }
+
+        if categorySummaries.isEmpty {
+            return "No contestants were selected for this week's results."
+        }
+
+        return categorySummaries.joined(separator: "\n")
+    }
+
+    private func contestantName(for id: String) -> String? {
+        contestants.first(where: { $0.id == id })?.name
+    }
+
+    private func displayTitle(for category: PickPhase.Category) -> String {
+        let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return displayName.isEmpty ? "Untitled Category" : displayName
     }
 }
 
