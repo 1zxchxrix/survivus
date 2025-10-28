@@ -26,8 +26,6 @@ struct AdminRoomView: View {
                     }
                 }
                 .disabled(!canInsertResults || !hasPhases)
-                Button("Modify Previous Results") {}
-                .disabled(!hasPhases)
                 Button("Start New Week") {
                     selectedPhaseForNewWeekID = currentPhase?.id ?? phases.first?.id
                     isPresentingStartWeek = true
@@ -148,6 +146,7 @@ private extension AdminRoomView {
 
     var canInsertResults: Bool {
         guard let phase = currentPhase, currentWeekId != nil else { return false }
+        guard !hasResultsForCurrentWeek else { return false }
         return !phase.categories.isEmpty
     }
 
@@ -164,7 +163,7 @@ private extension AdminRoomView {
             return true
         }
 
-        return !latestResult.immunityWinners.isEmpty || !latestResult.votedOut.isEmpty
+        return latestResult.hasRecordedResults
     }
 
     var currentWeekId: Int? {
@@ -174,6 +173,10 @@ private extension AdminRoomView {
     var currentWeekResult: EpisodeResult? {
         guard let currentWeekId else { return nil }
         return app.store.results.first(where: { $0.id == currentWeekId })
+    }
+
+    var hasResultsForCurrentWeek: Bool {
+        currentWeekResult?.hasRecordedResults ?? false
     }
 
     func startNewWeek(activating phase: PickPhase) {
