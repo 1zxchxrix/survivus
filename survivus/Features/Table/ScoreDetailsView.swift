@@ -585,14 +585,8 @@ private struct ScoreDetailsModel {
                 }
             }
 
-            let includeMergeCategory = ScoreDetailsModel.shouldIncludeMergeCategory(
-                hasMergePicks: hasMergePicks,
-                configuredPhase: configuredPhase,
-                defaultPhase: defaultPhase
-            )
-
             var mergeAliveByUser: [String: Set<String>] = [:]
-            if includeMergeCategory {
+            if hasMergePicks {
                 for (userId, season) in seasonsByUser {
                     let alive = season.mergePicks.subtracting(eliminatedThroughCurrentEpisode)
                     if !alive.isEmpty {
@@ -609,7 +603,7 @@ private struct ScoreDetailsModel {
                 remainPoints: remainPointsPerPick,
                 votedOutPoints: votedOutPointsPerPick,
                 immunityPoints: immunityPointsPerPick,
-                includeMergeCategory: includeMergeCategory,
+                includeMergeCategory: hasMergePicks,
                 mergeAliveByUser: mergeAliveByUser,
                 correctRemainByUser: correctRemainByUser,
                 correctVotedOutByUser: correctVotedOutByUser,
@@ -642,12 +636,7 @@ private struct ScoreDetailsModel {
 
                 let mergeToDate = scoring.mergeTrackPoints(for: userId, upTo: episode.id, seasonPicks: season)
                 let mergePrev = previousMergeTotals[userId] ?? 0
-                let mergeWeekly: Int
-                if includeMergeCategory {
-                    mergeWeekly = mergeToDate - mergePrev
-                } else {
-                    mergeWeekly = 0
-                }
+                let mergeWeekly = mergeToDate - mergePrev
                 previousMergeTotals[userId] = mergeToDate
 
                 let finalToDate = scoring.finalThreeTrackPoints(for: userId, upTo: episode.id, seasonPicks: season)
@@ -901,18 +890,6 @@ private struct ScoreDetailsModel {
         }
 
         return categories
-    }
-
-    private static func shouldIncludeMergeCategory(
-        hasMergePicks: Bool,
-        configuredPhase: PickPhase?,
-        defaultPhase: Phase
-    ) -> Bool {
-        guard hasMergePicks else { return false }
-        if let configuredPhase {
-            return configuredPhase.categories.contains { $0.matchesMergeCategory }
-        }
-        return defaultPhase == .preMerge
     }
 
     private static func displayName(for category: PickPhase.Category) -> String {
