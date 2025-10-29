@@ -395,6 +395,7 @@ private struct ScoreDetailsModel {
             users: store.users,
             store: store,
             scoring: scoring,
+            phases: app.phases,
             categoriesById: categoriesById,
             results: results
         )
@@ -424,12 +425,18 @@ private struct ScoreDetailsModel {
         users: [UserProfile],
         store: MemoryStore,
         scoring: ScoringEngine,
+        phases: [PickPhase],
         categoriesById: [UUID: PickPhase.Category],
         results: [EpisodeResult]
     ) -> [UserScoreBreakdown] {
         let episodesById = Dictionary(uniqueKeysWithValues: store.config.episodes.map { ($0.id, $0) })
         let scoredEpisodeIds = results.map(\.id).sorted()
         let lastEpisodeWithResult = scoredEpisodeIds.last ?? 0
+        let phasesById = Dictionary(uniqueKeysWithValues: phases.map { ($0.id, $0) })
+        let phaseByEpisodeId: [Int: PickPhase] = Dictionary(uniqueKeysWithValues: results.compactMap { result in
+            guard let phaseId = result.phaseId, let phase = phasesById[phaseId] else { return nil }
+            return (result.id, phase)
+        })
 
         return users.map { user in
             var votedOutPoints = 0
@@ -442,7 +449,8 @@ private struct ScoreDetailsModel {
                 let episode = episodesById[episodeId] ?? Episode(id: episodeId)
                 if let picks = store.weeklyPicks[user.id]?[episodeId] {
                     weeksParticipated += 1
-                    let score = scoring.score(weekly: picks, episode: episode, categoriesById: categoriesById)
+                    let configuredPhase = phaseByEpisodeId[episodeId]
+                    let score = scoring.score(weekly: picks, episode: episode, phase: configuredPhase, categoriesById: categoriesById)
                     votedOutPoints += score.votedOut
                     remainPoints += score.remain
                     immunityPoints += score.immunity
@@ -486,6 +494,11 @@ private struct ScoreDetailsModel {
 
         let episodesById = Dictionary(uniqueKeysWithValues: store.config.episodes.map { ($0.id, $0) })
         let sortedResults = results.sorted { $0.id < $1.id }
+        let phasesById = Dictionary(uniqueKeysWithValues: phases.map { ($0.id, $0) })
+        let phaseByEpisodeId: [Int: PickPhase] = Dictionary(uniqueKeysWithValues: sortedResults.compactMap { result in
+            guard let phaseId = result.phaseId, let phase = phasesById[phaseId] else { return nil }
+            return (result.id, phase)
+        })
 
         var weeks: [Week] = []
         var cumulativeTotals: [String: Int] = [:]
@@ -530,8 +543,11 @@ private struct ScoreDetailsModel {
                 }
             }
 
-            let phase = scoring.phase(for: episode)
-            let immunityPoints = phase == .preMerge ? 1 : 3
+            let defaultPhase = scoring.phase(for: episode)
+            let configuredPhase = phaseByEpisodeId[result.id]
+            let remainPointsPerPick = configuredPhase?.remainPointsPerCorrectPick ?? 1
+            let votedOutPointsPerPick = configuredPhase?.votedOutPointsPerCorrectPick ?? 3
+            let immunityPointsPerPick = configuredPhase?.immunityPointsPerCorrectPick ?? (defaultPhase == .preMerge ? 1 : 3)
             let votedOutSet = Set(result.votedOut)
             let immunityWinnerSet = Set(result.immunityWinners)
             let customWinnerSets = result.categoryWinners.mapValues { Set($0) }
@@ -584,7 +600,9 @@ private struct ScoreDetailsModel {
                 picksByUser: picksByUser,
                 phases: phases,
                 categoriesById: categoriesById,
-                immunityPoints: immunityPoints,
+                remainPoints: remainPointsPerPick,
+                votedOutPoints: votedOutPointsPerPick,
+                immunityPoints: immunityPointsPerPick,
                 includeMergeCategory: hasMergePicks,
                 mergeAliveByUser: mergeAliveByUser,
                 correctRemainByUser: correctRemainByUser,
@@ -603,7 +621,7 @@ private struct ScoreDetailsModel {
                 let breakdown: WeeklyScoreBreakdown
 
                 if let picks = picksByUser[userId] {
-                    breakdown = scoring.score(weekly: picks, episode: episode, categoriesById: categoriesById)
+                    breakdown = scoring.score(weekly: picks, episode: episode, phase: configuredPhase, categoriesById: categoriesById)
                 } else {
                     breakdown = WeeklyScoreBreakdown(
                         votedOut: 0,
@@ -647,7 +665,8 @@ private struct ScoreDetailsModel {
 
             let phaseDisplayName = phaseName(
                 for: categories,
-                defaultPhase: phase,
+                defaultPhase: defaultPhase,
+                configuredPhase: configuredPhase,
                 phases: phases,
                 phaseInfoByCategoryId: phaseInfoByCategoryId,
                 hasFinalPoints: awardedFinalPoints || awardedWinnerPoints
@@ -680,10 +699,15 @@ private struct ScoreDetailsModel {
     private static func phaseName(
         for categories: [Week.Category],
         defaultPhase: Phase,
+        configuredPhase: PickPhase?,
         phases: [PickPhase],
         phaseInfoByCategoryId: [UUID: (name: String, order: Int)],
         hasFinalPoints: Bool
     ) -> String {
+        if let configuredPhase {
+            return configuredPhase.name
+        }
+
         let candidates: [(order: Int, name: String)] = categories.compactMap { category in
             if case let .custom(id) = category.kind, let info = phaseInfoByCategoryId[id] {
                 return (info.order, info.name)
@@ -739,6 +763,8 @@ private struct ScoreDetailsModel {
         picksByUser: [String: WeeklyPicks],
         phases: [PickPhase],
         categoriesById: [UUID: PickPhase.Category],
+        remainPoints: Int,
+        votedOutPoints: Int,
         immunityPoints: Int,
         includeMergeCategory: Bool,
         mergeAliveByUser: [String: Set<String>],
@@ -753,9 +779,9 @@ private struct ScoreDetailsModel {
             Week.Category(
                 kind: .remain,
                 name: "Remain",
-                pointsText: "1",
+                pointsText: "\(remainPoints)",
                 correctPicksByUser: correctRemainByUser,
-                pointsPerCorrectPick: 1
+                pointsPerCorrectPick: remainPoints
             )
         )
 
@@ -763,9 +789,9 @@ private struct ScoreDetailsModel {
             Week.Category(
                 kind: .votedOut,
                 name: "Voted out",
-                pointsText: "3",
+                pointsText: "\(votedOutPoints)",
                 correctPicksByUser: correctVotedOutByUser,
-                pointsPerCorrectPick: 3
+                pointsPerCorrectPick: votedOutPoints
             )
         )
 

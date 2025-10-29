@@ -19,6 +19,11 @@ struct TableView: View {
         let categoriesById = Dictionary(uniqueKeysWithValues: app.phases.flatMap { phase in
             phase.categories.map { ($0.id, $0) }
         })
+        let phasesById = Dictionary(uniqueKeysWithValues: app.phases.map { ($0.id, $0) })
+        let phaseByEpisodeId: [Int: PickPhase] = Dictionary(uniqueKeysWithValues: recordedResults.compactMap { result in
+            guard let phaseId = result.phaseId, let phase = phasesById[phaseId] else { return nil }
+            return (result.id, phase)
+        })
         let episodesById = Dictionary(uniqueKeysWithValues: config.episodes.map { ($0.id, $0) })
         let scoredEpisodeIds = recordedResults.map(\.id).sorted()
         let pinnedColumns = columnDefinitions.filter { $0.isPinned }
@@ -43,7 +48,8 @@ struct TableView: View {
                 let episode = episodesById[episodeId] ?? Episode(id: episodeId)
                 if let picks = app.store.weeklyPicks[user.id]?[episodeId] {
                     weeksParticipated += 1
-                    let score = scoring.score(weekly: picks, episode: episode, categoriesById: categoriesById)
+                    let activePhase = phaseByEpisodeId[episodeId]
+                    let score = scoring.score(weekly: picks, episode: episode, phase: activePhase, categoriesById: categoriesById)
                     votedOutPoints += score.votedOut
                     remainPoints += score.remain
                     immunityPoints += score.immunity

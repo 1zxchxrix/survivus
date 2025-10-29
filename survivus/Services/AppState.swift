@@ -257,7 +257,7 @@ final class AppState: ObservableObject {
 
     func startNewWeek(activating phase: PickPhase) {
         let nextWeekId = (store.results.map(\.id).max() ?? 0) + 1
-        let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
+        let newResult = EpisodeResult(id: nextWeekId, phaseId: phase.id, immunityWinners: [], votedOut: [])
         store.results.append(newResult)
         store.results.sort(by: { $0.id < $1.id })
         activePhaseId = phase.id

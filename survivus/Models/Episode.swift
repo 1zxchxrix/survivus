@@ -53,9 +53,24 @@ enum Phase: String, Codable {
 
 struct EpisodeResult: Identifiable, Hashable, Codable {
     let id: Int
+    var phaseId: PickPhase.ID?
     var immunityWinners: [String]
     var votedOut: [String]
-    var categoryWinners: [UUID: [String]] = [:]
+    var categoryWinners: [UUID: [String]]
+
+    init(
+        id: Int,
+        phaseId: PickPhase.ID? = nil,
+        immunityWinners: [String],
+        votedOut: [String],
+        categoryWinners: [UUID: [String]] = [:]
+    ) {
+        self.id = id
+        self.phaseId = phaseId
+        self.immunityWinners = immunityWinners
+        self.votedOut = votedOut
+        self.categoryWinners = categoryWinners
+    }
 }
 
 extension EpisodeResult {

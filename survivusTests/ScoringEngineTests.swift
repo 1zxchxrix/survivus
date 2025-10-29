@@ -31,9 +31,55 @@ final class ScoringEngineTests: XCTestCase {
         var weekly = WeeklyPicks(userId: "user", episodeId: 2)
         weekly.remain = ["playerA"]
 
-        let breakdown = engine.score(weekly: weekly, episode: episodes[1])
+        let breakdown = engine.score(weekly: weekly, episode: episodes[1], phase: nil)
 
         XCTAssertEqual(breakdown.remain, 0)
+    }
+
+    func testScoreRespectsPhaseSpecificPointValues() {
+        let contestants = [
+            Contestant(id: "playerA", name: "Player A"),
+            Contestant(id: "playerB", name: "Player B"),
+            Contestant(id: "playerC", name: "Player C")
+        ]
+        let episodes = [Episode(id: 1, title: "Week 1", isMergeEpisode: false)]
+        let config = SeasonConfig(
+            seasonId: "test",
+            name: "Test Season",
+            contestants: contestants,
+            episodes: episodes,
+            weeklyPickCapsPreMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            weeklyPickCapsPostMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            lockHourUTC: 0
+        )
+
+        let phase = PickPhase(
+            name: "Post-merge",
+            categories: [
+                .init(name: "Remain", columnId: "RM", totalPicks: 3, pointsPerCorrectPick: 2, isLocked: false),
+                .init(name: "Voted out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 5, isLocked: false),
+                .init(name: "Immunity", columnId: "IM", totalPicks: 2, pointsPerCorrectPick: 4, isLocked: false)
+            ]
+        )
+
+        let result = EpisodeResult(
+            id: 1,
+            phaseId: phase.id,
+            immunityWinners: ["playerB"],
+            votedOut: ["playerC"]
+        )
+
+        let engine = ScoringEngine(config: config, resultsByEpisode: [1: result])
+        var weekly = WeeklyPicks(userId: "user", episodeId: 1)
+        weekly.remain = ["playerA", "playerB"]
+        weekly.votedOut = ["playerC"]
+        weekly.immunity = ["playerB"]
+
+        let breakdown = engine.score(weekly: weekly, episode: episodes[0], phase: phase)
+
+        XCTAssertEqual(breakdown.remain, 4)
+        XCTAssertEqual(breakdown.votedOut, 5)
+        XCTAssertEqual(breakdown.immunity, 4)
     }
 
     func testMergeTrackPointsStopAfterElimination() {
