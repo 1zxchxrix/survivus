@@ -10,8 +10,30 @@ struct WeeklyScoreBreakdown {
 struct ScoringEngine {
     let config: SeasonConfig
     let resultsByEpisode: [Int: EpisodeResult]
+    let phasesById: [PickPhase.ID: PickPhase]
+
+    init(
+        config: SeasonConfig,
+        resultsByEpisode: [Int: EpisodeResult],
+        phasesById: [PickPhase.ID: PickPhase] = [:]
+    ) {
+        self.config = config
+        self.resultsByEpisode = resultsByEpisode
+        self.phasesById = phasesById
+    }
 
     func phase(for episode: Episode) -> Phase {
+        if let phase = pickPhase(for: episode) {
+            let name = phase.name
+            if name.range(of: "post", options: .caseInsensitive) != nil,
+               name.range(of: "merge", options: .caseInsensitive) != nil {
+                return .postMerge
+            }
+            if name.range(of: "pre", options: .caseInsensitive) != nil,
+               name.range(of: "merge", options: .caseInsensitive) != nil {
+                return .preMerge
+            }
+        }
         if episode.isMergeEpisode { return .postMerge }
         let merged = config.episodes.contains(where: { $0.id <= episode.id && $0.isMergeEpisode })
         return merged ? .postMerge : .preMerge
@@ -34,8 +56,10 @@ struct ScoringEngine {
         let eligibleRemain = weekly.remain.subtracting(priorEliminations)
         let remainHits = eligibleRemain.subtracting(Set(result.votedOut)).count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
-        let phase = phase(for: episode)
-        let immunityPts = (phase == .preMerge) ? immunityHits * 1 : immunityHits * 3
+        let standardPoints = standardPoints(for: episode, result: result)
+        let votedOutPoints = standardPoints.votedOut > 0 ? votedOutHits * standardPoints.votedOut : 0
+        let remainPoints = standardPoints.remain > 0 ? remainHits * standardPoints.remain : 0
+        let immunityPts = standardPoints.immunity > 0 ? immunityHits * standardPoints.immunity : 0
         var categoryPoints: [String: Int] = [:]
 
         for (categoryId, winners) in result.categoryWinners {
@@ -59,11 +83,16 @@ struct ScoringEngine {
         }
 
         return WeeklyScoreBreakdown(
-            votedOut: votedOutHits * 3,
-            remain: remainHits * 1,
+            votedOut: votedOutPoints,
+            remain: remainPoints,
             immunity: immunityPts,
             categoryPointsByColumnId: categoryPoints
         )
+    }
+
+    func standardPoints(for episode: Episode) -> (remain: Int, votedOut: Int, immunity: Int) {
+        let result = resultsByEpisode[episode.id]
+        return standardPoints(for: episode, result: result)
     }
 
     func mergeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {
@@ -103,6 +132,43 @@ struct ScoringEngine {
 }
 
 private extension ScoringEngine {
+    func pickPhase(for episode: Episode) -> PickPhase? {
+        guard let phaseId = resultsByEpisode[episode.id]?.phaseId else { return nil }
+        return phasesById[phaseId]
+    }
+
+    func standardPoints(for episode: Episode, result: EpisodeResult?) -> (remain: Int, votedOut: Int, immunity: Int) {
+        let fallback = fallbackStandardPoints(for: phase(for: episode))
+        guard
+            let result,
+            let phaseId = result.phaseId,
+            let phase = phasesById[phaseId]
+        else {
+            return fallback
+        }
+
+        let remain = resolvedPoints(in: phase, matching: { $0.matchesRemainCategory }, defaultValue: fallback.remain)
+        let votedOut = resolvedPoints(in: phase, matching: { $0.matchesVotedOutCategory }, defaultValue: fallback.votedOut)
+        let immunity = resolvedPoints(in: phase, matching: { $0.matchesImmunityCategory }, defaultValue: fallback.immunity)
+
+        return (remain, votedOut, immunity)
+    }
+
+    func resolvedPoints(in phase: PickPhase, matching predicate: (PickPhase.Category) -> Bool, defaultValue: Int) -> Int {
+        guard let category = phase.categories.first(where: predicate),
+              let points = category.pointsPerCorrectPick,
+              points > 0
+        else {
+            return defaultValue
+        }
+        return points
+    }
+
+    func fallbackStandardPoints(for phase: Phase) -> (remain: Int, votedOut: Int, immunity: Int) {
+        let immunity = phase == .preMerge ? 1 : 3
+        return (remain: 1, votedOut: 3, immunity: immunity)
+    }
+
     func episodeIds(upTo upperBound: Int) -> [Int] {
         var idSet = Set(config.episodes.map(\.id))
         idSet.formUnion(resultsByEpisode.keys)
