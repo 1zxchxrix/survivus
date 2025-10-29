@@ -55,7 +55,6 @@ struct EpisodeResult: Identifiable, Hashable, Codable {
     let id: Int
     var immunityWinners: [String]
     var votedOut: [String]
-    var phaseId: PickPhase.ID?
     var categoryWinners: [UUID: [String]] = [:]
 }
 
