@@ -97,13 +97,19 @@ struct ScoringEngine {
         )
     }
 
-    func mergeTrackPoints(for userId: String, upTo episodeId: Int, seasonPicks: SeasonPicks) -> Int {
+    func mergeTrackPoints(
+        for userId: String,
+        upTo episodeId: Int,
+        seasonPicks: SeasonPicks,
+        isCategoryActive: ((Int) -> Bool)? = nil
+    ) -> Int {
         guard !seasonPicks.mergePicks.isEmpty else { return 0 }
         var pts = 0
         var eliminated: Set<String> = []
         for id in episodeIds(upTo: episodeId) {
             guard let res = resultsByEpisode[id] else { continue }
             eliminated.formUnion(res.votedOut)
+            if let isCategoryActive, !isCategoryActive(id) { continue }
             let alive = seasonPicks.mergePicks.subtracting(eliminated)
             pts += alive.count
         }

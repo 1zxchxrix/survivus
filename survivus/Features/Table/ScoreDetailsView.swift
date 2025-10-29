@@ -437,6 +437,10 @@ private struct ScoreDetailsModel {
             guard let phaseId = result.phaseId, let phase = phasesById[phaseId] else { return nil }
             return (result.id, phase)
         })
+        let isMergeCategoryActive: (Int) -> Bool = { episodeId in
+            guard let phase = phaseByEpisodeId[episodeId] else { return true }
+            return phase.categories.contains { $0.matchesMergeCategory }
+        }
 
         return users.map { user in
             var votedOutPoints = 0
@@ -461,7 +465,12 @@ private struct ScoreDetailsModel {
             }
 
             let season = store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id)
-            let mergePoints = scoring.mergeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
+            let mergePoints = scoring.mergeTrackPoints(
+                for: user.id,
+                upTo: lastEpisodeWithResult,
+                seasonPicks: season,
+                isCategoryActive: isMergeCategoryActive
+            )
             let finalThreePoints = scoring.finalThreeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
             let finalResult = scoring.resultsByEpisode[lastEpisodeWithResult]
             let winnerPoints = scoring.winnerPoints(seasonPicks: season, finalResult: finalResult)
@@ -499,6 +508,10 @@ private struct ScoreDetailsModel {
             guard let phaseId = result.phaseId, let phase = phasesById[phaseId] else { return nil }
             return (result.id, phase)
         })
+        let isMergeCategoryActive: (Int) -> Bool = { episodeId in
+            guard let phase = phaseByEpisodeId[episodeId] else { return true }
+            return phase.categories.contains { $0.matchesMergeCategory }
+        }
 
         var weeks: [Week] = []
         var cumulativeTotals: [String: Int] = [:]
@@ -614,7 +627,7 @@ private struct ScoreDetailsModel {
                 remainPoints: remainPointsPerPick,
                 votedOutPoints: votedOutPointsPerPick,
                 immunityPoints: immunityPointsPerPick,
-                includeMergeCategory: hasMergePicks,
+                includeMergeCategory: hasMergePicks && isMergeCategoryActive(episode.id),
                 mergeAliveByUser: mergeAliveByUser,
                 correctRemainByUser: correctRemainByUser,
                 correctVotedOutByUser: correctVotedOutByUser,
@@ -645,7 +658,12 @@ private struct ScoreDetailsModel {
                 let categoryPointsTotal = breakdown.categoryPointsByColumnId.values.reduce(0, +)
                 let baseWeeklyPoints = breakdown.votedOut + breakdown.remain + breakdown.immunity + categoryPointsTotal
 
-                let mergeToDate = scoring.mergeTrackPoints(for: userId, upTo: episode.id, seasonPicks: season)
+                let mergeToDate = scoring.mergeTrackPoints(
+                    for: userId,
+                    upTo: episode.id,
+                    seasonPicks: season,
+                    isCategoryActive: isMergeCategoryActive
+                )
                 let mergePrev = previousMergeTotals[userId] ?? 0
                 let mergeWeekly = mergeToDate - mergePrev
                 previousMergeTotals[userId] = mergeToDate

@@ -181,6 +181,44 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(points, 4)
     }
 
+    func testMergeTrackPointsRequireActivePhaseCategory() {
+        let contestants = [
+            Contestant(id: "playerA", name: "Player A"),
+            Contestant(id: "playerB", name: "Player B")
+        ]
+        let episodes = [
+            Episode(id: 1, title: "Week 1", isMergeEpisode: false),
+            Episode(id: 2, title: "Week 2", isMergeEpisode: true)
+        ]
+        let config = SeasonConfig(
+            seasonId: "test",
+            name: "Test Season",
+            contestants: contestants,
+            episodes: episodes,
+            weeklyPickCapsPreMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            weeklyPickCapsPostMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            lockHourUTC: 0
+        )
+
+        let resultsByEpisode: [Int: EpisodeResult] = [
+            1: EpisodeResult(id: 1, immunityWinners: [], votedOut: ["playerA"]),
+            2: EpisodeResult(id: 2, immunityWinners: [], votedOut: [])
+        ]
+
+        let engine = ScoringEngine(config: config, resultsByEpisode: resultsByEpisode)
+        let seasonPicks = SeasonPicks(userId: "user", mergePicks: ["playerA", "playerB"])
+        let activeEpisodes: Set<Int> = [2]
+
+        let points = engine.mergeTrackPoints(
+            for: "user",
+            upTo: 2,
+            seasonPicks: seasonPicks,
+            isCategoryActive: { episodeId in activeEpisodes.contains(episodeId) }
+        )
+
+        XCTAssertEqual(points, 1)
+    }
+
     func testFinalThreeTrackPointsStopAfterElimination() {
         let contestants = [
             Contestant(id: "playerA", name: "Player A"),

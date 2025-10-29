@@ -24,6 +24,10 @@ struct TableView: View {
             guard let phaseId = result.phaseId, let phase = phasesById[phaseId] else { return nil }
             return (result.id, phase)
         })
+        let isMergeCategoryActive: (Int) -> Bool = { episodeId in
+            guard let phase = phaseByEpisodeId[episodeId] else { return true }
+            return phase.categories.contains { $0.matchesMergeCategory }
+        }
         let episodesById = Dictionary(uniqueKeysWithValues: config.episodes.map { ($0.id, $0) })
         let scoredEpisodeIds = recordedResults.map(\.id).sorted()
         let pinnedColumns = columnDefinitions.filter { $0.isPinned }
@@ -60,7 +64,12 @@ struct TableView: View {
             }
             
             let season = app.store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id)
-            let mergePoints = scoring.mergeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
+            let mergePoints = scoring.mergeTrackPoints(
+                for: user.id,
+                upTo: lastEpisodeWithResult,
+                seasonPicks: season,
+                isCategoryActive: isMergeCategoryActive
+            )
             let finalThreePoints = scoring.finalThreeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
             let winnerPoints = scoring.winnerPoints(seasonPicks: season, finalResult: nil)
             
