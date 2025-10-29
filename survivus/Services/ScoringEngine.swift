@@ -20,6 +20,7 @@ struct ScoringEngine {
     func score(
         weekly: WeeklyPicks,
         episode: Episode,
+        phase: PickPhase? = nil,
         categoriesById: [PickPhase.Category.ID: PickPhase.Category] = [:]
     ) -> WeeklyScoreBreakdown {
         guard let result = resultsByEpisode[episode.id] else {
@@ -34,8 +35,13 @@ struct ScoringEngine {
         let eligibleRemain = weekly.remain.subtracting(priorEliminations)
         let remainHits = eligibleRemain.subtracting(Set(result.votedOut)).count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
-        let phase = phase(for: episode)
-        let immunityPts = (phase == .preMerge) ? immunityHits * 1 : immunityHits * 3
+        let defaultPhase = phase(for: episode)
+        let remainPointsPerPick = phase?.remainPointsPerCorrectPick ?? 1
+        let votedOutPointsPerPick = phase?.votedOutPointsPerCorrectPick ?? 3
+        let immunityPointsPerPick = phase?.immunityPointsPerCorrectPick ?? ((defaultPhase == .preMerge) ? 1 : 3)
+        let remainPoints = remainHits * remainPointsPerPick
+        let votedOutPoints = votedOutHits * votedOutPointsPerPick
+        let immunityPts = immunityHits * immunityPointsPerPick
         var categoryPoints: [String: Int] = [:]
 
         for (categoryId, winners) in result.categoryWinners {
@@ -59,8 +65,8 @@ struct ScoringEngine {
         }
 
         return WeeklyScoreBreakdown(
-            votedOut: votedOutHits * 3,
-            remain: remainHits * 1,
+            votedOut: votedOutPoints,
+            remain: remainPoints,
             immunity: immunityPts,
             categoryPointsByColumnId: categoryPoints
         )
