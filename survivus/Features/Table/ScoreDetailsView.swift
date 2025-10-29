@@ -599,6 +599,7 @@ private struct ScoreDetailsModel {
                 result: result,
                 picksByUser: picksByUser,
                 phases: phases,
+                configuredPhase: configuredPhase,
                 categoriesById: categoriesById,
                 remainPoints: remainPointsPerPick,
                 votedOutPoints: votedOutPointsPerPick,
@@ -762,6 +763,7 @@ private struct ScoreDetailsModel {
         result: EpisodeResult,
         picksByUser: [String: WeeklyPicks],
         phases: [PickPhase],
+        configuredPhase: PickPhase?,
         categoriesById: [UUID: PickPhase.Category],
         remainPoints: Int,
         votedOutPoints: Int,
@@ -773,15 +775,78 @@ private struct ScoreDetailsModel {
         correctImmunityByUser: [String: Set<String>],
         correctCustomByCategory: [UUID: [String: Set<String>]]
     ) -> [Week.Category] {
+        let resolvedPoints: (PickPhase.Category, Int) -> (text: String, value: Int?) = { category, fallback in
+            if let configured = category.pointsPerCorrectPick {
+                guard configured > 0 else { return ("—", nil) }
+                return ("\(configured)", configured)
+            }
+
+            guard fallback > 0 else { return ("—", nil) }
+            return ("\(fallback)", fallback)
+        }
+
+        if let configuredPhase {
+            var categories: [Week.Category] = []
+
+            for category in configuredPhase.categories {
+                if category.matchesMergeCategory && !includeMergeCategory {
+                    continue
+                }
+
+                let name = displayName(for: category)
+                let points: (text: String, value: Int?)
+                let correctPicks: [String: Set<String>]
+                let kind: CategoryKind
+
+                if category.matchesRemainCategory {
+                    points = resolvedPoints(category, remainPoints)
+                    correctPicks = correctRemainByUser
+                    kind = .remain
+                } else if category.matchesVotedOutCategory {
+                    points = resolvedPoints(category, votedOutPoints)
+                    correctPicks = correctVotedOutByUser
+                    kind = .votedOut
+                } else if category.matchesImmunityCategory {
+                    points = resolvedPoints(category, immunityPoints)
+                    correctPicks = correctImmunityByUser
+                    kind = .immunity
+                } else if category.matchesMergeCategory {
+                    points = resolvedPoints(category, 1)
+                    correctPicks = mergeAliveByUser
+                    kind = .merge
+                } else {
+                    points = resolvedPoints(category, 0)
+                    correctPicks = correctCustomByCategory[category.id] ?? [:]
+                    kind = .custom(category.id)
+                }
+
+                categories.append(
+                    Week.Category(
+                        kind: kind,
+                        name: name,
+                        pointsText: points.text,
+                        correctPicksByUser: correctPicks,
+                        pointsPerCorrectPick: points.value
+                    )
+                )
+            }
+
+            return categories
+        }
+
         var categories: [Week.Category] = []
+
+        let defaultRemain = max(remainPoints, 0)
+        let defaultVotedOut = max(votedOutPoints, 0)
+        let defaultImmunity = max(immunityPoints, 0)
 
         categories.append(
             Week.Category(
                 kind: .remain,
                 name: "Remain",
-                pointsText: "\(remainPoints)",
+                pointsText: defaultRemain > 0 ? "\(defaultRemain)" : "—",
                 correctPicksByUser: correctRemainByUser,
-                pointsPerCorrectPick: remainPoints
+                pointsPerCorrectPick: defaultRemain > 0 ? defaultRemain : nil
             )
         )
 
@@ -789,9 +854,9 @@ private struct ScoreDetailsModel {
             Week.Category(
                 kind: .votedOut,
                 name: "Voted out",
-                pointsText: "\(votedOutPoints)",
+                pointsText: defaultVotedOut > 0 ? "\(defaultVotedOut)" : "—",
                 correctPicksByUser: correctVotedOutByUser,
-                pointsPerCorrectPick: votedOutPoints
+                pointsPerCorrectPick: defaultVotedOut > 0 ? defaultVotedOut : nil
             )
         )
 
@@ -799,9 +864,9 @@ private struct ScoreDetailsModel {
             Week.Category(
                 kind: .immunity,
                 name: "Immunity",
-                pointsText: "\(immunityPoints)",
+                pointsText: defaultImmunity > 0 ? "\(defaultImmunity)" : "—",
                 correctPicksByUser: correctImmunityByUser,
-                pointsPerCorrectPick: immunityPoints
+                pointsPerCorrectPick: defaultImmunity > 0 ? defaultImmunity : nil
             )
         )
 
