@@ -107,7 +107,12 @@ final class AppState: ObservableObject {
     }
 
     var scoring: ScoringEngine {
-        ScoringEngine(config: store.config, resultsByEpisode: store.resultsByEpisode)
+        let phasesById = Dictionary(uniqueKeysWithValues: phases.map { ($0.id, $0) })
+        return ScoringEngine(
+            config: store.config,
+            resultsByEpisode: store.resultsByEpisode,
+            phasesById: phasesById
+        )
     }
 
     var votedOutContestantIDs: Set<String> {
@@ -257,7 +262,12 @@ final class AppState: ObservableObject {
 
     func startNewWeek(activating phase: PickPhase) {
         let nextWeekId = (store.results.map(\.id).max() ?? 0) + 1
-        let newResult = EpisodeResult(id: nextWeekId, immunityWinners: [], votedOut: [])
+        let newResult = EpisodeResult(
+            id: nextWeekId,
+            immunityWinners: [],
+            votedOut: [],
+            phaseId: phase.id
+        )
         store.results.append(newResult)
         store.results.sort(by: { $0.id < $1.id })
         activePhaseId = phase.id
