@@ -161,8 +161,7 @@ struct InsertResultsSheet: View {
     }
 
     private func buildEpisodeResult() -> EpisodeResult {
-        var result = existingResult ?? EpisodeResult(id: episodeId, immunityWinners: [], votedOut: [], phaseId: phase.id)
-        result.phaseId = phase.id
+        var result = existingResult ?? EpisodeResult(id: episodeId, immunityWinners: [], votedOut: [])
 
         for category in insertableCategories {
             let winners = sortedSelection(for: category)

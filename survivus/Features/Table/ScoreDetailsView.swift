@@ -530,8 +530,8 @@ private struct ScoreDetailsModel {
                 }
             }
 
-            let defaultPhase = scoring.phase(for: episode)
-            let standardPoints = scoring.standardPoints(for: episode)
+            let phase = scoring.phase(for: episode)
+            let immunityPoints = phase == .preMerge ? 1 : 3
             let votedOutSet = Set(result.votedOut)
             let immunityWinnerSet = Set(result.immunityWinners)
             let customWinnerSets = result.categoryWinners.mapValues { Set($0) }
@@ -584,7 +584,7 @@ private struct ScoreDetailsModel {
                 picksByUser: picksByUser,
                 phases: phases,
                 categoriesById: categoriesById,
-                standardPoints: standardPoints,
+                immunityPoints: immunityPoints,
                 includeMergeCategory: hasMergePicks,
                 mergeAliveByUser: mergeAliveByUser,
                 correctRemainByUser: correctRemainByUser,
@@ -647,11 +647,10 @@ private struct ScoreDetailsModel {
 
             let phaseDisplayName = phaseName(
                 for: categories,
-                defaultPhase: defaultPhase,
+                defaultPhase: phase,
                 phases: phases,
                 phaseInfoByCategoryId: phaseInfoByCategoryId,
-                hasFinalPoints: awardedFinalPoints || awardedWinnerPoints,
-                resultPhaseId: result.phaseId
+                hasFinalPoints: awardedFinalPoints || awardedWinnerPoints
             )
 
             let votedOutNames = result.votedOut.map { id -> String in
@@ -683,13 +682,8 @@ private struct ScoreDetailsModel {
         defaultPhase: Phase,
         phases: [PickPhase],
         phaseInfoByCategoryId: [UUID: (name: String, order: Int)],
-        hasFinalPoints: Bool,
-        resultPhaseId: PickPhase.ID?
+        hasFinalPoints: Bool
     ) -> String {
-        if let phaseId = resultPhaseId, let match = phases.first(where: { $0.id == phaseId }) {
-            return match.name
-        }
-
         let candidates: [(order: Int, name: String)] = categories.compactMap { category in
             if case let .custom(id) = category.kind, let info = phaseInfoByCategoryId[id] {
                 return (info.order, info.name)
@@ -745,7 +739,7 @@ private struct ScoreDetailsModel {
         picksByUser: [String: WeeklyPicks],
         phases: [PickPhase],
         categoriesById: [UUID: PickPhase.Category],
-        standardPoints: (remain: Int, votedOut: Int, immunity: Int),
+        immunityPoints: Int,
         includeMergeCategory: Bool,
         mergeAliveByUser: [String: Set<String>],
         correctRemainByUser: [String: Set<String>],
@@ -755,39 +749,33 @@ private struct ScoreDetailsModel {
     ) -> [Week.Category] {
         var categories: [Week.Category] = []
 
-        let remainPoints = standardPoints.remain
-        let remainPointsText = remainPoints > 0 ? String(remainPoints) : "—"
         categories.append(
             Week.Category(
                 kind: .remain,
                 name: "Remain",
-                pointsText: remainPointsText,
+                pointsText: "1",
                 correctPicksByUser: correctRemainByUser,
-                pointsPerCorrectPick: remainPoints > 0 ? remainPoints : nil
+                pointsPerCorrectPick: 1
             )
         )
 
-        let votedOutPoints = standardPoints.votedOut
-        let votedOutPointsText = votedOutPoints > 0 ? String(votedOutPoints) : "—"
         categories.append(
             Week.Category(
                 kind: .votedOut,
                 name: "Voted out",
-                pointsText: votedOutPointsText,
+                pointsText: "3",
                 correctPicksByUser: correctVotedOutByUser,
-                pointsPerCorrectPick: votedOutPoints > 0 ? votedOutPoints : nil
+                pointsPerCorrectPick: 3
             )
         )
 
-        let immunityPoints = standardPoints.immunity
-        let immunityPointsText = immunityPoints > 0 ? String(immunityPoints) : "—"
         categories.append(
             Week.Category(
                 kind: .immunity,
                 name: "Immunity",
-                pointsText: immunityPointsText,
+                pointsText: "\(immunityPoints)",
                 correctPicksByUser: correctImmunityByUser,
-                pointsPerCorrectPick: immunityPoints > 0 ? immunityPoints : nil
+                pointsPerCorrectPick: immunityPoints
             )
         )
 

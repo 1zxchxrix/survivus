@@ -68,7 +68,6 @@ class SeasonState:
 @dataclass(frozen=True)
 class EpisodeResult:
     id: int
-    phase_id: str | None = None
     immunity_winners: List[str]
     voted_out: List[str]
 
@@ -223,13 +222,11 @@ def build_seed_data(
     results = [
         EpisodeResult(
             id=1,
-            phase_id=phases[0].id,
             immunity_winners=["q"],
             voted_out=["todd_herzog"],
         ),
         EpisodeResult(
             id=2,
-            phase_id=phases[1].id,
             immunity_winners=["eva_erickson"],
             voted_out=["boston_rob"],
         ),
@@ -382,15 +379,13 @@ def build_seed_data(
         "activatedPhaseIds": state.activated_phase_ids,
     }
 
-    result_payloads = {}
-    for result in results:
-        payload = {
+    result_payloads = {
+        str(result.id): {
             "immunityWinners": result.immunity_winners,
             "votedOut": result.voted_out,
         }
-        if result.phase_id is not None:
-            payload["phaseId"] = result.phase_id
-        result_payloads[str(result.id)] = payload
+        for result in results
+    }
 
     return {
         "config": config_payload,

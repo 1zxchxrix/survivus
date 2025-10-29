@@ -481,20 +481,17 @@ struct PhaseCategoryDocument: Codable {
 
 struct EpisodeResultDocument: Codable {
     @DocumentID var documentId: String?
-    var phaseId: String?
     var immunityWinners: [String]
     var votedOut: [String]
     var categoryWinners: [String: [String]]?
 
     init(
         documentId: String? = nil,
-        phaseId: String? = nil,
         immunityWinners: [String],
         votedOut: [String],
         categoryWinners: [String: [String]]? = nil
     ) {
         self.documentId = documentId
-        self.phaseId = phaseId
         self.immunityWinners = immunityWinners
         self.votedOut = votedOut
         self.categoryWinners = categoryWinners
@@ -507,7 +504,6 @@ struct EpisodeResultDocument: Codable {
 
         self.init(
             documentId: String(result.id),
-            phaseId: result.phaseId?.uuidString,
             immunityWinners: result.immunityWinners,
             votedOut: result.votedOut,
             categoryWinners: encodedCategories.isEmpty ? nil : encodedCategories
@@ -517,9 +513,6 @@ struct EpisodeResultDocument: Codable {
     var model: EpisodeResult? {
         guard let documentId, let id = Int(documentId) else { return nil }
         var result = EpisodeResult(id: id, immunityWinners: immunityWinners, votedOut: votedOut)
-        if let phaseId, let uuid = UUID(uuidString: phaseId) {
-            result.phaseId = uuid
-        }
         categoryWinners?.forEach { key, values in
             if let uuid = UUID(uuidString: key) {
                 result.setWinners(values, for: uuid)
