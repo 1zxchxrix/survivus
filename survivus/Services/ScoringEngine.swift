@@ -20,7 +20,7 @@ struct ScoringEngine {
     func score(
         weekly: WeeklyPicks,
         episode: Episode,
-        phase phaseOverride: PickPhase? = nil,
+        phaseOverride: PickPhase? = nil,
         categoriesById: [PickPhase.Category.ID: PickPhase.Category] = [:]
     ) -> WeeklyScoreBreakdown {
         guard let result = resultsByEpisode[episode.id] else {
