@@ -49,7 +49,7 @@ struct TableView: View {
                 if let picks = app.store.weeklyPicks[user.id]?[episodeId] {
                     weeksParticipated += 1
                     let activePhase = phaseByEpisodeId[episodeId]
-                    let score = scoring.score(weekly: picks, episode: episode, phase: activePhase, categoriesById: categoriesById)
+                    let score = scoring.score(weekly: picks, episode: episode, phaseOverride: activePhase, categoriesById: categoriesById)
                     votedOutPoints += score.votedOut
                     remainPoints += score.remain
                     immunityPoints += score.immunity

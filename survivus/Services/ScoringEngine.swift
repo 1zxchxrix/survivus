@@ -20,7 +20,7 @@ struct ScoringEngine {
     func score(
         weekly: WeeklyPicks,
         episode: Episode,
-        phase: PickPhase? = nil,
+        phase phaseOverride: PickPhase? = nil,
         categoriesById: [PickPhase.Category.ID: PickPhase.Category] = [:]
     ) -> WeeklyScoreBreakdown {
         guard let result = resultsByEpisode[episode.id] else {
@@ -36,9 +36,9 @@ struct ScoringEngine {
         let remainHits = eligibleRemain.subtracting(Set(result.votedOut)).count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
         let defaultPhase = phase(for: episode)
-        let remainPointsPerPick = phase?.remainPointsPerCorrectPick ?? 1
-        let votedOutPointsPerPick = phase?.votedOutPointsPerCorrectPick ?? 3
-        let immunityPointsPerPick = phase?.immunityPointsPerCorrectPick ?? ((defaultPhase == .preMerge) ? 1 : 3)
+        let remainPointsPerPick = phaseOverride?.remainPointsPerCorrectPick ?? 1
+        let votedOutPointsPerPick = phaseOverride?.votedOutPointsPerCorrectPick ?? 3
+        let immunityPointsPerPick = phaseOverride?.immunityPointsPerCorrectPick ?? ((defaultPhase == .preMerge) ? 1 : 3)
         let remainPoints = remainHits * remainPointsPerPick
         let votedOutPoints = votedOutHits * votedOutPointsPerPick
         let immunityPts = immunityHits * immunityPointsPerPick

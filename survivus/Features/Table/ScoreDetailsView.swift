@@ -450,7 +450,7 @@ private struct ScoreDetailsModel {
                 if let picks = store.weeklyPicks[user.id]?[episodeId] {
                     weeksParticipated += 1
                     let configuredPhase = phaseByEpisodeId[episodeId]
-                    let score = scoring.score(weekly: picks, episode: episode, phase: configuredPhase, categoriesById: categoriesById)
+                    let score = scoring.score(weekly: picks, episode: episode, phaseOverride: configuredPhase, categoriesById: categoriesById)
                     votedOutPoints += score.votedOut
                     remainPoints += score.remain
                     immunityPoints += score.immunity
@@ -621,7 +621,7 @@ private struct ScoreDetailsModel {
                 let breakdown: WeeklyScoreBreakdown
 
                 if let picks = picksByUser[userId] {
-                    breakdown = scoring.score(weekly: picks, episode: episode, phase: configuredPhase, categoriesById: categoriesById)
+                    breakdown = scoring.score(weekly: picks, episode: episode, phaseOverride: configuredPhase, categoriesById: categoriesById)
                 } else {
                     breakdown = WeeklyScoreBreakdown(
                         votedOut: 0,
