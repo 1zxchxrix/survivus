@@ -36,16 +36,41 @@ struct ScoringEngine {
         let remainHits = eligibleRemain.subtracting(Set(result.votedOut)).count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
         let defaultPhase = phase(for: episode)
-        let remainPointsPerPick = phaseOverride?.remainPointsPerCorrectPick ?? 1
-        let votedOutPointsPerPick = phaseOverride?.votedOutPointsPerCorrectPick ?? 3
-        let immunityPointsPerPick = phaseOverride?.immunityPointsPerCorrectPick ?? ((defaultPhase == .preMerge) ? 1 : 3)
+        let remainPointsPerPick: Int
+        let votedOutPointsPerPick: Int
+        let immunityPointsPerPick: Int
+
+        if let phaseOverride {
+            remainPointsPerPick = max(phaseOverride.remainPointsPerCorrectPick ?? 0, 0)
+            votedOutPointsPerPick = max(phaseOverride.votedOutPointsPerCorrectPick ?? 0, 0)
+            immunityPointsPerPick = max(phaseOverride.immunityPointsPerCorrectPick ?? 0, 0)
+        } else {
+            remainPointsPerPick = 1
+            votedOutPointsPerPick = 3
+            immunityPointsPerPick = (defaultPhase == .preMerge) ? 1 : 3
+        }
+
         let remainPoints = remainHits * remainPointsPerPick
         let votedOutPoints = votedOutHits * votedOutPointsPerPick
         let immunityPts = immunityHits * immunityPointsPerPick
         var categoryPoints: [String: Int] = [:]
+        let activeCategoryIds: Set<UUID>? = phaseOverride.map { phase in
+            Set(phase.categories.map(\.id))
+        }
+
+        let categoriesLookup: (UUID) -> PickPhase.Category? = { id in
+            if let category = phaseOverride?.categories.first(where: { $0.id == id }) {
+                return category
+            }
+            return categoriesById[id]
+        }
 
         for (categoryId, winners) in result.categoryWinners {
-            guard let category = categoriesById[categoryId] else { continue }
+            if let activeCategoryIds, !activeCategoryIds.contains(categoryId) {
+                continue
+            }
+
+            guard let category = categoriesLookup(categoryId) else { continue }
             guard
                 !category.matchesRemainCategory,
                 !category.matchesVotedOutCategory,

@@ -31,7 +31,7 @@ final class ScoringEngineTests: XCTestCase {
         var weekly = WeeklyPicks(userId: "user", episodeId: 2)
         weekly.remain = ["playerA"]
 
-        let breakdown = engine.score(weekly: weekly, episode: episodes[1], phase: nil)
+        let breakdown = engine.score(weekly: weekly, episode: episodes[1], phaseOverride: nil)
 
         XCTAssertEqual(breakdown.remain, 0)
     }
@@ -75,11 +75,76 @@ final class ScoringEngineTests: XCTestCase {
         weekly.votedOut = ["playerC"]
         weekly.immunity = ["playerB"]
 
-        let breakdown = engine.score(weekly: weekly, episode: episodes[0], phase: phase)
+        let breakdown = engine.score(weekly: weekly, episode: episodes[0], phaseOverride: phase)
 
         XCTAssertEqual(breakdown.remain, 4)
         XCTAssertEqual(breakdown.votedOut, 5)
         XCTAssertEqual(breakdown.immunity, 4)
+    }
+
+    func testScoreIgnoresCategoriesOutsideActivePhase() {
+        let contestants = [
+            Contestant(id: "playerA", name: "Player A"),
+            Contestant(id: "playerB", name: "Player B")
+        ]
+        let episodes = [Episode(id: 1, title: "Finale", isMergeEpisode: true)]
+        let config = SeasonConfig(
+            seasonId: "test",
+            name: "Test Season",
+            contestants: contestants,
+            episodes: episodes,
+            weeklyPickCapsPreMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            weeklyPickCapsPostMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            lockHourUTC: 0
+        )
+
+        let activeCategory = PickPhase.Category(
+            name: "Fire Winner",
+            columnId: "FW",
+            totalPicks: 1,
+            pointsPerCorrectPick: 5,
+            isLocked: false
+        )
+        let inactiveCategory = PickPhase.Category(
+            name: "Sole Survivor",
+            columnId: "SS",
+            totalPicks: 1,
+            pointsPerCorrectPick: 25,
+            isLocked: false
+        )
+
+        let phase = PickPhase(name: "Finals", categories: [activeCategory])
+        let result = EpisodeResult(
+            id: 1,
+            phaseId: phase.id,
+            immunityWinners: [],
+            votedOut: [],
+            categoryWinners: [
+                activeCategory.id: ["playerA"],
+                inactiveCategory.id: ["playerA"]
+            ]
+        )
+
+        let engine = ScoringEngine(config: config, resultsByEpisode: [1: result])
+        var weekly = WeeklyPicks(userId: "user", episodeId: 1)
+        weekly.setSelections(Set(["playerA"]), for: activeCategory.id)
+        weekly.setSelections(Set(["playerA"]), for: inactiveCategory.id)
+
+        let categoriesById = [
+            activeCategory.id: activeCategory,
+            inactiveCategory.id: inactiveCategory
+        ]
+
+        let breakdown = engine.score(
+            weekly: weekly,
+            episode: episodes[0],
+            phaseOverride: phase,
+            categoriesById: categoriesById
+        )
+
+        XCTAssertEqual(breakdown.categoryPointsByColumnId.count, 1)
+        XCTAssertEqual(breakdown.categoryPointsByColumnId["FW"], 5)
+        XCTAssertNil(breakdown.categoryPointsByColumnId["SS"])
     }
 
     func testMergeTrackPointsStopAfterElimination() {
