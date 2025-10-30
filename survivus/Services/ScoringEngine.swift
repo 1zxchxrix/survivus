@@ -52,9 +52,8 @@ struct ScoringEngine {
         }
 
         let remainAutoScoringEnabled: Bool = {
-            if let phaseOverride,
-               phaseOverride.categories.contains(where: { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }) {
-                return true
+            if let phaseOverride {
+                return phaseOverride.categories.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
             }
             return categoriesById.values.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
         }()
