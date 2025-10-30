@@ -32,8 +32,9 @@ struct ScoringEngine {
                 partialResult.formUnion(entry.value.votedOut)
             }
         let votedOutHits = weekly.votedOut.intersection(result.votedOut).count
+        let currentVotedOut = Set(result.votedOut)
         let eligibleRemain = weekly.remain.subtracting(priorEliminations)
-        let remainHits = eligibleRemain.subtracting(Set(result.votedOut)).count
+        let remainHits = eligibleRemain.subtracting(currentVotedOut).count
         let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
         let defaultPhase = phase(for: episode)
         let remainPointsPerPick: Int
@@ -65,7 +66,22 @@ struct ScoringEngine {
             return categoriesById[id]
         }
 
-        for (categoryId, winners) in result.categoryWinners {
+        let winnersByCategory: [UUID: Set<String>] = result.categoryWinners.mapValues { Set($0) }
+        var categoryIdsToScore = Set(winnersByCategory.keys)
+
+        if let activeCategoryIds {
+            for categoryId in activeCategoryIds {
+                if let category = categoriesLookup(categoryId), category.autoScoresRemainingContestants {
+                    categoryIdsToScore.insert(categoryId)
+                }
+            }
+        } else {
+            for (categoryId, category) in categoriesById where category.autoScoresRemainingContestants {
+                categoryIdsToScore.insert(categoryId)
+            }
+        }
+
+        for categoryId in categoryIdsToScore {
             if let activeCategoryIds, !activeCategoryIds.contains(categoryId) {
                 continue
             }
@@ -80,15 +96,28 @@ struct ScoringEngine {
             }
 
             let selections = weekly.selections(for: categoryId)
-            let hits = selections.intersection(Set(winners)).count
             let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard !columnId.isEmpty else { continue }
+
+            if category.autoScoresRemainingContestants {
+                guard let pointsPerPick = category.pointsPerCorrectPick, pointsPerPick != 0 else { continue }
+                guard !selections.isEmpty else { continue }
+                let remainingSelections = selections
+                    .subtracting(priorEliminations)
+                    .subtracting(currentVotedOut)
+                guard !remainingSelections.isEmpty else { continue }
+                categoryPoints[columnId, default: 0] += remainingSelections.count * pointsPerPick
+                continue
+            }
+
+            guard let winners = winnersByCategory[categoryId], !winners.isEmpty else { continue }
+            let hits = selections.intersection(winners).count
 
             if let pointsPerPick = category.pointsPerCorrectPick, pointsPerPick != 0 {
                 guard hits > 0 else { continue }
                 categoryPoints[columnId, default: 0] += hits * pointsPerPick
             } else if let wager = category.wagerPoints, wager != 0 {
-                guard !selections.isEmpty, !winners.isEmpty else { continue }
+                guard !selections.isEmpty else { continue }
                 let delta = hits > 0 ? wager : -wager
                 categoryPoints[columnId, default: 0] += delta
             }

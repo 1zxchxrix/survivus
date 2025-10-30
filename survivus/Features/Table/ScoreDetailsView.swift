@@ -536,12 +536,21 @@ private struct ScoreDetailsModel {
                 }
 
                 for (categoryId, selections) in picks.categorySelections {
-                    let winners = customWinnerSets[categoryId] ?? []
-                    let hits = selections.intersection(winners)
-                    if !hits.isEmpty {
-                        var userMap = correctCustomByCategory[categoryId, default: [:]]
-                        userMap[userId] = hits
-                        correctCustomByCategory[categoryId] = userMap
+                    if let category = categoriesById[categoryId], category.autoScoresRemainingContestants {
+                        let hits = selections.subtracting(eliminatedThroughCurrentEpisode)
+                        if !hits.isEmpty {
+                            var userMap = correctCustomByCategory[categoryId, default: [:]]
+                            userMap[userId] = hits
+                            correctCustomByCategory[categoryId] = userMap
+                        }
+                    } else {
+                        let winners = customWinnerSets[categoryId] ?? []
+                        let hits = selections.intersection(winners)
+                        if !hits.isEmpty {
+                            var userMap = correctCustomByCategory[categoryId, default: [:]]
+                            userMap[userId] = hits
+                            correctCustomByCategory[categoryId] = userMap
+                        }
                     }
                 }
             }

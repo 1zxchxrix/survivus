@@ -294,6 +294,7 @@ private struct CategoryEditorSheet: View {
     @State private var draft: CategoryDraft
     @State private var pointsInput: String
     @State private var wagerInput: String
+    @State private var scoringMode: ScoringMode
 
     private let isEditingExisting: Bool
     var onSave: (CategoryDraft) -> Void
@@ -305,6 +306,7 @@ private struct CategoryEditorSheet: View {
         _draft = State(initialValue: initialDraft)
         _pointsInput = State(initialValue: initialDraft.pointsPerCorrectPick.map(String.init) ?? "")
         _wagerInput = State(initialValue: initialDraft.wagerPoints.map(String.init) ?? "")
+        _scoringMode = State(initialValue: initialDraft.usesWager ? .wager : .normal)
         self.isEditingExisting = isEditingExisting
         self.onSave = onSave
     }
@@ -339,18 +341,28 @@ private struct CategoryEditorSheet: View {
                         .pickerStyle(.wheel)
                     }
 
-                    Toggle("Wager", isOn: $draft.usesWager)
-                        .onChange(of: draft.usesWager) { isWager in
-                            if isWager {
-                                pointsInput = ""
-                                draft.pointsPerCorrectPick = nil
-                            } else {
-                                wagerInput = ""
-                                draft.wagerPoints = nil
-                            }
-                        }
+                }
 
-                    if draft.usesWager {
+                Section("Scoring") {
+                    Picker("Scoring mode", selection: $scoringMode) {
+                        Text("Normal").tag(ScoringMode.normal)
+                        Text("Wager").tag(ScoringMode.wager)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: scoringMode) { mode in
+                        let isWager = mode == .wager
+                        draft.usesWager = isWager
+                        if isWager {
+                            pointsInput = ""
+                            draft.pointsPerCorrectPick = nil
+                            draft.autoScoresRemainingContestants = false
+                        } else {
+                            wagerInput = ""
+                            draft.wagerPoints = nil
+                        }
+                    }
+
+                    if scoringMode == .wager {
                         TextField("Wager points", text: Binding(
                             get: { wagerInput },
                             set: { newValue in
@@ -370,6 +382,8 @@ private struct CategoryEditorSheet: View {
                             }
                         ))
                         .keyboardType(.numberPad)
+
+                        Toggle("Auto-score", isOn: $draft.autoScoresRemainingContestants)
                     }
 
                     Toggle("Lock category", isOn: $draft.isLocked)
@@ -397,13 +411,15 @@ private struct CategoryEditorSheet: View {
     private func saveCategory() {
         var categoryToSave = draft
 
-        if categoryToSave.usesWager {
+        if scoringMode == .wager {
             if let value = Int(wagerInput), !wagerInput.isEmpty {
                 categoryToSave.wagerPoints = value
             } else {
                 categoryToSave.wagerPoints = nil
             }
             categoryToSave.pointsPerCorrectPick = nil
+            categoryToSave.autoScoresRemainingContestants = false
+            categoryToSave.usesWager = true
         } else {
             if let value = Int(pointsInput), !pointsInput.isEmpty {
                 categoryToSave.pointsPerCorrectPick = value
@@ -411,6 +427,7 @@ private struct CategoryEditorSheet: View {
                 categoryToSave.pointsPerCorrectPick = nil
             }
             categoryToSave.wagerPoints = nil
+            categoryToSave.usesWager = false
         }
 
         let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -427,6 +444,13 @@ private struct CategoryEditorSheet: View {
 
         onSave(categoryToSave)
         dismiss()
+    }
+
+    private enum ScoringMode: String, CaseIterable, Identifiable {
+        case normal
+        case wager
+
+        var id: String { rawValue }
     }
 
     private func sanitizedColumnId(from input: String, fallbackName: String) -> String {

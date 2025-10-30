@@ -8,14 +8,24 @@ struct CategoryPreset: Identifiable, Equatable {
     let pointsPerCorrectPick: Int?
     let wagerPoints: Int?
     let isLocked: Bool
+    let autoScoresRemainingContestants: Bool
 
-    init(name: String, columnId: String, totalPicks: Int, pointsPerCorrectPick: Int?, wagerPoints: Int? = nil, isLocked: Bool) {
+    init(
+        name: String,
+        columnId: String,
+        totalPicks: Int,
+        pointsPerCorrectPick: Int?,
+        wagerPoints: Int? = nil,
+        isLocked: Bool,
+        autoScoresRemainingContestants: Bool = false
+    ) {
         self.name = name
         self.columnId = columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
         self.wagerPoints = wagerPoints
         self.isLocked = isLocked
+        self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.id = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
@@ -26,6 +36,7 @@ struct CategoryPreset: Identifiable, Equatable {
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
+            autoScoresRemainingContestants: autoScoresRemainingContestants,
             isLocked: isLocked
         )
     }
