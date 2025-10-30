@@ -13,9 +13,7 @@ extension PickPhase.Category {
         normalizedName.contains("voted")
     }
 
-    var matchesRemainCategory: Bool {
-        normalizedName.contains("remain") || normalizedName.contains("safe")
-    }
+    var matchesRemainCategory: Bool { autoScoresRemainers }
 
 }
 
