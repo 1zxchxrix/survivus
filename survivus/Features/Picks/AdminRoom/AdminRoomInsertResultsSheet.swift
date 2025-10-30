@@ -32,11 +32,11 @@ struct InsertResultsSheet: View {
         )
 
         if let existingResult {
-            if let immunityCategory = insertableCategories.first(where: { Self.isImmunityCategory($0) }) {
+            if let immunityCategory = insertableCategories.first(where: { isImmunityCategory($0) }) {
                 initialSelections[immunityCategory.id] = Set(existingResult.immunityWinners)
             }
 
-            if let votedOutCategory = insertableCategories.first(where: { Self.isVotedOutCategory($0) }) {
+            if let votedOutCategory = insertableCategories.first(where: { isVotedOutCategory($0) }) {
                 initialSelections[votedOutCategory.id] = Set(existingResult.votedOut)
             }
 
@@ -174,11 +174,11 @@ struct InsertResultsSheet: View {
             let winners = sortedSelection(for: category)
             result.setWinners(winners, for: category.id)
 
-            if Self.isImmunityCategory(category) {
+            if isImmunityCategory(category) {
                 result.immunityWinners = winners
             }
 
-            if Self.isVotedOutCategory(category) {
+            if isVotedOutCategory(category) {
                 result.votedOut = winners
             }
         }
@@ -225,15 +225,15 @@ struct InsertResultsSheet: View {
         return displayName.isEmpty ? "Untitled Category" : displayName
     }
 
-    private static func isImmunityCategory(_ category: PickPhase.Category) -> Bool {
+    private func isImmunityCategory(_ category: PickPhase.Category) -> Bool {
         categoryMatches(category, columnId: "IM", fallbackName: "immunity")
     }
 
-    private static func isVotedOutCategory(_ category: PickPhase.Category) -> Bool {
+    private func isVotedOutCategory(_ category: PickPhase.Category) -> Bool {
         categoryMatches(category, columnId: "VO", fallbackName: "voted out")
     }
 
-    private static func categoryMatches(
+    private func categoryMatches(
         _ category: PickPhase.Category,
         columnId expectedColumnId: String,
         fallbackName expectedName: String
