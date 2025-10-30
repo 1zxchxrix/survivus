@@ -262,6 +262,7 @@ private extension AllPicksView {
 }
 
 private struct UserPicksCard: View {
+    @EnvironmentObject private var app: AppState
     let user: UserProfile
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
@@ -362,7 +363,7 @@ private struct UserPicksCard: View {
             switch kind {
             case let .weekly(panel):
                 let canEditWeeklyPicks = !(weeklyPicks?.isSubmitted ?? false)
-                let canNavigate = canEditWeeklyPicks && !category.isLocked
+                let canNavigate = canEditWeeklyPicks && canEditCategory(category)
 
                 if let episode = selectedEpisode, canNavigate {
                     NavigationLink {
@@ -402,6 +403,30 @@ private struct UserPicksCard: View {
     private enum CategoryKind {
         case weekly(WeeklyPickPanel)
         case unknown
+    }
+
+    private func canEditCategory(_ category: PickPhase.Category) -> Bool {
+        guard category.isLocked else { return true }
+        guard let episode = selectedEpisode else { return false }
+        guard let phaseInfo = app.phaseContext(forEpisodeId: episode.id) else { return true }
+
+        return !hasSelections(for: category, phaseId: phaseInfo.phaseId)
+    }
+
+    private func hasSelections(for category: PickPhase.Category, phaseId: PickPhase.ID) -> Bool {
+        guard let picksByEpisode = app.store.weeklyPicks[user.id] else { return false }
+
+        let episodeIds = app.phaseEpisodeIds(for: phaseId)
+
+        for episodeId in episodeIds {
+            guard let picks = picksByEpisode[episodeId] else { continue }
+            let selection = app.selections(for: category, in: picks)
+            if !selection.isEmpty {
+                return true
+            }
+        }
+
+        return false
     }
 
     private func displayTitle(for category: PickPhase.Category) -> String {
