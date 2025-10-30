@@ -409,7 +409,7 @@ struct TableView: View {
             case custom(String)
 
             init?(category: PickPhase.Category) {
-                if category.matchesRemainCategory {
+                if category.matchesRemainCategory && category.autoScoresRemainingContestants {
                     self = .remain
                 } else if category.matchesVotedOutCategory {
                     self = .votedOut

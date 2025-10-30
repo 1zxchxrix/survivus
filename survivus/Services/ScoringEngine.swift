@@ -94,15 +94,20 @@ struct ScoringEngine {
             }
 
             guard let category = categoriesLookup(categoryId) else { continue }
-            guard
-                !category.matchesRemainCategory,
-                !category.matchesVotedOutCategory,
-                !category.matchesImmunityCategory
-            else {
+            if category.matchesRemainCategory && category.autoScoresRemainingContestants {
                 continue
             }
 
-            let selections = weekly.selections(for: categoryId)
+            guard !category.matchesVotedOutCategory, !category.matchesImmunityCategory else {
+                continue
+            }
+
+            let selections: Set<String>
+            if category.matchesRemainCategory {
+                selections = weekly.remain
+            } else {
+                selections = weekly.selections(for: categoryId)
+            }
             let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard !columnId.isEmpty else { continue }
 

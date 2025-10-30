@@ -435,21 +435,16 @@ private struct UserPicksCard: View {
     }
 
     private func kind(for category: PickPhase.Category) -> CategoryKind {
-        let normalized = category.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-        if normalized.contains("immunity") {
-            return .weekly(.immunity)
-        }
-
-        if normalized.contains("voted") || normalized.contains("vote") {
-            return .weekly(.votedOut)
-        }
-
-        if normalized.contains("remain") || normalized.contains("safe") {
+        switch category.kind {
+        case .remain:
             return .weekly(.remain)
+        case .votedOut:
+            return .weekly(.votedOut)
+        case .immunity:
+            return .weekly(.immunity)
+        case .custom:
+            return .weekly(.custom(category.id))
         }
-
-        return .weekly(.custom(category.id))
     }
 
     private func contestants(
@@ -499,10 +494,16 @@ private struct UserPicksCard: View {
 
             switch panel {
             case .remain:
-                guard !result.votedOut.isEmpty,
-                      let weeklyPicks = self.weeklyPicks else { return [] }
-                let votedOutIds = Set(result.votedOut)
-                return weeklyPicks.remain.subtracting(votedOutIds)
+                guard let weeklyPicks = self.weeklyPicks else { return [] }
+                if category.autoScoresRemainingContestants {
+                    guard !result.votedOut.isEmpty else { return [] }
+                    let votedOutIds = Set(result.votedOut)
+                    return weeklyPicks.remain.subtracting(votedOutIds)
+                } else {
+                    let winners = Set(result.winners(for: category.id))
+                    guard !winners.isEmpty else { return [] }
+                    return weeklyPicks.remain.intersection(winners)
+                }
             case .votedOut:
                 let votedOutIds = Set(result.votedOut)
                 guard let weeklyPicks = self.weeklyPicks else { return [] }
