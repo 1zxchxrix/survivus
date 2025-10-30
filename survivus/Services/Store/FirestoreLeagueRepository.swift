@@ -400,6 +400,7 @@ struct PhaseCategoryDocument: Codable {
     var wagerPoints: Int?
     var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
+    var kind: String?
 
     init(
         id: String,
@@ -409,7 +410,8 @@ struct PhaseCategoryDocument: Codable {
         pointsPerCorrectPick: Int?,
         wagerPoints: Int?,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool
+        isLocked: Bool,
+        kind: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -419,6 +421,7 @@ struct PhaseCategoryDocument: Codable {
         self.wagerPoints = wagerPoints
         self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
+        self.kind = kind
     }
 
     init(from category: PickPhase.Category) {
@@ -430,12 +433,30 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
             autoScoresRemainingContestants: category.autoScoresRemainingContestants,
-            isLocked: category.isLocked
+            isLocked: category.isLocked,
+            kind: category.kind.rawValue
         )
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
+        let resolvedKind: PickPhase.Category.Kind = {
+            if let kind, let parsed = PickPhase.Category.Kind(rawValue: kind) {
+                return parsed
+            }
+
+            let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if normalized.contains("remain") || normalized.contains("safe") {
+                return .remain
+            }
+            if normalized.contains("voted") || normalized.contains("vote") {
+                return .votedOut
+            }
+            if normalized.contains("immunity") {
+                return .immunity
+            }
+            return .custom
+        }()
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -444,7 +465,8 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
             autoScoresRemainingContestants: autoScoresRemainingContestants,
-            isLocked: isLocked
+            isLocked: isLocked,
+            kind: resolvedKind
         )
     }
 }
@@ -659,6 +681,7 @@ struct PhaseCategoryDocument: Codable {
     var wagerPoints: Int?
     var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
+    var kind: String?
 
     init(
         id: String = UUID().uuidString,
@@ -668,7 +691,8 @@ struct PhaseCategoryDocument: Codable {
         pointsPerCorrectPick: Int? = nil,
         wagerPoints: Int? = nil,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool = false
+        isLocked: Bool = false,
+        kind: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -678,10 +702,28 @@ struct PhaseCategoryDocument: Codable {
         self.wagerPoints = wagerPoints
         self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
+        self.kind = kind
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
+        let resolvedKind: PickPhase.Category.Kind = {
+            if let kind, let parsed = PickPhase.Category.Kind(rawValue: kind) {
+                return parsed
+            }
+
+            let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if normalized.contains("remain") || normalized.contains("safe") {
+                return .remain
+            }
+            if normalized.contains("voted") || normalized.contains("vote") {
+                return .votedOut
+            }
+            if normalized.contains("immunity") {
+                return .immunity
+            }
+            return .custom
+        }()
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -690,7 +732,8 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
             autoScoresRemainingContestants: autoScoresRemainingContestants,
-            isLocked: isLocked
+            isLocked: isLocked,
+            kind: resolvedKind
         )
     }
 }

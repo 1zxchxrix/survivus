@@ -521,6 +521,18 @@ private struct ScoreDetailsModel {
                 return categoriesById.values.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
             }()
 
+            let remainManualWinnerSet: Set<String> = {
+                guard !remainAutoScoringEnabled else { return [] }
+                if let configuredPhase,
+                   let category = configuredPhase.categories.first(where: { $0.matchesRemainCategory && !$0.autoScoresRemainingContestants }) {
+                    return Set(result.winners(for: category.id))
+                }
+                if let category = categoriesById.values.first(where: { $0.matchesRemainCategory && !$0.autoScoresRemainingContestants }) {
+                    return Set(result.winners(for: category.id))
+                }
+                return []
+            }()
+
             var correctRemainByUser: [String: Set<String>] = [:]
             var correctVotedOutByUser: [String: Set<String>] = [:]
             var correctImmunityByUser: [String: Set<String>] = [:]
@@ -531,6 +543,11 @@ private struct ScoreDetailsModel {
                     let remainHits = picks.remain.subtracting(eliminatedThroughCurrentEpisode)
                     if !remainHits.isEmpty {
                         correctRemainByUser[userId] = remainHits
+                    }
+                } else if !remainManualWinnerSet.isEmpty {
+                    let hits = picks.remain.intersection(remainManualWinnerSet)
+                    if !hits.isEmpty {
+                        correctRemainByUser[userId] = hits
                     }
                 }
 
