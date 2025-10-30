@@ -317,13 +317,6 @@ private struct CategoryEditorSheet: View {
                 Section("Details") {
                     TextField("Category name", text: $draft.name)
 
-                    Picker("Category type", selection: $draft.kind) {
-                        ForEach(PickPhase.Category.Kind.orderedCases, id: \.self) { kind in
-                            Text(kind.displayName).tag(kind)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
                     TextField("Column ID", text: Binding(
                         get: { draft.columnId },
                         set: { newValue in

@@ -43,31 +43,11 @@ extension AppState {
     }
 
     func selections(for category: PickPhase.Category, in picks: WeeklyPicks) -> Set<String> {
-        if category.matchesRemainCategory {
-            return picks.remain
-        }
-
-        if category.matchesVotedOutCategory {
-            return picks.votedOut
-        }
-
-        if category.matchesImmunityCategory {
-            return picks.immunity
-        }
-
-        return picks.selections(for: category.id)
+        picks.selections(for: category.id)
     }
 
     func setSelections(_ selections: Set<String>, for category: PickPhase.Category, in picks: inout WeeklyPicks) {
-        if category.matchesRemainCategory {
-            picks.remain = selections
-        } else if category.matchesVotedOutCategory {
-            picks.votedOut = selections
-        } else if category.matchesImmunityCategory {
-            picks.immunity = selections
-        } else {
-            picks.setSelections(selections, for: category.id)
-        }
+        picks.setSelections(selections, for: category.id)
     }
 
     private func lockedSelections(

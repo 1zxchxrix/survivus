@@ -32,11 +32,11 @@ struct InsertResultsSheet: View {
         )
 
         if let existingResult {
-            if let immunityCategory = insertableCategories.first(where: { $0.matchesImmunityCategory }) {
+            if let immunityCategory = insertableCategories.first(where: { Self.isImmunityCategory($0) }) {
                 initialSelections[immunityCategory.id] = Set(existingResult.immunityWinners)
             }
 
-            if let votedOutCategory = insertableCategories.first(where: { $0.matchesVotedOutCategory }) {
+            if let votedOutCategory = insertableCategories.first(where: { Self.isVotedOutCategory($0) }) {
                 initialSelections[votedOutCategory.id] = Set(existingResult.votedOut)
             }
 
@@ -174,11 +174,11 @@ struct InsertResultsSheet: View {
             let winners = sortedSelection(for: category)
             result.setWinners(winners, for: category.id)
 
-            if category.matchesImmunityCategory {
+            if Self.isImmunityCategory(category) {
                 result.immunityWinners = winners
             }
 
-            if category.matchesVotedOutCategory {
+            if Self.isVotedOutCategory(category) {
                 result.votedOut = winners
             }
         }
@@ -223,6 +223,46 @@ struct InsertResultsSheet: View {
     private func displayTitle(for category: PickPhase.Category) -> String {
         let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return displayName.isEmpty ? "Untitled Category" : displayName
+    }
+
+    private static func isImmunityCategory(_ category: PickPhase.Category) -> Bool {
+        categoryMatches(category, columnId: "IM", fallbackName: "immunity")
+    }
+
+    private static func isVotedOutCategory(_ category: PickPhase.Category) -> Bool {
+        categoryMatches(category, columnId: "VO", fallbackName: "voted out")
+    }
+
+    private static func categoryMatches(
+        _ category: PickPhase.Category,
+        columnId expectedColumnId: String,
+        fallbackName expectedName: String
+    ) -> Bool {
+        let normalizedColumnId = category.columnId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+
+        if !normalizedColumnId.isEmpty, normalizedColumnId == expectedColumnId {
+            return true
+        }
+
+        let normalizedName = category.name
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        if normalizedName == expectedName {
+            return true
+        }
+
+        let collapsedName = normalizedName
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+
+        let collapsedExpectedName = expectedName
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+
+        return collapsedName == collapsedExpectedName
     }
 }
 
