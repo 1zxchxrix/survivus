@@ -36,35 +36,26 @@ struct TableView: View {
         let pinnedSectionWidth = pinnedColumns.reduce(nameColumnWidth) { partialWidth, column in
             partialWidth + columnSpacing + column.width
         }
-        
+
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
-            var votedOutPoints = 0
-            var remainPoints = 0
-            var immunityPoints = 0
             var weeksParticipated = 0
             var categoryPoints: [String: Int] = [:]
-            
+
             for episodeId in scoredEpisodeIds {
                 let episode = episodesById[episodeId] ?? Episode(id: episodeId)
                 if let picks = app.store.weeklyPicks[user.id]?[episodeId] {
                     weeksParticipated += 1
                     let activePhase = phaseByEpisodeId[episodeId]
                     let score = scoring.score(weekly: picks, episode: episode, phaseOverride: activePhase, categoriesById: categoriesById)
-                    votedOutPoints += score.votedOut
-                    remainPoints += score.remain
-                    immunityPoints += score.immunity
                     for (columnId, points) in score.categoryPointsByColumnId {
                         categoryPoints[columnId, default: 0] += points
                     }
                 }
             }
-            
+
             return UserScoreBreakdown(
                 userId: user.id,
                 weeksParticipated: weeksParticipated,
-                votedOutPoints: votedOutPoints,
-                remainPoints: remainPoints,
-                immunityPoints: immunityPoints,
                 categoryPointsByColumnId: categoryPoints
             )
         }
@@ -402,24 +393,13 @@ struct TableView: View {
     private struct TableColumnDefinition: Identifiable, Hashable {
         enum Metric: Hashable {
             case weeks
-            case votedOut
-            case remain
-            case immunity
             case total
             case custom(String)
 
             init?(category: PickPhase.Category) {
-                if category.matchesRemainCategory && category.autoScoresRemainingContestants {
-                    self = .remain
-                } else if category.matchesVotedOutCategory {
-                    self = .votedOut
-                } else if category.matchesImmunityCategory {
-                    self = .immunity
-                } else {
-                    let trimmed = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                    guard !trimmed.isEmpty else { return nil }
-                    self = .custom(trimmed)
-                }
+                let trimmed = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                guard !trimmed.isEmpty else { return nil }
+                self = .custom(trimmed)
             }
         }
         
@@ -441,20 +421,14 @@ struct TableView: View {
             guard let metric else {
                 return "0"
             }
-            
+
             return String(value(for: breakdown, metric: metric))
         }
-        
+
         private func value(for breakdown: UserScoreBreakdown, metric: Metric) -> Int {
             switch metric {
             case .weeks:
                 return breakdown.weeksParticipated
-            case .votedOut:
-                return breakdown.votedOutPoints
-            case .remain:
-                return breakdown.remainPoints
-            case .immunity:
-                return breakdown.immunityPoints
             case .total:
                 return breakdown.total
             case let .custom(columnId):
@@ -487,12 +461,6 @@ struct TableView: View {
             switch metric {
             case .weeks:
                 return "Weeks participated"
-            case .votedOut:
-                return "Voted out points"
-            case .remain:
-                return "Remain points"
-            case .immunity:
-                return "Immunity points"
             case .total:
                 return "Total points"
             case .custom:

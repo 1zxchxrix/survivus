@@ -4,9 +4,6 @@ struct WeeklyPicks: Identifiable, Hashable, Codable {
     var id: String { "\(userId)-ep-\(episodeId)" }
     let userId: String
     let episodeId: Int
-    var remain: Set<String> = []
-    var votedOut: Set<String> = []
-    var immunity: Set<String> = []
     var categorySelections: [UUID: Set<String>] = [:]
     var isSubmitted: Bool = false
 

@@ -255,36 +255,23 @@ struct ScoreDetailsView: View {
         let weeklyPicks = week.picksByUser[user.id]
         let pointsByPick = category.pointsByPick(for: user.id)
 
-        switch category.kind {
-        case .remain:
-            guard let picks = weeklyPicks else { return "—" }
+        if let categoryId = category.categoryId, let picks = weeklyPicks {
             return formattedNames(
-                for: picks.remain,
-                contestantsById: contestantsById,
-                pointsById: pointsByPick
-            )
-        case .votedOut:
-            guard let picks = weeklyPicks else { return "—" }
-            return formattedNames(
-                for: picks.votedOut,
-                contestantsById: contestantsById,
-                pointsById: pointsByPick
-            )
-        case .immunity:
-            guard let picks = weeklyPicks else { return "—" }
-            return formattedNames(
-                for: picks.immunity,
-                contestantsById: contestantsById,
-                pointsById: pointsByPick
-            )
-        case let .custom(id):
-            guard let picks = weeklyPicks else { return "—" }
-            return formattedNames(
-                for: picks.selections(for: id),
+                for: picks.selections(for: categoryId),
                 contestantsById: contestantsById,
                 pointsById: pointsByPick
             )
         }
+
+        if let correct = category.correctPicksByUser[user.id], !correct.isEmpty {
+            return formattedNames(
+                for: correct,
+                contestantsById: contestantsById,
+                pointsById: pointsByPick
+            )
+        }
+
+        return "—"
     }
 
     private func formattedNames(
@@ -313,25 +300,25 @@ struct ScoreDetailsView: View {
 
 }
 
-private struct ScoreDetailsModel {
-    struct Week: Identifiable {
-        struct Category: Identifiable {
-            let kind: CategoryKind
-            let name: String
-            let pointsText: String
-            let correctPicksByUser: [String: Set<String>]
-            let pointsPerCorrectPick: Int?
-            let wagerPoints: Int?
+    private struct ScoreDetailsModel {
+        struct Week: Identifiable {
+            struct Category: Identifiable {
+                let categoryId: UUID?
+                let name: String
+                let pointsText: String
+                let correctPicksByUser: [String: Set<String>]
+                let pointsPerCorrectPick: Int?
+                let wagerPoints: Int?
 
-            var id: String { kind.id }
+                var id: String { categoryId?.uuidString ?? name }
 
-            func pointsByPick(for userId: String) -> [String: Int] {
-                guard let perPick = pointsPerCorrectPick, perPick > 0 else { return [:] }
-                guard let picks = correctPicksByUser[userId], !picks.isEmpty else { return [:] }
+                func pointsByPick(for userId: String) -> [String: Int] {
+                    guard let perPick = pointsPerCorrectPick, perPick > 0 else { return [:] }
+                    guard let picks = correctPicksByUser[userId], !picks.isEmpty else { return [:] }
 
-                return Dictionary(uniqueKeysWithValues: picks.map { ($0, perPick) })
+                    return Dictionary(uniqueKeysWithValues: picks.map { ($0, perPick) })
+                }
             }
-        }
 
         struct SummaryValues {
             let weekly: Int
@@ -346,26 +333,6 @@ private struct ScoreDetailsModel {
         let picksByUser: [String: WeeklyPicks]
         let summaries: [String: SummaryValues]
         let votedOutNames: [String]
-    }
-
-    enum CategoryKind: Hashable {
-        case remain
-        case votedOut
-        case immunity
-        case custom(UUID)
-
-        var id: String {
-            switch self {
-            case .remain:
-                return "remain"
-            case .votedOut:
-                return "votedOut"
-            case .immunity:
-                return "immunity"
-            case let .custom(id):
-                return "custom-\(id.uuidString)"
-            }
-        }
     }
 
     let users: [UserProfile]
@@ -429,9 +396,6 @@ private struct ScoreDetailsModel {
         })
 
         return users.map { user in
-            var votedOutPoints = 0
-            var remainPoints = 0
-            var immunityPoints = 0
             var weeksParticipated = 0
             var categoryPoints: [String: Int] = [:]
 
@@ -441,9 +405,6 @@ private struct ScoreDetailsModel {
                     weeksParticipated += 1
                     let configuredPhase = phaseByEpisodeId[episodeId]
                     let score = scoring.score(weekly: picks, episode: episode, phaseOverride: configuredPhase, categoriesById: categoriesById)
-                    votedOutPoints += score.votedOut
-                    remainPoints += score.remain
-                    immunityPoints += score.immunity
                     for (columnId, points) in score.categoryPointsByColumnId {
                         categoryPoints[columnId, default: 0] += points
                     }
@@ -453,9 +414,6 @@ private struct ScoreDetailsModel {
             return UserScoreBreakdown(
                 userId: user.id,
                 weeksParticipated: weeksParticipated,
-                votedOutPoints: votedOutPoints,
-                remainPoints: remainPoints,
-                immunityPoints: immunityPoints,
                 categoryPointsByColumnId: categoryPoints
             )
         }
@@ -506,95 +464,58 @@ private struct ScoreDetailsModel {
 
             let defaultPhase = scoring.phase(for: episode)
             let configuredPhase = phaseByEpisodeId[result.id]
-            let remainPointsPerPick = configuredPhase?.remainPointsPerCorrectPick ?? 1
-            let votedOutPointsPerPick = configuredPhase?.votedOutPointsPerCorrectPick ?? 3
-            let immunityPointsPerPick = configuredPhase?.immunityPointsPerCorrectPick ?? (defaultPhase == .preMerge ? 1 : 3)
-            let votedOutSet = Set(result.votedOut)
-            let immunityWinnerSet = Set(result.immunityWinners)
-            let customWinnerSets = result.categoryWinners.mapValues { Set($0) }
-            let eliminatedThroughCurrentEpisode = eliminatedContestantIds.union(votedOutSet)
+            let priorEliminations = eliminatedContestantIds
+            let currentVotedOut = Set(result.votedOut)
+            let winnersByCategory = result.categoryWinners.mapValues { Set($0) }
 
-            let remainAutoScoringEnabled: Bool = {
-                if let configuredPhase {
-                    return configuredPhase.categories.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
+            var orderedCategories: [PickPhase.Category] = []
+            var seenCategoryIds: Set<UUID> = []
+
+            if let configuredPhase {
+                for category in configuredPhase.categories {
+                    orderedCategories.append(category)
+                    seenCategoryIds.insert(category.id)
                 }
-                return categoriesById.values.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
-            }()
+            }
 
-            let remainManualWinnerSet: Set<String> = {
-                guard !remainAutoScoringEnabled else { return [] }
-                if let configuredPhase,
-                   let category = configuredPhase.categories.first(where: { $0.matchesRemainCategory && !$0.autoScoresRemainingContestants }) {
-                    return Set(result.winners(for: category.id))
+            for categoryId in winnersByCategory.keys where !seenCategoryIds.contains(categoryId) {
+                if let category = categoriesById[categoryId] {
+                    orderedCategories.append(category)
+                    seenCategoryIds.insert(categoryId)
                 }
-                if let category = categoriesById.values.first(where: { $0.matchesRemainCategory && !$0.autoScoresRemainingContestants }) {
-                    return Set(result.winners(for: category.id))
-                }
-                return []
-            }()
+            }
 
-            var correctRemainByUser: [String: Set<String>] = [:]
-            var correctVotedOutByUser: [String: Set<String>] = [:]
-            var correctImmunityByUser: [String: Set<String>] = [:]
-            var correctCustomByCategory: [UUID: [String: Set<String>]] = [:]
-
-            for (userId, picks) in picksByUser {
-                if remainAutoScoringEnabled {
-                    let remainHits = picks.remain.subtracting(eliminatedThroughCurrentEpisode)
-                    if !remainHits.isEmpty {
-                        correctRemainByUser[userId] = remainHits
-                    }
-                } else if !remainManualWinnerSet.isEmpty {
-                    let hits = picks.remain.intersection(remainManualWinnerSet)
-                    if !hits.isEmpty {
-                        correctRemainByUser[userId] = hits
-                    }
-                }
-
-                let votedOutHits = picks.votedOut.intersection(votedOutSet)
-                if !votedOutHits.isEmpty {
-                    correctVotedOutByUser[userId] = votedOutHits
-                }
-
-                let immunityHits = picks.immunity.intersection(immunityWinnerSet)
-                if !immunityHits.isEmpty {
-                    correctImmunityByUser[userId] = immunityHits
-                }
-
-                for (categoryId, selections) in picks.categorySelections {
-                    if let category = categoriesById[categoryId], category.autoScoresRemainingContestants {
-                        let hits = selections.subtracting(eliminatedThroughCurrentEpisode)
-                        if !hits.isEmpty {
-                            var userMap = correctCustomByCategory[categoryId, default: [:]]
-                            userMap[userId] = hits
-                            correctCustomByCategory[categoryId] = userMap
-                        }
-                    } else {
-                        let winners = customWinnerSets[categoryId] ?? []
-                        let hits = selections.intersection(winners)
-                        if !hits.isEmpty {
-                            var userMap = correctCustomByCategory[categoryId, default: [:]]
-                            userMap[userId] = hits
-                            correctCustomByCategory[categoryId] = userMap
-                        }
+            for picks in picksByUser.values {
+                for categoryId in picks.categorySelections.keys where !seenCategoryIds.contains(categoryId) {
+                    if let category = categoriesById[categoryId] {
+                        orderedCategories.append(category)
+                        seenCategoryIds.insert(categoryId)
                     }
                 }
             }
 
-            let categories = makeCategories(
-                result: result,
-                picksByUser: picksByUser,
-                phases: phases,
-                configuredPhase: configuredPhase,
-                categoriesById: categoriesById,
-                remainPoints: remainAutoScoringEnabled ? remainPointsPerPick : 0,
-                votedOutPoints: votedOutPointsPerPick,
-                immunityPoints: immunityPointsPerPick,
-                correctRemainByUser: correctRemainByUser,
-                correctVotedOutByUser: correctVotedOutByUser,
-                correctImmunityByUser: correctImmunityByUser,
-                correctCustomByCategory: correctCustomByCategory
-            )
+            var categories: [Week.Category] = []
+
+            for category in orderedCategories {
+                let correctByUser = correctSelections(
+                    for: category,
+                    picksByUser: picksByUser,
+                    winnersByCategory: winnersByCategory,
+                    priorEliminations: priorEliminations,
+                    currentVotedOut: currentVotedOut
+                )
+                let points = pointsDescription(for: category)
+                categories.append(
+                    Week.Category(
+                        categoryId: category.id,
+                        name: displayName(for: category),
+                        pointsText: points.text,
+                        correctPicksByUser: correctByUser,
+                        pointsPerCorrectPick: points.perPick,
+                        wagerPoints: points.wager
+                    )
+                )
+            }
 
             var summaries: [String: Week.SummaryValues] = [:]
 
@@ -605,16 +526,10 @@ private struct ScoreDetailsModel {
                 if let picks = picksByUser[userId] {
                     breakdown = scoring.score(weekly: picks, episode: episode, phaseOverride: configuredPhase, categoriesById: categoriesById)
                 } else {
-                    breakdown = WeeklyScoreBreakdown(
-                        votedOut: 0,
-                        remain: 0,
-                        immunity: 0,
-                        categoryPointsByColumnId: [:]
-                    )
+                    breakdown = WeeklyScoreBreakdown(categoryPointsByColumnId: [:])
                 }
 
-                let categoryPointsTotal = breakdown.categoryPointsByColumnId.values.reduce(0, +)
-                let weeklyTotal = breakdown.votedOut + breakdown.remain + breakdown.immunity + categoryPointsTotal
+                let weeklyTotal = breakdown.categoryPointsByColumnId.values.reduce(0, +)
                 let previousTotal = cumulativeTotals[userId] ?? 0
                 let currentTotal = previousTotal + weeklyTotal
                 cumulativeTotals[userId] = currentTotal
@@ -651,7 +566,7 @@ private struct ScoreDetailsModel {
                 )
             )
 
-            eliminatedContestantIds = eliminatedThroughCurrentEpisode
+            eliminatedContestantIds.formUnion(currentVotedOut)
         }
 
         return weeks.sorted(by: { $0.id > $1.id })
@@ -669,10 +584,10 @@ private struct ScoreDetailsModel {
         }
 
         let candidates: [(order: Int, name: String)] = categories.compactMap { category in
-            if case let .custom(id) = category.kind, let info = phaseInfoByCategoryId[id] {
-                return (info.order, info.name)
+            guard let categoryId = category.categoryId, let info = phaseInfoByCategoryId[categoryId] else {
+                return nil
             }
-            return nil
+            return (info.order, info.name)
         }
 
         if let selected = candidates.sorted(by: { $0.order < $1.order }).last {
@@ -708,136 +623,47 @@ private struct ScoreDetailsModel {
         }
     }
 
-    private static func makeCategories(
-        result: EpisodeResult,
+    private static func correctSelections(
+        for category: PickPhase.Category,
         picksByUser: [String: WeeklyPicks],
-        phases: [PickPhase],
-        configuredPhase: PickPhase?,
-        categoriesById: [UUID: PickPhase.Category],
-        remainPoints: Int,
-        votedOutPoints: Int,
-        immunityPoints: Int,
-        correctRemainByUser: [String: Set<String>],
-        correctVotedOutByUser: [String: Set<String>],
-        correctImmunityByUser: [String: Set<String>],
-        correctCustomByCategory: [UUID: [String: Set<String>]]
-    ) -> [Week.Category] {
-        let resolvedText: (PickPhase.Category, Int) -> (text: String, perPick: Int?, wager: Int?) = { category, fallback in
-            if let wager = category.wagerPoints, wager > 0 {
-                return ("±\(wager)", nil, wager)
+        winnersByCategory: [UUID: Set<String>],
+        priorEliminations: Set<String>,
+        currentVotedOut: Set<String>
+    ) -> [String: Set<String>] {
+        var result: [String: Set<String>] = [:]
+
+        for (userId, picks) in picksByUser {
+            let selections = picks.selections(for: category.id)
+            guard !selections.isEmpty else { continue }
+
+            let hits: Set<String>
+            if category.autoScoresRemainingContestants {
+                hits = selections
+                    .subtracting(priorEliminations)
+                    .subtracting(currentVotedOut)
+            } else {
+                let winners = winnersByCategory[category.id] ?? []
+                hits = selections.intersection(winners)
             }
 
-            if let configured = category.pointsPerCorrectPick, configured > 0 {
-                return ("\(configured)", configured, nil)
+            if !hits.isEmpty {
+                result[userId] = hits
             }
-
-            let positiveFallback = max(fallback, 0)
-            if positiveFallback > 0 {
-                return ("\(positiveFallback)", positiveFallback, nil)
-            }
-
-            return ("—", nil, nil)
         }
 
-        if let configuredPhase {
-            var categories: [Week.Category] = []
+        return result
+    }
 
-            for category in configuredPhase.categories {
-                let name = displayName(for: category)
-                let points: (text: String, perPick: Int?, wager: Int?)
-                let correctPicks: [String: Set<String>]
-                let kind: CategoryKind
-
-                if category.matchesRemainCategory {
-                    points = resolvedText(category, remainPoints)
-                    correctPicks = correctRemainByUser
-                    kind = .remain
-                } else if category.matchesVotedOutCategory {
-                    points = resolvedText(category, votedOutPoints)
-                    correctPicks = correctVotedOutByUser
-                    kind = .votedOut
-                } else if category.matchesImmunityCategory {
-                    points = resolvedText(category, immunityPoints)
-                    correctPicks = correctImmunityByUser
-                    kind = .immunity
-                } else {
-                    points = resolvedText(category, 0)
-                    correctPicks = correctCustomByCategory[category.id] ?? [:]
-                    kind = .custom(category.id)
-                }
-
-                categories.append(
-                    Week.Category(
-                        kind: kind,
-                        name: name,
-                        pointsText: points.text,
-                        correctPicksByUser: correctPicks,
-                        pointsPerCorrectPick: points.perPick,
-                        wagerPoints: points.wager
-                    )
-                )
-            }
-
-            return categories
+    private static func pointsDescription(for category: PickPhase.Category) -> (text: String, perPick: Int?, wager: Int?) {
+        if let wager = category.wagerPoints, wager > 0 {
+            return ("±\(wager)", nil, wager)
         }
 
-        var categories: [Week.Category] = []
-
-        let defaultRemain = max(remainPoints, 0)
-        let defaultVotedOut = max(votedOutPoints, 0)
-        let defaultImmunity = max(immunityPoints, 0)
-
-        categories.append(
-            Week.Category(
-                kind: .remain,
-                name: "Remain",
-                pointsText: defaultRemain > 0 ? "\(defaultRemain)" : "—",
-                correctPicksByUser: correctRemainByUser,
-                pointsPerCorrectPick: defaultRemain > 0 ? defaultRemain : nil,
-                wagerPoints: nil
-            )
-        )
-
-        categories.append(
-            Week.Category(
-                kind: .votedOut,
-                name: "Voted out",
-                pointsText: defaultVotedOut > 0 ? "\(defaultVotedOut)" : "—",
-                correctPicksByUser: correctVotedOutByUser,
-                pointsPerCorrectPick: defaultVotedOut > 0 ? defaultVotedOut : nil,
-                wagerPoints: nil
-            )
-        )
-
-        categories.append(
-            Week.Category(
-                kind: .immunity,
-                name: "Immunity",
-                pointsText: defaultImmunity > 0 ? "\(defaultImmunity)" : "—",
-                correctPicksByUser: correctImmunityByUser,
-                pointsPerCorrectPick: defaultImmunity > 0 ? defaultImmunity : nil,
-                wagerPoints: nil
-            )
-        )
-
-        for (categoryId, winnersByUser) in correctCustomByCategory.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
-            guard let category = categoriesById[categoryId] else { continue }
-            let name = displayName(for: category)
-            let points = resolvedText(category, 0)
-
-            categories.append(
-                Week.Category(
-                    kind: .custom(categoryId),
-                    name: name,
-                    pointsText: points.text,
-                    correctPicksByUser: winnersByUser,
-                    pointsPerCorrectPick: points.perPick,
-                    wagerPoints: points.wager
-                )
-            )
+        if let configured = category.pointsPerCorrectPick, configured > 0 {
+            return ("\(configured)", configured, nil)
         }
 
-        return categories
+        return ("—", nil, nil)
     }
     private static func displayName(for category: PickPhase.Category) -> String {
         let trimmed = category.name.trimmingCharacters(in: .whitespacesAndNewlines)

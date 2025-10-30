@@ -1,9 +1,6 @@
 import Foundation
 
 struct WeeklyScoreBreakdown {
-    var votedOut: Int
-    var remain: Int
-    var immunity: Int
     var categoryPointsByColumnId: [String: Int]
 }
 
@@ -24,43 +21,14 @@ struct ScoringEngine {
         categoriesById: [PickPhase.Category.ID: PickPhase.Category] = [:]
     ) -> WeeklyScoreBreakdown {
         guard let result = resultsByEpisode[episode.id] else {
-            return WeeklyScoreBreakdown(votedOut: 0, remain: 0, immunity: 0, categoryPointsByColumnId: [:])
+            return WeeklyScoreBreakdown(categoryPointsByColumnId: [:])
         }
         let priorEliminations: Set<String> = resultsByEpisode
             .filter { $0.key < episode.id }
             .reduce(into: Set<String>()) { partialResult, entry in
                 partialResult.formUnion(entry.value.votedOut)
             }
-        let votedOutHits = weekly.votedOut.intersection(result.votedOut).count
         let currentVotedOut = Set(result.votedOut)
-        let eligibleRemain = weekly.remain.subtracting(priorEliminations)
-        let remainHits = eligibleRemain.subtracting(currentVotedOut).count
-        let immunityHits = weekly.immunity.intersection(result.immunityWinners).count
-        let defaultPhase = phase(for: episode)
-        let remainPointsPerPick: Int
-        let votedOutPointsPerPick: Int
-        let immunityPointsPerPick: Int
-
-        if let phaseOverride {
-            remainPointsPerPick = max(phaseOverride.remainPointsPerCorrectPick ?? 0, 0)
-            votedOutPointsPerPick = max(phaseOverride.votedOutPointsPerCorrectPick ?? 0, 0)
-            immunityPointsPerPick = max(phaseOverride.immunityPointsPerCorrectPick ?? 0, 0)
-        } else {
-            remainPointsPerPick = 1
-            votedOutPointsPerPick = 3
-            immunityPointsPerPick = (defaultPhase == .preMerge) ? 1 : 3
-        }
-
-        let remainAutoScoringEnabled: Bool = {
-            if let phaseOverride {
-                return phaseOverride.categories.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
-            }
-            return categoriesById.values.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
-        }()
-
-        let remainPoints = remainAutoScoringEnabled ? remainHits * remainPointsPerPick : 0
-        let votedOutPoints = votedOutHits * votedOutPointsPerPick
-        let immunityPts = immunityHits * immunityPointsPerPick
         var categoryPoints: [String: Int] = [:]
         let activeCategoryIds: Set<UUID>? = phaseOverride.map { phase in
             Set(phase.categories.map(\.id))
@@ -94,20 +62,7 @@ struct ScoringEngine {
             }
 
             guard let category = categoriesLookup(categoryId) else { continue }
-            if category.matchesRemainCategory && category.autoScoresRemainingContestants {
-                continue
-            }
-
-            guard !category.matchesVotedOutCategory, !category.matchesImmunityCategory else {
-                continue
-            }
-
-            let selections: Set<String>
-            if category.matchesRemainCategory {
-                selections = weekly.remain
-            } else {
-                selections = weekly.selections(for: categoryId)
-            }
+            let selections = weekly.selections(for: categoryId)
             let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard !columnId.isEmpty else { continue }
 
@@ -136,9 +91,6 @@ struct ScoringEngine {
         }
 
         return WeeklyScoreBreakdown(
-            votedOut: votedOutPoints,
-            remain: remainPoints,
-            immunity: immunityPts,
             categoryPointsByColumnId: categoryPoints
         )
     }
