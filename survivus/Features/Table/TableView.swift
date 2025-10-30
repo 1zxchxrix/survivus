@@ -59,20 +59,12 @@ struct TableView: View {
                 }
             }
             
-            let season = app.store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id)
-            let mergePoints = scoring.mergeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
-            let finalThreePoints = scoring.finalThreeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
-            let winnerPoints = scoring.winnerPoints(seasonPicks: season, finalResult: nil)
-            
             return UserScoreBreakdown(
                 userId: user.id,
                 weeksParticipated: weeksParticipated,
                 votedOutPoints: votedOutPoints,
                 remainPoints: remainPoints,
                 immunityPoints: immunityPoints,
-                mergeTrackPoints: mergePoints,
-                finalThreeTrackPoints: finalThreePoints,
-                winnerPoints: winnerPoints,
                 categoryPointsByColumnId: categoryPoints
             )
         }
@@ -413,12 +405,9 @@ struct TableView: View {
             case votedOut
             case remain
             case immunity
-            case merge
-            case finalThree
-            case winner
             case total
             case custom(String)
-            
+
             init?(category: PickPhase.Category) {
                 if category.matchesRemainCategory {
                     self = .remain
@@ -426,12 +415,6 @@ struct TableView: View {
                     self = .votedOut
                 } else if category.matchesImmunityCategory {
                     self = .immunity
-                } else if category.matchesMergeCategory {
-                    self = .merge
-                } else if category.matchesFinalThreeCategory {
-                    self = .finalThree
-                } else if category.matchesWinnerCategory {
-                    self = .winner
                 } else {
                     let trimmed = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
                     guard !trimmed.isEmpty else { return nil }
@@ -472,12 +455,6 @@ struct TableView: View {
                 return breakdown.remainPoints
             case .immunity:
                 return breakdown.immunityPoints
-            case .merge:
-                return breakdown.mergeTrackPoints
-            case .finalThree:
-                return breakdown.finalThreeTrackPoints
-            case .winner:
-                return breakdown.winnerPoints
             case .total:
                 return breakdown.total
             case let .custom(columnId):
@@ -516,12 +493,6 @@ struct TableView: View {
                 return "Remain points"
             case .immunity:
                 return "Immunity points"
-            case .merge:
-                return "Mergers points"
-            case .finalThree:
-                return "Final three track points"
-            case .winner:
-                return "Winner points"
             case .total:
                 return "Total points"
             case .custom:

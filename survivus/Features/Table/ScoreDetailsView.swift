@@ -256,13 +256,6 @@ struct ScoreDetailsView: View {
         let pointsByPick = category.pointsByPick(for: user.id)
 
         switch category.kind {
-        case .merge:
-            let selections = week.mergePicksByUser[user.id] ?? []
-            return formattedNames(
-                for: selections,
-                contestantsById: contestantsById,
-                pointsById: pointsByPick
-            )
         case .remain:
             guard let picks = weeklyPicks else { return "—" }
             return formattedNames(
@@ -328,6 +321,7 @@ private struct ScoreDetailsModel {
             let pointsText: String
             let correctPicksByUser: [String: Set<String>]
             let pointsPerCorrectPick: Int?
+            let wagerPoints: Int?
 
             var id: String { kind.id }
 
@@ -350,7 +344,6 @@ private struct ScoreDetailsModel {
         let phaseName: String
         let categories: [Category]
         let picksByUser: [String: WeeklyPicks]
-        let mergePicksByUser: [String: Set<String>]
         let summaries: [String: SummaryValues]
         let votedOutNames: [String]
     }
@@ -359,7 +352,6 @@ private struct ScoreDetailsModel {
         case remain
         case votedOut
         case immunity
-        case merge
         case custom(UUID)
 
         var id: String {
@@ -370,8 +362,6 @@ private struct ScoreDetailsModel {
                 return "votedOut"
             case .immunity:
                 return "immunity"
-            case .merge:
-                return "merge"
             case let .custom(id):
                 return "custom-\(id.uuidString)"
             }
@@ -460,21 +450,12 @@ private struct ScoreDetailsModel {
                 }
             }
 
-            let season = store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id)
-            let mergePoints = scoring.mergeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
-            let finalThreePoints = scoring.finalThreeTrackPoints(for: user.id, upTo: lastEpisodeWithResult, seasonPicks: season)
-            let finalResult = scoring.resultsByEpisode[lastEpisodeWithResult]
-            let winnerPoints = scoring.winnerPoints(seasonPicks: season, finalResult: finalResult)
-
             return UserScoreBreakdown(
                 userId: user.id,
                 weeksParticipated: weeksParticipated,
                 votedOutPoints: votedOutPoints,
                 remainPoints: remainPoints,
                 immunityPoints: immunityPoints,
-                mergeTrackPoints: mergePoints,
-                finalThreeTrackPoints: finalThreePoints,
-                winnerPoints: winnerPoints,
                 categoryPointsByColumnId: categoryPoints
             )
         }
@@ -502,9 +483,6 @@ private struct ScoreDetailsModel {
 
         var weeks: [Week] = []
         var cumulativeTotals: [String: Int] = [:]
-        var previousMergeTotals: [String: Int] = [:]
-        var previousFinalTotals: [String: Int] = [:]
-        var previousWinnerTotals: [String: Int] = [:]
         let phaseInfoByCategoryId: [UUID: (name: String, order: Int)] = {
             var mapping: [UUID: (name: String, order: Int)] = [:]
             for (index, phase) in phases.enumerated() {
@@ -513,23 +491,6 @@ private struct ScoreDetailsModel {
                 }
             }
             return mapping
-        }()
-        let seasonsByUser: [String: SeasonPicks] = Dictionary(uniqueKeysWithValues: orderedUsers.map { user in
-            (user.id, store.seasonPicks[user.id] ?? SeasonPicks(userId: user.id))
-        })
-        let hasMergePicks = seasonsByUser.values.contains { !$0.mergePicks.isEmpty }
-        let mergeSelectionsByUser: [String: Set<String>] = {
-            guard hasMergePicks else { return [:] }
-
-            var selections: [String: Set<String>] = [:]
-            for (userId, season) in seasonsByUser {
-                let picks = season.mergePicks
-                if !picks.isEmpty {
-                    selections[userId] = picks
-                }
-            }
-
-            return selections
         }()
         var eliminatedContestantIds: Set<String> = []
 
@@ -585,16 +546,6 @@ private struct ScoreDetailsModel {
                 }
             }
 
-            var mergeAliveByUser: [String: Set<String>] = [:]
-            if hasMergePicks {
-                for (userId, season) in seasonsByUser {
-                    let alive = season.mergePicks.subtracting(eliminatedThroughCurrentEpisode)
-                    if !alive.isEmpty {
-                        mergeAliveByUser[userId] = alive
-                    }
-                }
-            }
-
             let categories = makeCategories(
                 result: result,
                 picksByUser: picksByUser,
@@ -604,8 +555,6 @@ private struct ScoreDetailsModel {
                 remainPoints: remainPointsPerPick,
                 votedOutPoints: votedOutPointsPerPick,
                 immunityPoints: immunityPointsPerPick,
-                includeMergeCategory: hasMergePicks,
-                mergeAliveByUser: mergeAliveByUser,
                 correctRemainByUser: correctRemainByUser,
                 correctVotedOutByUser: correctVotedOutByUser,
                 correctImmunityByUser: correctImmunityByUser,
@@ -613,12 +562,9 @@ private struct ScoreDetailsModel {
             )
 
             var summaries: [String: Week.SummaryValues] = [:]
-            var awardedFinalPoints = false
-            var awardedWinnerPoints = false
 
             for user in orderedUsers {
                 let userId = user.id
-                let season = seasonsByUser[userId] ?? SeasonPicks(userId: userId)
                 let breakdown: WeeklyScoreBreakdown
 
                 if let picks = picksByUser[userId] {
@@ -633,26 +579,7 @@ private struct ScoreDetailsModel {
                 }
 
                 let categoryPointsTotal = breakdown.categoryPointsByColumnId.values.reduce(0, +)
-                let baseWeeklyPoints = breakdown.votedOut + breakdown.remain + breakdown.immunity + categoryPointsTotal
-
-                let mergeToDate = scoring.mergeTrackPoints(for: userId, upTo: episode.id, seasonPicks: season)
-                let mergePrev = previousMergeTotals[userId] ?? 0
-                let mergeWeekly = mergeToDate - mergePrev
-                previousMergeTotals[userId] = mergeToDate
-
-                let finalToDate = scoring.finalThreeTrackPoints(for: userId, upTo: episode.id, seasonPicks: season)
-                let finalPrev = previousFinalTotals[userId] ?? 0
-                let finalWeekly = finalToDate - finalPrev
-                if finalWeekly > 0 { awardedFinalPoints = true }
-                previousFinalTotals[userId] = finalToDate
-
-                let winnerToDate = scoring.winnerPoints(seasonPicks: season, finalResult: scoring.resultsByEpisode[episode.id])
-                let winnerPrev = previousWinnerTotals[userId] ?? 0
-                let winnerWeekly = max(0, winnerToDate - winnerPrev)
-                if winnerWeekly > 0 { awardedWinnerPoints = true }
-                previousWinnerTotals[userId] = winnerToDate
-
-                let weeklyTotal = baseWeeklyPoints + mergeWeekly + finalWeekly + winnerWeekly
+                let weeklyTotal = breakdown.votedOut + breakdown.remain + breakdown.immunity + categoryPointsTotal
                 let previousTotal = cumulativeTotals[userId] ?? 0
                 let currentTotal = previousTotal + weeklyTotal
                 cumulativeTotals[userId] = currentTotal
@@ -669,8 +596,7 @@ private struct ScoreDetailsModel {
                 defaultPhase: defaultPhase,
                 configuredPhase: configuredPhase,
                 phases: phases,
-                phaseInfoByCategoryId: phaseInfoByCategoryId,
-                hasFinalPoints: awardedFinalPoints || awardedWinnerPoints
+                phaseInfoByCategoryId: phaseInfoByCategoryId
             )
 
             let votedOutNames = result.votedOut.map { id -> String in
@@ -685,7 +611,6 @@ private struct ScoreDetailsModel {
                     phaseName: phaseDisplayName,
                     categories: categories,
                     picksByUser: picksByUser,
-                    mergePicksByUser: mergeSelectionsByUser,
                     summaries: summaries,
                     votedOutNames: votedOutNames
                 )
@@ -702,8 +627,7 @@ private struct ScoreDetailsModel {
         defaultPhase: Phase,
         configuredPhase: PickPhase?,
         phases: [PickPhase],
-        phaseInfoByCategoryId: [UUID: (name: String, order: Int)],
-        hasFinalPoints: Bool
+        phaseInfoByCategoryId: [UUID: (name: String, order: Int)]
     ) -> String {
         if let configuredPhase {
             return configuredPhase.name
@@ -720,23 +644,13 @@ private struct ScoreDetailsModel {
             return selected.name
         }
 
-        return fallbackPhaseName(for: defaultPhase, phases: phases, hasFinalPoints: hasFinalPoints)
+        return fallbackPhaseName(for: defaultPhase, phases: phases)
     }
 
     private static func fallbackPhaseName(
         for defaultPhase: Phase,
-        phases: [PickPhase],
-        hasFinalPoints: Bool
+        phases: [PickPhase]
     ) -> String {
-        if hasFinalPoints {
-            if let finalsPhase = phases.first(where: { phase in
-                phase.name.range(of: "final", options: .caseInsensitive) != nil
-            }) {
-                return finalsPhase.name
-            }
-            return "Finale"
-        }
-
         switch defaultPhase {
         case .preMerge:
             if let match = phases.first(where: { phase in
@@ -768,54 +682,51 @@ private struct ScoreDetailsModel {
         remainPoints: Int,
         votedOutPoints: Int,
         immunityPoints: Int,
-        includeMergeCategory: Bool,
-        mergeAliveByUser: [String: Set<String>],
         correctRemainByUser: [String: Set<String>],
         correctVotedOutByUser: [String: Set<String>],
         correctImmunityByUser: [String: Set<String>],
         correctCustomByCategory: [UUID: [String: Set<String>]]
     ) -> [Week.Category] {
-        let resolvedPoints: (PickPhase.Category, Int) -> (text: String, value: Int?) = { category, fallback in
-            if let configured = category.pointsPerCorrectPick {
-                guard configured > 0 else { return ("—", nil) }
-                return ("\(configured)", configured)
+        let resolvedText: (PickPhase.Category, Int) -> (text: String, perPick: Int?, wager: Int?) = { category, fallback in
+            if let wager = category.wagerPoints, wager > 0 {
+                return ("±\(wager)", nil, wager)
             }
 
-            guard fallback > 0 else { return ("—", nil) }
-            return ("\(fallback)", fallback)
+            if let configured = category.pointsPerCorrectPick, configured > 0 {
+                return ("\(configured)", configured, nil)
+            }
+
+            let positiveFallback = max(fallback, 0)
+            if positiveFallback > 0 {
+                return ("\(positiveFallback)", positiveFallback, nil)
+            }
+
+            return ("—", nil, nil)
         }
 
         if let configuredPhase {
             var categories: [Week.Category] = []
 
             for category in configuredPhase.categories {
-                if category.matchesMergeCategory && !includeMergeCategory {
-                    continue
-                }
-
                 let name = displayName(for: category)
-                let points: (text: String, value: Int?)
+                let points: (text: String, perPick: Int?, wager: Int?)
                 let correctPicks: [String: Set<String>]
                 let kind: CategoryKind
 
                 if category.matchesRemainCategory {
-                    points = resolvedPoints(category, remainPoints)
+                    points = resolvedText(category, remainPoints)
                     correctPicks = correctRemainByUser
                     kind = .remain
                 } else if category.matchesVotedOutCategory {
-                    points = resolvedPoints(category, votedOutPoints)
+                    points = resolvedText(category, votedOutPoints)
                     correctPicks = correctVotedOutByUser
                     kind = .votedOut
                 } else if category.matchesImmunityCategory {
-                    points = resolvedPoints(category, immunityPoints)
+                    points = resolvedText(category, immunityPoints)
                     correctPicks = correctImmunityByUser
                     kind = .immunity
-                } else if category.matchesMergeCategory {
-                    points = resolvedPoints(category, 1)
-                    correctPicks = mergeAliveByUser
-                    kind = .merge
                 } else {
-                    points = resolvedPoints(category, 0)
+                    points = resolvedText(category, 0)
                     correctPicks = correctCustomByCategory[category.id] ?? [:]
                     kind = .custom(category.id)
                 }
@@ -826,7 +737,8 @@ private struct ScoreDetailsModel {
                         name: name,
                         pointsText: points.text,
                         correctPicksByUser: correctPicks,
-                        pointsPerCorrectPick: points.value
+                        pointsPerCorrectPick: points.perPick,
+                        wagerPoints: points.wager
                     )
                 )
             }
@@ -846,7 +758,8 @@ private struct ScoreDetailsModel {
                 name: "Remain",
                 pointsText: defaultRemain > 0 ? "\(defaultRemain)" : "—",
                 correctPicksByUser: correctRemainByUser,
-                pointsPerCorrectPick: defaultRemain > 0 ? defaultRemain : nil
+                pointsPerCorrectPick: defaultRemain > 0 ? defaultRemain : nil,
+                wagerPoints: nil
             )
         )
 
@@ -856,7 +769,8 @@ private struct ScoreDetailsModel {
                 name: "Voted out",
                 pointsText: defaultVotedOut > 0 ? "\(defaultVotedOut)" : "—",
                 correctPicksByUser: correctVotedOutByUser,
-                pointsPerCorrectPick: defaultVotedOut > 0 ? defaultVotedOut : nil
+                pointsPerCorrectPick: defaultVotedOut > 0 ? defaultVotedOut : nil,
+                wagerPoints: nil
             )
         )
 
@@ -866,97 +780,30 @@ private struct ScoreDetailsModel {
                 name: "Immunity",
                 pointsText: defaultImmunity > 0 ? "\(defaultImmunity)" : "—",
                 correctPicksByUser: correctImmunityByUser,
-                pointsPerCorrectPick: defaultImmunity > 0 ? defaultImmunity : nil
+                pointsPerCorrectPick: defaultImmunity > 0 ? defaultImmunity : nil,
+                wagerPoints: nil
             )
         )
 
-        if includeMergeCategory {
+        for (categoryId, winnersByUser) in correctCustomByCategory.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
+            guard let category = categoriesById[categoryId] else { continue }
+            let name = displayName(for: category)
+            let points = resolvedText(category, 0)
+
             categories.append(
                 Week.Category(
-                    kind: .merge,
-                    name: "Mergers",
-                    pointsText: "1",
-                    correctPicksByUser: mergeAliveByUser,
-                    pointsPerCorrectPick: 1
+                    kind: .custom(categoryId),
+                    name: name,
+                    pointsText: points.text,
+                    correctPicksByUser: winnersByUser,
+                    pointsPerCorrectPick: points.perPick,
+                    wagerPoints: points.wager
                 )
             )
-        }
-
-        var customCategoryIds = Set(result.categoryWinners.keys)
-        for picks in picksByUser.values {
-            for categoryId in picks.categorySelections.keys {
-                customCategoryIds.insert(categoryId)
-            }
-        }
-
-        guard !customCategoryIds.isEmpty else { return categories }
-
-        var remaining = customCategoryIds
-
-        for phase in phases {
-            for category in phase.categories {
-                guard remaining.contains(category.id) else { continue }
-
-                if category.matchesRemainCategory || category.matchesVotedOutCategory || category.matchesImmunityCategory {
-                    remaining.remove(category.id)
-                    continue
-                }
-
-                let name = displayName(for: category)
-                let pointsText = category.pointsPerCorrectPick.map(String.init) ?? "—"
-                let pointsPerPick = category.pointsPerCorrectPick.flatMap { $0 > 0 ? $0 : nil }
-                let correctPicks = correctCustomByCategory[category.id] ?? [:]
-
-                categories.append(
-                    Week.Category(
-                        kind: .custom(category.id),
-                        name: name,
-                        pointsText: pointsText,
-                        correctPicksByUser: correctPicks,
-                        pointsPerCorrectPick: pointsPerPick
-                    )
-                )
-                remaining.remove(category.id)
-            }
-        }
-
-        for id in remaining {
-            if let category = categoriesById[id] {
-                if category.matchesRemainCategory || category.matchesVotedOutCategory || category.matchesImmunityCategory {
-                    continue
-                }
-
-                let name = displayName(for: category)
-                let pointsText = category.pointsPerCorrectPick.map(String.init) ?? "—"
-                let pointsPerPick = category.pointsPerCorrectPick.flatMap { $0 > 0 ? $0 : nil }
-                let correctPicks = correctCustomByCategory[id] ?? [:]
-
-                categories.append(
-                    Week.Category(
-                        kind: .custom(id),
-                        name: name,
-                        pointsText: pointsText,
-                        correctPicksByUser: correctPicks,
-                        pointsPerCorrectPick: pointsPerPick
-                    )
-                )
-            } else {
-                let correctPicks = correctCustomByCategory[id] ?? [:]
-                categories.append(
-                    Week.Category(
-                        kind: .custom(id),
-                        name: "Category",
-                        pointsText: "—",
-                        correctPicksByUser: correctPicks,
-                        pointsPerCorrectPick: nil
-                    )
-                )
-            }
         }
 
         return categories
     }
-
     private static func displayName(for category: PickPhase.Category) -> String {
         let trimmed = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {

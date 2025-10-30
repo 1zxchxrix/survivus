@@ -86,7 +86,6 @@ struct AllPicksView: View {
 
                             UserPicksCard(
                                 user: user,
-                                seasonPicks: isLocked ? nil : seasonPicks(for: user),
                                 weeklyPicks: isLocked ? nil : weeklyPicks(for: user),
                                 contestantsById: contestantsById,
                                 isCurrentUser: isCurrentUser,
@@ -199,10 +198,6 @@ private extension AllPicksView {
         }
     }
 
-    func seasonPicks(for user: UserProfile) -> SeasonPicks? {
-        app.store.seasonPicks[user.id]
-    }
-
     func weeklyPicks(for user: UserProfile) -> WeeklyPicks? {
         guard case let .week(episodeId) = selectedWeek else { return nil }
         return app.store.weeklyPicks[user.id]?[episodeId]
@@ -255,7 +250,6 @@ private extension AllPicksView {
 
 private struct UserPicksCard: View {
     let user: UserProfile
-    let seasonPicks: SeasonPicks?
     let weeklyPicks: WeeklyPicks?
     let contestantsById: [String: Contestant]
     let isCurrentUser: Bool
@@ -273,7 +267,6 @@ private struct UserPicksCard: View {
 
     init(
         user: UserProfile,
-        seasonPicks: SeasonPicks?,
         weeklyPicks: WeeklyPicks?,
         contestantsById: [String: Contestant],
         isCurrentUser: Bool,
@@ -287,7 +280,6 @@ private struct UserPicksCard: View {
         onToggleCollapse: (() -> Void)?
     ) {
         self.user = user
-        self.seasonPicks = seasonPicks
         self.weeklyPicks = weeklyPicks
         self.contestantsById = contestantsById
         self.isCurrentUser = isCurrentUser
@@ -355,49 +347,6 @@ private struct UserPicksCard: View {
 
         if isCurrentUser {
             switch kind {
-            case .seasonMerge:
-                let mergeLocked = seasonPicks?.mergePicksLocked == true
-
-                if mergeLocked {
-                    PickSection(
-                        title: title,
-                        contestants: contestants,
-                        correctContestantIDs: correctContestantIDs
-                    )
-                } else {
-                    NavigationLink {
-                        MergePickEditor()
-                    } label: {
-                        PickSection(
-                            title: title,
-                            contestants: contestants,
-                            isInteractive: true,
-                            correctContestantIDs: correctContestantIDs
-                        )
-                    }
-                }
-            case .seasonFinalThree:
-                NavigationLink {
-                    FinalThreePickEditor()
-                } label: {
-                    PickSection(
-                        title: title,
-                        contestants: contestants,
-                        isInteractive: true,
-                        correctContestantIDs: correctContestantIDs
-                    )
-                }
-            case .seasonWinner:
-                NavigationLink {
-                    WinnerPickEditor()
-                } label: {
-                    PickSection(
-                        title: title,
-                        contestants: contestants,
-                        isInteractive: true,
-                        correctContestantIDs: correctContestantIDs
-                    )
-                }
             case let .weekly(panel):
                 let canEditWeeklyPicks = !(weeklyPicks?.isSubmitted ?? false)
 
@@ -436,9 +385,6 @@ private struct UserPicksCard: View {
     }
 
     private enum CategoryKind {
-        case seasonMerge
-        case seasonFinalThree
-        case seasonWinner
         case weekly(WeeklyPickPanel)
         case unknown
     }
@@ -450,23 +396,6 @@ private struct UserPicksCard: View {
 
     private func kind(for category: PickPhase.Category) -> CategoryKind {
         let normalized = category.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-        if normalized.contains("merge") {
-            return .seasonMerge
-        }
-
-        if normalized.contains("final") && (normalized.contains("three") || normalized.contains("3")) {
-            return .seasonFinalThree
-        }
-
-        if normalized.contains("sole") && normalized.contains("survivor") {
-            return .seasonWinner
-        }
-
-        let winnerPhrases: [String] = ["winner", "winner pick", "season winner", "survivor winner"]
-        if winnerPhrases.contains(normalized) || normalized.contains("winner pick") {
-            return .seasonWinner
-        }
 
         if normalized.contains("immunity") {
             return .weekly(.immunity)
@@ -499,15 +428,6 @@ private struct UserPicksCard: View {
         let limit: Int? = selectionLimit(for: category, kind: kind)
 
         switch kind {
-        case .seasonMerge:
-            return contestants(for: seasonPicks?.mergePicks ?? Set<String>(), limit: limit)
-        case .seasonFinalThree:
-            return contestants(for: seasonPicks?.finalThreePicks ?? Set<String>(), limit: limit)
-        case .seasonWinner:
-            if let winner = seasonPicks?.winnerPick {
-                return contestants(for: Set([winner]), limit: 1)
-            }
-            return []
         case let .weekly(panel):
             switch panel {
             case .remain:
@@ -526,19 +446,7 @@ private struct UserPicksCard: View {
 
     private func correctContestantIDs(for category: PickPhase.Category, kind: CategoryKind) -> Set<String> {
         switch kind {
-        case .seasonMerge:
-            guard let seasonPicks = self.seasonPicks,
-                  let episode = selectedEpisode,
-                  let currentResults = scoringEngine.resultsByEpisode[episode.id],
-                  currentResults.hasRecordedResults
-            else {
-                return []
-            }
-
-            let eliminated = eliminatedContestantIDs(upTo: episode.id)
-            return seasonPicks.mergePicks.subtracting(eliminated)
-
-        case .seasonFinalThree, .seasonWinner, .unknown:
+        case .unknown:
             return []
 
         case let .weekly(panel):
@@ -570,14 +478,6 @@ private struct UserPicksCard: View {
                 return selections.intersection(winners)
             }
         }
-    }
-
-    private func eliminatedContestantIDs(upTo episodeId: Int) -> Set<String> {
-        scoringEngine.resultsByEpisode
-            .filter { $0.key <= episodeId && $0.value.hasRecordedResults }
-            .reduce(into: Set<String>()) { result, entry in
-                result.formUnion(entry.value.votedOut)
-            }
     }
 
     @ViewBuilder
@@ -720,7 +620,7 @@ private extension UserPicksCard {
 
             return limit(for: panel, caps: caps)
 
-        case .seasonMerge, .seasonFinalThree, .seasonWinner, .unknown:
+        case .unknown:
             return positiveLimit(from: category.totalPicks)
         }
     }

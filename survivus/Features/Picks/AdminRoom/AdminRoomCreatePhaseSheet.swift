@@ -236,8 +236,10 @@ private struct CategoryRow: View {
 
                 Text("Total picks: \(category.totalPicks)")
 
-                if let points = category.pointsPerCorrectPick {
-                    Text("Points per correct pick: \(points)")
+                if category.usesWager {
+                    Text("Wager: \(category.wagerPoints.map { "±\($0)" } ?? "—")")
+                } else {
+                    Text("Points per correct pick: \(category.pointsPerCorrectPick.map(String.init) ?? "—")")
                 }
             }
             .font(.subheadline)
@@ -265,8 +267,12 @@ private struct CategoryPresetRow: View {
 
                 Text("Total picks: \(preset.totalPicks)")
 
-                if let points = preset.pointsPerCorrectPick {
+                if let wager = preset.wagerPoints {
+                    Text("Wager: ±\(wager)")
+                } else if let points = preset.pointsPerCorrectPick {
                     Text("Points per correct pick: \(points)")
+                } else {
+                    Text("Points per correct pick: —")
                 }
             }
             .font(.subheadline)
@@ -287,6 +293,7 @@ private struct CategoryEditorSheet: View {
 
     @State private var draft: CategoryDraft
     @State private var pointsInput: String
+    @State private var wagerInput: String
 
     private let isEditingExisting: Bool
     var onSave: (CategoryDraft) -> Void
@@ -297,6 +304,7 @@ private struct CategoryEditorSheet: View {
 
         _draft = State(initialValue: initialDraft)
         _pointsInput = State(initialValue: initialDraft.pointsPerCorrectPick.map(String.init) ?? "")
+        _wagerInput = State(initialValue: initialDraft.wagerPoints.map(String.init) ?? "")
         self.isEditingExisting = isEditingExisting
         self.onSave = onSave
     }
@@ -331,15 +339,38 @@ private struct CategoryEditorSheet: View {
                         .pickerStyle(.wheel)
                     }
 
-                    TextField("Points per correct pick", text: Binding(
-                        get: { pointsInput },
-                        set: { newValue in
-                            let filtered = newValue.filter(\.isNumber)
-                            pointsInput = filtered
-                            draft.pointsPerCorrectPick = filtered.isEmpty ? nil : Int(filtered)
+                    Toggle("Wager", isOn: $draft.usesWager)
+                        .onChange(of: draft.usesWager) { isWager in
+                            if isWager {
+                                pointsInput = ""
+                                draft.pointsPerCorrectPick = nil
+                            } else {
+                                wagerInput = ""
+                                draft.wagerPoints = nil
+                            }
                         }
-                    ))
-                    .keyboardType(.numberPad)
+
+                    if draft.usesWager {
+                        TextField("Wager points", text: Binding(
+                            get: { wagerInput },
+                            set: { newValue in
+                                let filtered = newValue.filter(\.isNumber)
+                                wagerInput = filtered
+                                draft.wagerPoints = filtered.isEmpty ? nil : Int(filtered)
+                            }
+                        ))
+                        .keyboardType(.numberPad)
+                    } else {
+                        TextField("Points per correct pick", text: Binding(
+                            get: { pointsInput },
+                            set: { newValue in
+                                let filtered = newValue.filter(\.isNumber)
+                                pointsInput = filtered
+                                draft.pointsPerCorrectPick = filtered.isEmpty ? nil : Int(filtered)
+                            }
+                        ))
+                        .keyboardType(.numberPad)
+                    }
 
                     Toggle("Lock category", isOn: $draft.isLocked)
                 }
@@ -366,10 +397,20 @@ private struct CategoryEditorSheet: View {
     private func saveCategory() {
         var categoryToSave = draft
 
-        if let value = Int(pointsInput), !pointsInput.isEmpty {
-            categoryToSave.pointsPerCorrectPick = value
-        } else {
+        if categoryToSave.usesWager {
+            if let value = Int(wagerInput), !wagerInput.isEmpty {
+                categoryToSave.wagerPoints = value
+            } else {
+                categoryToSave.wagerPoints = nil
+            }
             categoryToSave.pointsPerCorrectPick = nil
+        } else {
+            if let value = Int(pointsInput), !pointsInput.isEmpty {
+                categoryToSave.pointsPerCorrectPick = value
+            } else {
+                categoryToSave.pointsPerCorrectPick = nil
+            }
+            categoryToSave.wagerPoints = nil
         }
 
         let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)

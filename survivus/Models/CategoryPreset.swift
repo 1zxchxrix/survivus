@@ -6,13 +6,15 @@ struct CategoryPreset: Identifiable, Equatable {
     let columnId: String
     let totalPicks: Int
     let pointsPerCorrectPick: Int?
+    let wagerPoints: Int?
     let isLocked: Bool
 
-    init(name: String, columnId: String, totalPicks: Int, pointsPerCorrectPick: Int?, isLocked: Bool) {
+    init(name: String, columnId: String, totalPicks: Int, pointsPerCorrectPick: Int?, wagerPoints: Int? = nil, isLocked: Bool) {
         self.name = name
         self.columnId = columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
+        self.wagerPoints = wagerPoints
         self.isLocked = isLocked
         self.id = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
@@ -23,6 +25,7 @@ struct CategoryPreset: Identifiable, Equatable {
             columnId: columnId,
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
+            wagerPoints: wagerPoints,
             isLocked: isLocked
         )
     }
@@ -37,6 +40,6 @@ extension CategoryPreset {
         CategoryPreset(name: "Carried", columnId: "CA", totalPicks: 1, pointsPerCorrectPick: 10, isLocked: false),
         CategoryPreset(name: "Fire", columnId: "FI", totalPicks: 2, pointsPerCorrectPick: 10, isLocked: false),
         CategoryPreset(name: "Fire Winner", columnId: "FW", totalPicks: 1, pointsPerCorrectPick: 15, isLocked: false),
-        CategoryPreset(name: "Sole Survivor", columnId: "SS", totalPicks: 1, pointsPerCorrectPick: 25, isLocked: false)
+        CategoryPreset(name: "Sole Survivor", columnId: "SS", totalPicks: 1, pointsPerCorrectPick: nil, wagerPoints: 30, isLocked: false)
     ]
 }

@@ -13,7 +13,6 @@ seasons/{seasonId}
   ├── phases/{phaseId}
   ├── results/{episodeNumber}
   ├── users/{userId}
-  ├── seasonPicks/{userId}
   └── weeklyPicks/{userId}/episodes/{episodeNumber}
 ```
 
@@ -31,7 +30,6 @@ infra/
         phases.json             # Array of PhaseDocument
         results.json            # Array of EpisodeResultDocument
         users.json              # Array of UserDocument
-        seasonPicks.json        # Array of SeasonPicksDocument
         weeklyPicks.json        # Array of WeeklyPicksDocument grouped by user/episode
 firebase.json                   # Emulator + deploy targets
 firestore.indexes.json          # Composite index definitions

@@ -22,12 +22,3 @@ struct WeeklyPicks: Identifiable, Hashable, Codable {
         }
     }
 }
-
-struct SeasonPicks: Identifiable, Hashable, Codable {
-    var id: String { "\(userId)-season" }
-    let userId: String
-    var mergePicks: Set<String> = []
-    var finalThreePicks: Set<String> = []
-    var winnerPick: String?
-    var mergePicksLocked: Bool = false
-}
