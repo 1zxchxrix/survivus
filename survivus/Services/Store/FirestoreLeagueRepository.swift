@@ -398,7 +398,6 @@ struct PhaseCategoryDocument: Codable {
     var totalPicks: Int
     var pointsPerCorrectPick: Int?
     var wagerPoints: Int?
-    var autoScoresRemainers: Bool?
     var isLocked: Bool
 
     init(
@@ -408,7 +407,6 @@ struct PhaseCategoryDocument: Codable {
         totalPicks: Int,
         pointsPerCorrectPick: Int?,
         wagerPoints: Int?,
-        autoScoresRemainers: Bool?,
         isLocked: Bool
     ) {
         self.id = id
@@ -417,7 +415,6 @@ struct PhaseCategoryDocument: Codable {
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
         self.wagerPoints = wagerPoints
-        self.autoScoresRemainers = autoScoresRemainers
         self.isLocked = isLocked
     }
 
@@ -429,15 +426,12 @@ struct PhaseCategoryDocument: Codable {
             totalPicks: category.totalPicks,
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
-            autoScoresRemainers: category.autoScoresRemainers,
             isLocked: category.isLocked
         )
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
-        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let fallbackAutoScore = normalizedName.contains("remain") || normalizedName.contains("safe")
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -445,7 +439,6 @@ struct PhaseCategoryDocument: Codable {
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
-            autoScoresRemainers: autoScoresRemainers ?? fallbackAutoScore,
             isLocked: isLocked
         )
     }
@@ -658,8 +651,6 @@ struct PhaseCategoryDocument: Codable {
     var columnId: String
     var totalPicks: Int
     var pointsPerCorrectPick: Int?
-    var wagerPoints: Int?
-    var autoScoresRemainers: Bool?
     var isLocked: Bool
 
     init(
@@ -668,8 +659,6 @@ struct PhaseCategoryDocument: Codable {
         columnId: String = "",
         totalPicks: Int = 0,
         pointsPerCorrectPick: Int? = nil,
-        wagerPoints: Int? = nil,
-        autoScoresRemainers: Bool? = nil,
         isLocked: Bool = false
     ) {
         self.id = id
@@ -677,8 +666,6 @@ struct PhaseCategoryDocument: Codable {
         self.columnId = columnId
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
-        self.wagerPoints = wagerPoints
-        self.autoScoresRemainers = autoScoresRemainers
         self.isLocked = isLocked
     }
 
@@ -690,8 +677,6 @@ struct PhaseCategoryDocument: Codable {
             columnId: columnId,
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
-            wagerPoints: wagerPoints,
-            autoScoresRemainers: autoScoresRemainers ?? false,
             isLocked: isLocked
         )
     }

@@ -240,9 +240,6 @@ private struct CategoryRow: View {
                     Text("Wager: \(category.wagerPoints.map { "±\($0)" } ?? "—")")
                 } else {
                     Text("Points per correct pick: \(category.pointsPerCorrectPick.map(String.init) ?? "—")")
-                    if category.autoScoresRemainers {
-                        Text("Auto-score enabled")
-                    }
                 }
             }
             .font(.subheadline)
@@ -297,7 +294,6 @@ private struct CategoryEditorSheet: View {
     @State private var draft: CategoryDraft
     @State private var pointsInput: String
     @State private var wagerInput: String
-    @State private var scoringMode: ScoringMode
 
     private let isEditingExisting: Bool
     var onSave: (CategoryDraft) -> Void
@@ -309,25 +305,8 @@ private struct CategoryEditorSheet: View {
         _draft = State(initialValue: initialDraft)
         _pointsInput = State(initialValue: initialDraft.pointsPerCorrectPick.map(String.init) ?? "")
         _wagerInput = State(initialValue: initialDraft.wagerPoints.map(String.init) ?? "")
-        _scoringMode = State(initialValue: initialDraft.usesWager ? .wager : .normal)
         self.isEditingExisting = isEditingExisting
         self.onSave = onSave
-    }
-
-    private enum ScoringMode: String, CaseIterable, Identifiable {
-        case normal
-        case wager
-
-        var id: Self { self }
-
-        var title: String {
-            switch self {
-            case .normal:
-                return "Normal"
-            case .wager:
-                return "Wager"
-            }
-        }
     }
 
     var body: some View {
@@ -360,27 +339,28 @@ private struct CategoryEditorSheet: View {
                         .pickerStyle(.wheel)
                     }
 
-                    Picker("Scoring", selection: $scoringMode) {
-                        ForEach(ScoringMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
+                    Toggle("Wager", isOn: $draft.usesWager)
+                        .onChange(of: draft.usesWager) { isWager in
+                            if isWager {
+                                pointsInput = ""
+                                draft.pointsPerCorrectPick = nil
+                            } else {
+                                wagerInput = ""
+                                draft.wagerPoints = nil
+                            }
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: scoringMode) { mode in
-                        switch mode {
-                        case .normal:
-                            draft.usesWager = false
-                            wagerInput = ""
-                            draft.wagerPoints = nil
-                        case .wager:
-                            draft.usesWager = true
-                            pointsInput = ""
-                            draft.pointsPerCorrectPick = nil
-                            draft.autoScoresRemainers = false
-                        }
-                    }
 
-                    if scoringMode == .normal {
+                    if draft.usesWager {
+                        TextField("Wager points", text: Binding(
+                            get: { wagerInput },
+                            set: { newValue in
+                                let filtered = newValue.filter(\.isNumber)
+                                wagerInput = filtered
+                                draft.wagerPoints = filtered.isEmpty ? nil : Int(filtered)
+                            }
+                        ))
+                        .keyboardType(.numberPad)
+                    } else {
                         TextField("Points per correct pick", text: Binding(
                             get: { pointsInput },
                             set: { newValue in
@@ -390,20 +370,9 @@ private struct CategoryEditorSheet: View {
                             }
                         ))
                         .keyboardType(.numberPad)
-
-                        Toggle("Auto-score", isOn: $draft.autoScoresRemainers)
-                        Toggle("Lock category", isOn: $draft.isLocked)
-                    } else {
-                        TextField("Wagered points", text: Binding(
-                            get: { wagerInput },
-                            set: { newValue in
-                                let filtered = newValue.filter(\.isNumber)
-                                wagerInput = filtered
-                                draft.wagerPoints = filtered.isEmpty ? nil : Int(filtered)
-                            }
-                        ))
-                        .keyboardType(.numberPad)
                     }
+
+                    Toggle("Lock category", isOn: $draft.isLocked)
                 }
 
                 Section {
@@ -435,7 +404,6 @@ private struct CategoryEditorSheet: View {
                 categoryToSave.wagerPoints = nil
             }
             categoryToSave.pointsPerCorrectPick = nil
-            categoryToSave.autoScoresRemainers = false
         } else {
             if let value = Int(pointsInput), !pointsInput.isEmpty {
                 categoryToSave.pointsPerCorrectPick = value
