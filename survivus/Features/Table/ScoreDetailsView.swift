@@ -506,7 +506,7 @@ private struct ScoreDetailsModel {
 
             let defaultPhase = scoring.phase(for: episode)
             let configuredPhase = phaseByEpisodeId[result.id]
-            let remainPointsPerPick = configuredPhase?.remainPointsPerCorrectPick ?? 1
+            let remainPointsPerPick = configuredPhase?.remainPointsPerCorrectPick ?? 0
             let votedOutPointsPerPick = configuredPhase?.votedOutPointsPerCorrectPick ?? 3
             let immunityPointsPerPick = configuredPhase?.immunityPointsPerCorrectPick ?? (defaultPhase == .preMerge ? 1 : 3)
             let votedOutSet = Set(result.votedOut)
