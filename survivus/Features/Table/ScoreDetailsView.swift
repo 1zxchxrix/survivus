@@ -514,15 +514,24 @@ private struct ScoreDetailsModel {
             let customWinnerSets = result.categoryWinners.mapValues { Set($0) }
             let eliminatedThroughCurrentEpisode = eliminatedContestantIds.union(votedOutSet)
 
+            let remainAutoScoringEnabled: Bool = {
+                if let configuredPhase {
+                    return configuredPhase.categories.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
+                }
+                return categoriesById.values.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
+            }()
+
             var correctRemainByUser: [String: Set<String>] = [:]
             var correctVotedOutByUser: [String: Set<String>] = [:]
             var correctImmunityByUser: [String: Set<String>] = [:]
             var correctCustomByCategory: [UUID: [String: Set<String>]] = [:]
 
             for (userId, picks) in picksByUser {
-                let remainHits = picks.remain.subtracting(eliminatedThroughCurrentEpisode)
-                if !remainHits.isEmpty {
-                    correctRemainByUser[userId] = remainHits
+                if remainAutoScoringEnabled {
+                    let remainHits = picks.remain.subtracting(eliminatedThroughCurrentEpisode)
+                    if !remainHits.isEmpty {
+                        correctRemainByUser[userId] = remainHits
+                    }
                 }
 
                 let votedOutHits = picks.votedOut.intersection(votedOutSet)
@@ -561,7 +570,7 @@ private struct ScoreDetailsModel {
                 phases: phases,
                 configuredPhase: configuredPhase,
                 categoriesById: categoriesById,
-                remainPoints: remainPointsPerPick,
+                remainPoints: remainAutoScoringEnabled ? remainPointsPerPick : 0,
                 votedOutPoints: votedOutPointsPerPick,
                 immunityPoints: immunityPointsPerPick,
                 correctRemainByUser: correctRemainByUser,
