@@ -355,39 +355,29 @@ private struct UserPicksCard: View {
     @ViewBuilder
     private func section(for category: PickPhase.Category) -> some View {
         let title = displayTitle(for: category)
-        let kind = kind(for: category)
-        let contestants = contestants(for: category, kind: kind)
-        let correctContestantIDs = correctContestantIDs(for: category, kind: kind)
+        let contestants = contestants(for: category)
+        let correctContestantIDs = correctContestantIDs(for: category)
 
         if isCurrentUser {
-            switch kind {
-            case let .weekly(panel):
-                let canEditWeeklyPicks = !(weeklyPicks?.isSubmitted ?? false)
-                let canNavigate = canEditWeeklyPicks && canEditCategory(category)
+            let canEditWeeklyPicks = !(weeklyPicks?.isSubmitted ?? false)
+            let canNavigate = canEditWeeklyPicks && canEditCategory(category)
 
-                if let episode = selectedEpisode, canNavigate {
-                    NavigationLink {
-                        WeeklyPickEditor(episode: episode, panel: panel)
-                    } label: {
-                        PickSection(
-                            title: title,
-                            contestants: contestants,
-                            isInteractive: true,
-                            correctContestantIDs: correctContestantIDs
-                        )
-                    }
-                } else {
+            if let episode = selectedEpisode, canNavigate {
+                NavigationLink {
+                    WeeklyPickEditor(episode: episode, categoryId: category.id)
+                } label: {
                     PickSection(
                         title: title,
                         contestants: contestants,
-                        isInteractive: canNavigate,
+                        isInteractive: true,
                         correctContestantIDs: correctContestantIDs
                     )
                 }
-            case .unknown:
+            } else {
                 PickSection(
                     title: title,
                     contestants: contestants,
+                    isInteractive: canNavigate,
                     correctContestantIDs: correctContestantIDs
                 )
             }
@@ -398,11 +388,6 @@ private struct UserPicksCard: View {
                 correctContestantIDs: correctContestantIDs
             )
         }
-    }
-
-    private enum CategoryKind {
-        case weekly(WeeklyPickPanel)
-        case unknown
     }
 
     private func canEditCategory(_ category: PickPhase.Category) -> Bool {
@@ -434,19 +419,6 @@ private struct UserPicksCard: View {
         return trimmed.isEmpty ? "Untitled Category" : trimmed
     }
 
-    private func kind(for category: PickPhase.Category) -> CategoryKind {
-        switch category.kind {
-        case .remain:
-            return .weekly(.remain)
-        case .votedOut:
-            return .weekly(.votedOut)
-        case .immunity:
-            return .weekly(.immunity)
-        case .custom:
-            return .weekly(.custom(category.id))
-        }
-    }
-
     private func contestants(
         for ids: Set<String>,
         limit: Int? = nil
@@ -459,66 +431,38 @@ private struct UserPicksCard: View {
         return picks
     }
 
-    private func contestants(for category: PickPhase.Category, kind: CategoryKind) -> [Contestant] {
-        let limit: Int? = selectionLimit(for: category, kind: kind)
-
-        switch kind {
-        case let .weekly(panel):
-            switch panel {
-            case .remain:
-                return contestants(for: weeklyPicks?.remain ?? Set<String>(), limit: limit)
-            case .votedOut:
-                return contestants(for: weeklyPicks?.votedOut ?? Set<String>(), limit: limit)
-            case .immunity:
-                return contestants(for: weeklyPicks?.immunity ?? Set<String>(), limit: limit)
-            case let .custom(categoryId):
-                return contestants(for: weeklyPicks?.selections(for: categoryId) ?? Set<String>(), limit: limit)
-            }
-        case .unknown:
-            return []
-        }
+    private func contestants(for category: PickPhase.Category) -> [Contestant] {
+        let selections = weeklyPicks?.selections(for: category.id) ?? Set<String>()
+        return contestants(for: selections, limit: selectionLimit(for: category))
     }
 
-    private func correctContestantIDs(for category: PickPhase.Category, kind: CategoryKind) -> Set<String> {
-        switch kind {
-        case .unknown:
+    private func correctContestantIDs(for category: PickPhase.Category) -> Set<String> {
+        guard let episode = selectedEpisode,
+              let result = scoringEngine.resultsByEpisode[episode.id],
+              result.hasRecordedResults,
+              let weeklyPicks = self.weeklyPicks
+        else {
             return []
-
-        case let .weekly(panel):
-            guard let episode = selectedEpisode,
-                  let result = scoringEngine.resultsByEpisode[episode.id],
-                  result.hasRecordedResults
-            else {
-                return []
-            }
-
-            switch panel {
-            case .remain:
-                guard let weeklyPicks = self.weeklyPicks else { return [] }
-                if category.autoScoresRemainingContestants {
-                    guard !result.votedOut.isEmpty else { return [] }
-                    let votedOutIds = Set(result.votedOut)
-                    return weeklyPicks.remain.subtracting(votedOutIds)
-                } else {
-                    let winners = Set(result.winners(for: category.id))
-                    guard !winners.isEmpty else { return [] }
-                    return weeklyPicks.remain.intersection(winners)
-                }
-            case .votedOut:
-                let votedOutIds = Set(result.votedOut)
-                guard let weeklyPicks = self.weeklyPicks else { return [] }
-                return weeklyPicks.votedOut.intersection(votedOutIds)
-            case .immunity:
-                guard let weeklyPicks = self.weeklyPicks else { return [] }
-                return weeklyPicks.immunity.intersection(Set(result.immunityWinners))
-            case let .custom(categoryId):
-                guard let weeklyPicks = self.weeklyPicks else { return [] }
-                let winners = Set(result.winners(for: categoryId))
-                guard !winners.isEmpty else { return [] }
-                let selections = weeklyPicks.selections(for: categoryId)
-                return selections.intersection(winners)
-            }
         }
+
+        let selections = weeklyPicks.selections(for: category.id)
+        guard !selections.isEmpty else { return [] }
+
+        if category.autoScoresRemainingContestants {
+            let priorEliminations: Set<String> = scoringEngine.resultsByEpisode
+                .filter { $0.key < episode.id }
+                .reduce(into: Set<String>()) { partialResult, entry in
+                    partialResult.formUnion(entry.value.votedOut)
+                }
+            let currentVotedOut = Set(result.votedOut)
+            return selections
+                .subtracting(priorEliminations)
+                .subtracting(currentVotedOut)
+        }
+
+        let winners = Set(result.winners(for: category.id))
+        guard !winners.isEmpty else { return [] }
+        return selections.intersection(winners)
     }
 
     @ViewBuilder
@@ -645,42 +589,9 @@ private extension UserPicksCard {
         return "Submit your picks for this week to view others."
     }
 
-    private func selectionLimit(for category: PickPhase.Category, kind: CategoryKind) -> Int? {
-        switch kind {
-        case .weekly(let panel):
-            if case .custom = panel {
-                return positiveLimit(from: category.totalPicks)
-            }
-
-            guard let episode = selectedEpisode else {
-                return positiveLimit(from: category.totalPicks)
-            }
-
-            let phase = scoringEngine.phase(for: episode)
-            let caps = (phase == .preMerge) ? seasonConfig.weeklyPickCapsPreMerge : seasonConfig.weeklyPickCapsPostMerge
-
-            return limit(for: panel, caps: caps)
-
-        case .unknown:
-            return positiveLimit(from: category.totalPicks)
-        }
-    }
-
-    private func limit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int? {
-        switch panel {
-        case .remain:
-            return caps.remain ?? 3
-        case .votedOut:
-            return caps.votedOut ?? 3
-        case .immunity:
-            return caps.immunity ?? 3
-        case .custom:
-            return nil
-        }
-    }
-
-    private func positiveLimit(from value: Int) -> Int? {
-        value > 0 ? value : nil
+    private func selectionLimit(for category: PickPhase.Category) -> Int? {
+        let configured = category.totalPicks
+        return configured > 0 ? configured : nil
     }
 }
 
