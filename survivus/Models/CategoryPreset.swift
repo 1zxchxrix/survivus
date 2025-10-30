@@ -34,7 +34,7 @@ struct CategoryPreset: Identifiable, Equatable {
 extension CategoryPreset {
     static let all: [CategoryPreset] = [
         CategoryPreset(name: "Mergers", columnId: "MG", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: true),
-        CategoryPreset(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false),
+        CategoryPreset(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: false),
         CategoryPreset(name: "Voted out", columnId: "VO", totalPicks: 3, pointsPerCorrectPick: 3, isLocked: false),
         CategoryPreset(name: "Remains", columnId: "RM", totalPicks: 3, pointsPerCorrectPick: 1, isLocked: false),
         CategoryPreset(name: "Carried", columnId: "CA", totalPicks: 1, pointsPerCorrectPick: 10, isLocked: false),
