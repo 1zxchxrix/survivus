@@ -400,7 +400,6 @@ struct PhaseCategoryDocument: Codable {
     var wagerPoints: Int?
     var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
-    var kind: String?
 
     init(
         id: String,
@@ -410,8 +409,7 @@ struct PhaseCategoryDocument: Codable {
         pointsPerCorrectPick: Int?,
         wagerPoints: Int?,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool,
-        kind: String? = nil
+        isLocked: Bool
     ) {
         self.id = id
         self.name = name
@@ -421,7 +419,6 @@ struct PhaseCategoryDocument: Codable {
         self.wagerPoints = wagerPoints
         self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
-        self.kind = kind
     }
 
     init(from category: PickPhase.Category) {
@@ -433,30 +430,12 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
             autoScoresRemainingContestants: category.autoScoresRemainingContestants,
-            isLocked: category.isLocked,
-            kind: category.kind.rawValue
+            isLocked: category.isLocked
         )
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
-        let resolvedKind: PickPhase.Category.Kind = {
-            if let kind, let parsed = PickPhase.Category.Kind(rawValue: kind) {
-                return parsed
-            }
-
-            let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if normalized.contains("remain") || normalized.contains("safe") {
-                return .remain
-            }
-            if normalized.contains("voted") || normalized.contains("vote") {
-                return .votedOut
-            }
-            if normalized.contains("immunity") {
-                return .immunity
-            }
-            return .custom
-        }()
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -465,8 +444,7 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
             autoScoresRemainingContestants: autoScoresRemainingContestants,
-            isLocked: isLocked,
-            kind: resolvedKind
+            isLocked: isLocked
         )
     }
 }
@@ -556,9 +534,6 @@ struct UserDocument: Codable {
 struct WeeklyPicksDocument: Codable {
     @DocumentID var documentId: String?
     var seasonId: String?
-    var remain: [String]?
-    var votedOut: [String]?
-    var immunity: [String]?
     var categorySelections: [String: [String]]?
     var isSubmitted: Bool?
 
@@ -566,9 +541,6 @@ struct WeeklyPicksDocument: Codable {
 
     init(from picks: WeeklyPicks, seasonId: String) {
         self.seasonId = seasonId
-        remain = Array(picks.remain)
-        votedOut = Array(picks.votedOut)
-        immunity = Array(picks.immunity)
         categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
             partialResult[entry.key.uuidString] = Array(entry.value)
         }
@@ -578,9 +550,6 @@ struct WeeklyPicksDocument: Codable {
     func model(userId: String) -> WeeklyPicks? {
         guard let documentId, let episodeId = Int(documentId) else { return nil }
         var picks = WeeklyPicks(userId: userId, episodeId: episodeId)
-        if let remain { picks.remain = Set(remain) }
-        if let votedOut { picks.votedOut = Set(votedOut) }
-        if let immunity { picks.immunity = Set(immunity) }
         categorySelections?.forEach { key, values in
             if let uuid = UUID(uuidString: key) {
                 picks.setSelections(Set(values), for: uuid)
@@ -681,7 +650,6 @@ struct PhaseCategoryDocument: Codable {
     var wagerPoints: Int?
     var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
-    var kind: String?
 
     init(
         id: String = UUID().uuidString,
@@ -691,8 +659,7 @@ struct PhaseCategoryDocument: Codable {
         pointsPerCorrectPick: Int? = nil,
         wagerPoints: Int? = nil,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool = false,
-        kind: String? = nil
+        isLocked: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -702,28 +669,10 @@ struct PhaseCategoryDocument: Codable {
         self.wagerPoints = wagerPoints
         self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
-        self.kind = kind
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
-        let resolvedKind: PickPhase.Category.Kind = {
-            if let kind, let parsed = PickPhase.Category.Kind(rawValue: kind) {
-                return parsed
-            }
-
-            let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if normalized.contains("remain") || normalized.contains("safe") {
-                return .remain
-            }
-            if normalized.contains("voted") || normalized.contains("vote") {
-                return .votedOut
-            }
-            if normalized.contains("immunity") {
-                return .immunity
-            }
-            return .custom
-        }()
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -732,8 +681,7 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
             autoScoresRemainingContestants: autoScoresRemainingContestants,
-            isLocked: isLocked,
-            kind: resolvedKind
+            isLocked: isLocked
         )
     }
 }
@@ -809,18 +757,12 @@ struct UserDocument: Codable {
 struct WeeklyPicksDocument: Codable {
     var documentId: String?
     var seasonId: String?
-    var remain: [String]?
-    var votedOut: [String]?
-    var immunity: [String]?
     var categorySelections: [String: [String]]?
     var isSubmitted: Bool?
 
-    init(documentId: String? = nil, seasonId: String? = nil, remain: [String]? = nil, votedOut: [String]? = nil, immunity: [String]? = nil, categorySelections: [String: [String]]? = nil, isSubmitted: Bool? = nil) {
+    init(documentId: String? = nil, seasonId: String? = nil, categorySelections: [String: [String]]? = nil, isSubmitted: Bool? = nil) {
         self.documentId = documentId
         self.seasonId = seasonId
-        self.remain = remain
-        self.votedOut = votedOut
-        self.immunity = immunity
         self.categorySelections = categorySelections
         self.isSubmitted = isSubmitted
     }
@@ -828,9 +770,6 @@ struct WeeklyPicksDocument: Codable {
     init(from picks: WeeklyPicks, seasonId: String) {
         self.documentId = String(picks.episodeId)
         self.seasonId = seasonId
-        remain = Array(picks.remain)
-        votedOut = Array(picks.votedOut)
-        immunity = Array(picks.immunity)
         categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
             partialResult[entry.key.uuidString] = Array(entry.value)
         }
@@ -840,9 +779,6 @@ struct WeeklyPicksDocument: Codable {
     func model(userId: String) -> WeeklyPicks? {
         guard let documentId, let episodeId = Int(documentId) else { return nil }
         var picks = WeeklyPicks(userId: userId, episodeId: episodeId)
-        if let remain { picks.remain = Set(remain) }
-        if let votedOut { picks.votedOut = Set(votedOut) }
-        if let immunity { picks.immunity = Set(immunity) }
         categorySelections?.forEach { key, values in
             if let uuid = UUID(uuidString: key) {
                 picks.setSelections(Set(values), for: uuid)

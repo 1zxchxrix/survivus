@@ -1,48 +1,33 @@
 import SwiftUI
 
-enum WeeklyPickPanel: Hashable {
-    case remain
-    case votedOut
-    case immunity
-    case custom(UUID)
-
-    var categoryId: UUID? {
-        if case let .custom(id) = self {
-            return id
-        }
-        return nil
-    }
-}
-
 struct WeeklyPickEditor: View {
     @EnvironmentObject var app: AppState
     let episode: Episode
-    let panel: WeeklyPickPanel
+    let categoryId: PickPhase.Category.ID
     @State private var picks: WeeklyPicks
 
-    init(episode: Episode, panel: WeeklyPickPanel) {
+    init(episode: Episode, categoryId: PickPhase.Category.ID) {
         self.episode = episode
-        self.panel = panel
+        self.categoryId = categoryId
         _picks = State(initialValue: WeeklyPicks(userId: "", episodeId: episode.id))
     }
 
     var body: some View {
         let config = app.store.config
         let userId = app.currentUserId
-        let phase = app.scoring.phase(for: episode)
-        let caps = (phase == .preMerge) ? config.weeklyPickCapsPreMerge : config.weeklyPickCapsPostMerge
-        let limit = phaseCategoryLimit(for: panel) ?? selectionLimit(for: panel, caps: caps)
+        let category = resolvedCategory
+        let limit = max(selectionLimit(for: category), 1)
         let locked = picksLocked(for: episode, userId: userId, store: app.store)
-        let panelLocked = isPanelLockedForEditing(panel, userId: userId)
+        let categoryLocked = category.map { isCategoryLockedForEditing($0, userId: userId) } ?? true
 
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if locked {
                     LockPill(text: "Locked for \(episode.title)")
-                } else if panelLocked {
+                } else if categoryLocked {
                     LockPill(text: "Locked for this phase")
-                } else {
-                    Text(instructionText(for: panel, limit: limit))
+                } else if let category {
+                    Text(instructionText(for: category, limit: limit))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -50,20 +35,38 @@ struct WeeklyPickEditor: View {
                 LimitedMultiSelect(
                     all: config.contestants,
                     selection: Binding(
-                        get: { selection(for: panel) },
+                        get: { selection(for: categoryId) },
                         set: { newValue in updateSelection(newValue, limit: limit, locked: locked, userId: userId) }
                     ),
                     max: limit,
-                    disabled: locked || panelLocked
+                    disabled: locked || categoryLocked || category == nil
                 )
             }
             .padding()
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(navigationTitle(for: panel))
+        .navigationTitle(categoryDisplayName(for: category))
         .onAppear { loadPicks(for: userId) }
         .onChange(of: episode.id) { _ in loadPicks(for: userId) }
         .onChange(of: app.currentUserId) { newValue in loadPicks(for: newValue) }
+    }
+
+    private var resolvedCategory: PickPhase.Category? {
+        if let category = phaseContext?.phase.categories.first(where: { $0.id == categoryId }) {
+            return category
+        }
+
+        if let category = app.activePhase?.categories.first(where: { $0.id == categoryId }) {
+            return category
+        }
+
+        for phase in app.phases {
+            if let category = phase.categories.first(where: { $0.id == categoryId }) {
+                return category
+            }
+        }
+
+        return nil
     }
 
     private func loadPicks(for userId: String) {
@@ -76,140 +79,49 @@ struct WeeklyPickEditor: View {
         }
     }
 
-    private func selection(for panel: WeeklyPickPanel) -> Set<String> {
-        switch panel {
-        case .remain:
-            return picks.remain
-        case .votedOut:
-            return picks.votedOut
-        case .immunity:
-            return picks.immunity
-        case let .custom(categoryId):
-            return picks.selections(for: categoryId)
-        }
+    private func selection(for categoryId: UUID) -> Set<String> {
+        picks.selections(for: categoryId)
     }
 
     private func updateSelection(_ newValue: Set<String>, limit: Int, locked: Bool, userId: String) {
         guard !locked else { return }
         let editingUserId = picks.userId.isEmpty ? userId : picks.userId
-        guard !isPanelLockedForEditing(panel, userId: editingUserId) else { return }
+        guard let category = resolvedCategory else { return }
+        guard !isCategoryLockedForEditing(category, userId: editingUserId) else { return }
+
         let limited = Set(newValue.prefix(limit))
-        switch panel {
-        case .remain:
-            picks.remain = limited
-        case .votedOut:
-            picks.votedOut = limited
-        case .immunity:
-            picks.immunity = limited
-        case let .custom(categoryId):
-            picks.setSelections(limited, for: categoryId)
-        }
+        picks.setSelections(limited, for: category.id)
         picks.isSubmitted = false
         app.store.save(picks)
     }
 
-    private func selectionLimit(for panel: WeeklyPickPanel, caps: SeasonConfig.WeeklyPickCaps) -> Int {
-        switch panel {
-        case .remain:
-            return caps.remain ?? 3
-        case .votedOut:
-            return caps.votedOut ?? 3
-        case .immunity:
-            return caps.immunity ?? 3
-        case .custom:
-            return defaultCustomLimit
+    private func selectionLimit(for category: PickPhase.Category?) -> Int {
+        guard let category else { return 3 }
+        let configured = category.totalPicks
+        if configured > 0 {
+            return configured
         }
+        return 3
     }
 
-    private func phaseCategoryLimit(for panel: WeeklyPickPanel) -> Int? {
-        guard let category = category(for: panel) else { return nil }
-        let total = category.totalPicks
-        guard total > 0 else { return nil }
-        return total
+    private func instructionText(for category: PickPhase.Category, limit: Int) -> String {
+        let name = categoryDisplayName(for: category)
+        return "Select up to \(limit) players for \(name)."
     }
 
-    private func navigationTitle(for panel: WeeklyPickPanel) -> String {
-        switch panel {
-        case .remain:
-            return "Who Will Remain"
-        case .votedOut:
-            return "Who Will be Voted Out"
-        case .immunity:
-            return "Who Will Have Immunity"
-        case let .custom(categoryId):
-            return categoryName(for: categoryId)
-        }
-    }
-
-    private func instructionText(for panel: WeeklyPickPanel, limit: Int) -> String {
-        switch panel {
-        case .remain:
-            return "Select up to \(limit) players you expect to stay safe this week."
-        case .votedOut:
-            return "Select up to \(limit) players you think will be voted out."
-        case .immunity:
-            return "Select up to \(limit) players you think will win immunity."
-        case let .custom(categoryId):
-            let name = categoryName(for: categoryId)
-            return "Select up to \(limit) players for \(name)."
-        }
-    }
-
-    private var defaultCustomLimit: Int {
-        guard let categoryId = panel.categoryId,
-              let category = category(withId: categoryId)
-        else { return 3 }
-
-        return max(category.totalPicks, 1)
-    }
-
-    private func categoryName(for categoryId: UUID) -> String {
-        guard let category = category(withId: categoryId) else {
-            return "Category"
-        }
-
+    private func categoryDisplayName(for category: PickPhase.Category?) -> String {
+        guard let category else { return "Category" }
         let trimmed = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "Category" : trimmed
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+
+        let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines)
+        return columnId.isEmpty ? "Category" : columnId
     }
 
-    private func category(withId id: UUID) -> PickPhase.Category? {
-        if let category = phaseContext?.phase.categories.first(where: { $0.id == id }) {
-            return category
-        }
-
-        if let category = app.activePhase?.categories.first(where: { $0.id == id }) {
-            return category
-        }
-
-        for phase in app.phases {
-            if let category = phase.categories.first(where: { $0.id == id }) {
-                return category
-            }
-        }
-
-        return nil
-    }
-
-    private func category(for panel: WeeklyPickPanel) -> PickPhase.Category? {
-        let context = phaseContext
-
-        switch panel {
-        case .remain:
-            return context?.phase.categories.first(where: { $0.matchesRemainCategory })
-        case .votedOut:
-            return context?.phase.categories.first(where: { $0.matchesVotedOutCategory })
-        case .immunity:
-            return context?.phase.categories.first(where: { $0.matchesImmunityCategory })
-        case let .custom(categoryId):
-            if let category = context?.phase.categories.first(where: { $0.id == categoryId }) {
-                return category
-            }
-            return self.category(withId: categoryId)
-        }
-    }
-
-    private func isPanelLockedForEditing(_ panel: WeeklyPickPanel, userId: String) -> Bool {
-        guard let category = category(for: panel), category.isLocked else { return false }
+    private func isCategoryLockedForEditing(_ category: PickPhase.Category, userId: String) -> Bool {
+        guard category.isLocked else { return false }
         guard let phaseInfo = phaseContext else { return false }
         guard let originEpisodeId = originEpisodeId(for: category, phaseId: phaseInfo.phaseId, userId: userId) else {
             return false

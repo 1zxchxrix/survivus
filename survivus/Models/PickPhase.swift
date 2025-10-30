@@ -2,13 +2,6 @@ import Foundation
 
 struct PickPhase: Identifiable, Equatable {
     struct Category: Identifiable, Equatable {
-        enum Kind: String, CaseIterable, Codable, Equatable {
-            case remain
-            case votedOut
-            case immunity
-            case custom
-        }
-
         let id: UUID
         var name: String
         var columnId: String
@@ -17,7 +10,6 @@ struct PickPhase: Identifiable, Equatable {
         var wagerPoints: Int?
         var autoScoresRemainingContestants: Bool
         var isLocked: Bool
-        var kind: Kind
 
         init(
             id: UUID = UUID(),
@@ -27,8 +19,7 @@ struct PickPhase: Identifiable, Equatable {
             pointsPerCorrectPick: Int?,
             wagerPoints: Int?,
             autoScoresRemainingContestants: Bool,
-            isLocked: Bool,
-            kind: Kind = .custom
+            isLocked: Bool
         ) {
             self.id = id
             self.name = name
@@ -43,7 +34,6 @@ struct PickPhase: Identifiable, Equatable {
             self.wagerPoints = wagerPoints
             self.autoScoresRemainingContestants = autoScoresRemainingContestants
             self.isLocked = isLocked
-            self.kind = kind
         }
     }
 
@@ -58,38 +48,21 @@ struct PickPhase: Identifiable, Equatable {
     }
 }
 
-extension PickPhase.Category.Kind {
-    static var orderedCases: [Self] { [.custom, .remain, .votedOut, .immunity] }
-
-    var displayName: String {
-        switch self {
-        case .remain:
-            return "Remain"
-        case .votedOut:
-            return "Voted Out"
-        case .immunity:
-            return "Immunity"
-        case .custom:
-            return "Custom"
-        }
-    }
-}
-
 extension PickPhase {
     static let preconfigured: [PickPhase] = [
         PickPhase(
             name: "Pre-merge",
             categories: [
                 .init(name: "Mergers", columnId: "MG", totalPicks: 3, pointsPerCorrectPick: 1, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: true),
-                .init(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false, kind: .immunity),
-                .init(name: "Voted out", columnId: "VO", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false, kind: .votedOut)
+                .init(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Voted out", columnId: "VO", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false)
             ]
         ),
         PickPhase(
             name: "Post-merge",
             categories: [
-                .init(name: "Immunity", columnId: "IM", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false, kind: .immunity),
-                .init(name: "Voted out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false, kind: .votedOut)
+                .init(name: "Immunity", columnId: "IM", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Voted out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false)
             ]
         ),
         PickPhase(
@@ -107,8 +80,8 @@ extension PickPhase {
         PickPhase(
             name: "Week 1",
             categories: [
-                .init(name: "Immunity", columnId: "IM", totalPicks: 1, pointsPerCorrectPick: 2, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false, kind: .immunity),
-                .init(name: "Voted Out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false, kind: .votedOut),
+                .init(name: "Immunity", columnId: "IM", totalPicks: 1, pointsPerCorrectPick: 2, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Voted Out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
                 .init(name: "Reward Challenge", columnId: "RC", totalPicks: 3, pointsPerCorrectPick: nil, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
                 .init(name: "Locked Category", columnId: "LC", totalPicks: 1, pointsPerCorrectPick: nil, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: true)
             ]
@@ -126,8 +99,7 @@ extension PickPhase.Category {
             pointsPerCorrectPick: draft.usesWager ? nil : draft.pointsPerCorrectPick,
             wagerPoints: draft.usesWager ? draft.wagerPoints : nil,
             autoScoresRemainingContestants: draft.usesWager ? false : draft.autoScoresRemainingContestants,
-            isLocked: draft.isLocked,
-            kind: draft.kind
+            isLocked: draft.isLocked
         )
     }
 
@@ -146,7 +118,6 @@ struct CategoryDraft: Identifiable, Equatable {
     var usesWager: Bool
     var autoScoresRemainingContestants: Bool
     var isLocked: Bool
-    var kind: PickPhase.Category.Kind
 
     init(
         id: UUID = UUID(),
@@ -157,8 +128,7 @@ struct CategoryDraft: Identifiable, Equatable {
         wagerPoints: Int? = nil,
         usesWager: Bool = false,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool = false,
-        kind: PickPhase.Category.Kind = .custom
+        isLocked: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -169,7 +139,6 @@ struct CategoryDraft: Identifiable, Equatable {
         self.usesWager = usesWager || wagerPoints != nil
         self.autoScoresRemainingContestants = self.usesWager ? false : autoScoresRemainingContestants
         self.isLocked = isLocked
-        self.kind = kind
     }
 
     init(from category: PickPhase.Category) {
@@ -182,8 +151,7 @@ struct CategoryDraft: Identifiable, Equatable {
             wagerPoints: category.wagerPoints,
             usesWager: category.wagerPoints != nil,
             autoScoresRemainingContestants: category.autoScoresRemainingContestants,
-            isLocked: category.isLocked,
-            kind: category.kind
+            isLocked: category.isLocked
         )
     }
 }

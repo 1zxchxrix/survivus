@@ -380,7 +380,7 @@ extension AppState {
         ]
         let store = MemoryStore(config: config, results: results, users: users)
         store.loadMockPicks()
-        return AppState(store: store, phases: PickPhase.preconfigured, connectToFirestore: false)
+        return AppState(store: store, phases: MockContent.phases, connectToFirestore: false)
     }
 }
 #endif
