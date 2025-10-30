@@ -8,6 +8,7 @@ struct PickPhase: Identifiable, Equatable {
         var totalPicks: Int
         var pointsPerCorrectPick: Int?
         var wagerPoints: Int?
+        var autoScoresRemainingContestants: Bool
         var isLocked: Bool
 
         init(
@@ -17,6 +18,7 @@ struct PickPhase: Identifiable, Equatable {
             totalPicks: Int,
             pointsPerCorrectPick: Int?,
             wagerPoints: Int?,
+            autoScoresRemainingContestants: Bool,
             isLocked: Bool
         ) {
             self.id = id
@@ -30,6 +32,7 @@ struct PickPhase: Identifiable, Equatable {
             self.totalPicks = totalPicks
             self.pointsPerCorrectPick = pointsPerCorrectPick
             self.wagerPoints = wagerPoints
+            self.autoScoresRemainingContestants = autoScoresRemainingContestants
             self.isLocked = isLocked
         }
     }
@@ -50,25 +53,25 @@ extension PickPhase {
         PickPhase(
             name: "Pre-merge",
             categories: [
-                .init(name: "Mergers", columnId: "MG", totalPicks: 3, pointsPerCorrectPick: 1, wagerPoints: nil, isLocked: true),
-                .init(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, isLocked: false),
-                .init(name: "Voted out", columnId: "VO", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, isLocked: false)
+                .init(name: "Mergers", columnId: "MG", totalPicks: 3, pointsPerCorrectPick: 1, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: true),
+                .init(name: "Immunity", columnId: "IM", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Voted out", columnId: "VO", totalPicks: 3, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false)
             ]
         ),
         PickPhase(
             name: "Post-merge",
             categories: [
-                .init(name: "Immunity", columnId: "IM", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, isLocked: false),
-                .init(name: "Voted out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, isLocked: false)
+                .init(name: "Immunity", columnId: "IM", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Voted out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false)
             ]
         ),
         PickPhase(
             name: "Finals",
             categories: [
-                .init(name: "Carried", columnId: "CA", totalPicks: 1, pointsPerCorrectPick: 10, wagerPoints: nil, isLocked: false),
-                .init(name: "Fire", columnId: "FI", totalPicks: 2, pointsPerCorrectPick: 10, wagerPoints: nil, isLocked: false),
-                .init(name: "Fire Winner", columnId: "FW", totalPicks: 1, pointsPerCorrectPick: 15, wagerPoints: nil, isLocked: false),
-                .init(name: "Sole Survivor", columnId: "SS", totalPicks: 1, pointsPerCorrectPick: nil, wagerPoints: 30, isLocked: false)
+                .init(name: "Carried", columnId: "CA", totalPicks: 1, pointsPerCorrectPick: 10, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Fire", columnId: "FI", totalPicks: 2, pointsPerCorrectPick: 10, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Fire Winner", columnId: "FW", totalPicks: 1, pointsPerCorrectPick: 15, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Sole Survivor", columnId: "SS", totalPicks: 1, pointsPerCorrectPick: nil, wagerPoints: 30, autoScoresRemainingContestants: false, isLocked: false)
             ]
         )
     ]
@@ -77,10 +80,10 @@ extension PickPhase {
         PickPhase(
             name: "Week 1",
             categories: [
-                .init(name: "Immunity", columnId: "IM", totalPicks: 1, pointsPerCorrectPick: 2, wagerPoints: nil, isLocked: false),
-                .init(name: "Voted Out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 3, wagerPoints: nil, isLocked: false),
-                .init(name: "Reward Challenge", columnId: "RC", totalPicks: 3, pointsPerCorrectPick: nil, wagerPoints: nil, isLocked: false),
-                .init(name: "Locked Category", columnId: "LC", totalPicks: 1, pointsPerCorrectPick: nil, wagerPoints: nil, isLocked: true)
+                .init(name: "Immunity", columnId: "IM", totalPicks: 1, pointsPerCorrectPick: 2, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Voted Out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 3, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Reward Challenge", columnId: "RC", totalPicks: 3, pointsPerCorrectPick: nil, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Locked Category", columnId: "LC", totalPicks: 1, pointsPerCorrectPick: nil, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: true)
             ]
         )
     }
@@ -95,6 +98,7 @@ extension PickPhase.Category {
             totalPicks: draft.totalPicks,
             pointsPerCorrectPick: draft.usesWager ? nil : draft.pointsPerCorrectPick,
             wagerPoints: draft.usesWager ? draft.wagerPoints : nil,
+            autoScoresRemainingContestants: draft.usesWager ? false : draft.autoScoresRemainingContestants,
             isLocked: draft.isLocked
         )
     }
@@ -112,6 +116,7 @@ struct CategoryDraft: Identifiable, Equatable {
     var pointsPerCorrectPick: Int?
     var wagerPoints: Int?
     var usesWager: Bool
+    var autoScoresRemainingContestants: Bool
     var isLocked: Bool
 
     init(
@@ -122,6 +127,7 @@ struct CategoryDraft: Identifiable, Equatable {
         pointsPerCorrectPick: Int? = nil,
         wagerPoints: Int? = nil,
         usesWager: Bool = false,
+        autoScoresRemainingContestants: Bool = false,
         isLocked: Bool = false
     ) {
         self.id = id
@@ -131,6 +137,7 @@ struct CategoryDraft: Identifiable, Equatable {
         self.pointsPerCorrectPick = pointsPerCorrectPick
         self.wagerPoints = wagerPoints
         self.usesWager = usesWager || wagerPoints != nil
+        self.autoScoresRemainingContestants = self.usesWager ? false : autoScoresRemainingContestants
         self.isLocked = isLocked
     }
 
@@ -143,6 +150,7 @@ struct CategoryDraft: Identifiable, Equatable {
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
             usesWager: category.wagerPoints != nil,
+            autoScoresRemainingContestants: category.autoScoresRemainingContestants,
             isLocked: category.isLocked
         )
     }

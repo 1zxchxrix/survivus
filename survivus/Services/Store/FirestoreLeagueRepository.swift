@@ -398,6 +398,7 @@ struct PhaseCategoryDocument: Codable {
     var totalPicks: Int
     var pointsPerCorrectPick: Int?
     var wagerPoints: Int?
+    var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
 
     init(
@@ -407,6 +408,7 @@ struct PhaseCategoryDocument: Codable {
         totalPicks: Int,
         pointsPerCorrectPick: Int?,
         wagerPoints: Int?,
+        autoScoresRemainingContestants: Bool = false,
         isLocked: Bool
     ) {
         self.id = id
@@ -415,6 +417,7 @@ struct PhaseCategoryDocument: Codable {
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
         self.wagerPoints = wagerPoints
+        self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
     }
 
@@ -426,6 +429,7 @@ struct PhaseCategoryDocument: Codable {
             totalPicks: category.totalPicks,
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
+            autoScoresRemainingContestants: category.autoScoresRemainingContestants,
             isLocked: category.isLocked
         )
     }
@@ -439,6 +443,7 @@ struct PhaseCategoryDocument: Codable {
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
+            autoScoresRemainingContestants: autoScoresRemainingContestants,
             isLocked: isLocked
         )
     }
@@ -651,6 +656,8 @@ struct PhaseCategoryDocument: Codable {
     var columnId: String
     var totalPicks: Int
     var pointsPerCorrectPick: Int?
+    var wagerPoints: Int?
+    var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
 
     init(
@@ -659,6 +666,8 @@ struct PhaseCategoryDocument: Codable {
         columnId: String = "",
         totalPicks: Int = 0,
         pointsPerCorrectPick: Int? = nil,
+        wagerPoints: Int? = nil,
+        autoScoresRemainingContestants: Bool = false,
         isLocked: Bool = false
     ) {
         self.id = id
@@ -666,6 +675,8 @@ struct PhaseCategoryDocument: Codable {
         self.columnId = columnId
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
+        self.wagerPoints = wagerPoints
+        self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
     }
 
@@ -677,6 +688,8 @@ struct PhaseCategoryDocument: Codable {
             columnId: columnId,
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
+            wagerPoints: wagerPoints,
+            autoScoresRemainingContestants: autoScoresRemainingContestants,
             isLocked: isLocked
         )
     }
