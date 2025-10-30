@@ -51,7 +51,15 @@ struct ScoringEngine {
             immunityPointsPerPick = (defaultPhase == .preMerge) ? 1 : 3
         }
 
-        let remainPoints = remainHits * remainPointsPerPick
+        let remainAutoScoringEnabled: Bool = {
+            if let phaseOverride,
+               phaseOverride.categories.contains(where: { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }) {
+                return true
+            }
+            return categoriesById.values.contains { $0.matchesRemainCategory && $0.autoScoresRemainingContestants }
+        }()
+
+        let remainPoints = remainAutoScoringEnabled ? remainHits * remainPointsPerPick : 0
         let votedOutPoints = votedOutHits * votedOutPointsPerPick
         let immunityPts = immunityHits * immunityPointsPerPick
         var categoryPoints: [String: Int] = [:]

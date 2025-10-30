@@ -56,7 +56,7 @@ final class ScoringEngineTests: XCTestCase {
         let phase = PickPhase(
             name: "Post-merge",
             categories: [
-                .init(name: "Remain", columnId: "RM", totalPicks: 3, pointsPerCorrectPick: 2, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
+                .init(name: "Remain", columnId: "RM", totalPicks: 3, pointsPerCorrectPick: 2, wagerPoints: nil, autoScoresRemainingContestants: true, isLocked: false),
                 .init(name: "Voted out", columnId: "VO", totalPicks: 2, pointsPerCorrectPick: 5, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false),
                 .init(name: "Immunity", columnId: "IM", totalPicks: 2, pointsPerCorrectPick: 4, wagerPoints: nil, autoScoresRemainingContestants: false, isLocked: false)
             ]
@@ -80,6 +80,54 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(breakdown.remain, 4)
         XCTAssertEqual(breakdown.votedOut, 5)
         XCTAssertEqual(breakdown.immunity, 4)
+    }
+
+    func testRemainCategoryDoesNotAutoScoreWhenToggleDisabled() {
+        let contestants = [
+            Contestant(id: "playerA", name: "Player A"),
+            Contestant(id: "playerB", name: "Player B")
+        ]
+        let episodes = [Episode(id: 1, title: "Week 1", isMergeEpisode: false)]
+        let config = SeasonConfig(
+            seasonId: "test",
+            name: "Test Season",
+            contestants: contestants,
+            episodes: episodes,
+            weeklyPickCapsPreMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            weeklyPickCapsPostMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            lockHourUTC: 0
+        )
+
+        let remainCategory = PickPhase.Category(
+            name: "Remain",
+            columnId: "RM",
+            totalPicks: 2,
+            pointsPerCorrectPick: 2,
+            wagerPoints: nil,
+            autoScoresRemainingContestants: false,
+            isLocked: false
+        )
+        let phase = PickPhase(name: "Custom", categories: [remainCategory])
+
+        let result = EpisodeResult(
+            id: 1,
+            phaseId: phase.id,
+            immunityWinners: [],
+            votedOut: []
+        )
+
+        let engine = ScoringEngine(config: config, resultsByEpisode: [1: result])
+        var weekly = WeeklyPicks(userId: "user", episodeId: 1)
+        weekly.remain = ["playerA", "playerB"]
+
+        let breakdown = engine.score(
+            weekly: weekly,
+            episode: episodes[0],
+            phaseOverride: phase,
+            categoriesById: [remainCategory.id: remainCategory]
+        )
+
+        XCTAssertEqual(breakdown.remain, 0)
     }
 
     func testScoreIgnoresCategoriesOutsideActivePhase() {
