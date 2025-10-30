@@ -45,12 +45,7 @@ struct ScoringEngine {
             votedOutPointsPerPick = max(phaseOverride.votedOutPointsPerCorrectPick ?? 0, 0)
             immunityPointsPerPick = max(phaseOverride.immunityPointsPerCorrectPick ?? 0, 0)
         } else {
-            if let category = categoriesById.values.first(where: { $0.matchesRemainCategory }),
-               let points = category.pointsPerCorrectPick {
-                remainPointsPerPick = max(points, 0)
-            } else {
-                remainPointsPerPick = 0
-            }
+            remainPointsPerPick = 1
             votedOutPointsPerPick = 3
             immunityPointsPerPick = (defaultPhase == .preMerge) ? 1 : 3
         }

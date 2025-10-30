@@ -104,7 +104,6 @@ final class ScoringEngineTests: XCTestCase {
             totalPicks: 1,
             pointsPerCorrectPick: 5,
             wagerPoints: nil,
-            autoScoresRemainers: false,
             isLocked: false
         )
         let inactiveCategory = PickPhase.Category(
@@ -113,7 +112,6 @@ final class ScoringEngineTests: XCTestCase {
             totalPicks: 1,
             pointsPerCorrectPick: nil,
             wagerPoints: 30,
-            autoScoresRemainers: false,
             isLocked: false
         )
 
@@ -170,7 +168,6 @@ final class ScoringEngineTests: XCTestCase {
             totalPicks: 1,
             pointsPerCorrectPick: nil,
             wagerPoints: 30,
-            autoScoresRemainers: false,
             isLocked: false
         )
         let phase = PickPhase(name: "Finals", categories: [wagerCategory])
@@ -210,7 +207,6 @@ final class ScoringEngineTests: XCTestCase {
             totalPicks: 1,
             pointsPerCorrectPick: nil,
             wagerPoints: 30,
-            autoScoresRemainers: false,
             isLocked: false
         )
         let phase = PickPhase(name: "Finals", categories: [wagerCategory])
