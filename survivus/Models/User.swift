@@ -21,9 +21,6 @@ struct UserScoreBreakdown: Identifiable, Hashable, Codable {
     var votedOutPoints: Int
     var remainPoints: Int
     var immunityPoints: Int
-    var mergeTrackPoints: Int
-    var finalThreeTrackPoints: Int
-    var winnerPoints: Int
     var categoryPointsByColumnId: [String: Int]
 
     init(
@@ -32,9 +29,6 @@ struct UserScoreBreakdown: Identifiable, Hashable, Codable {
         votedOutPoints: Int,
         remainPoints: Int,
         immunityPoints: Int,
-        mergeTrackPoints: Int,
-        finalThreeTrackPoints: Int,
-        winnerPoints: Int,
         categoryPointsByColumnId: [String: Int] = [:]
     ) {
         self.userId = userId
@@ -42,9 +36,6 @@ struct UserScoreBreakdown: Identifiable, Hashable, Codable {
         self.votedOutPoints = votedOutPoints
         self.remainPoints = remainPoints
         self.immunityPoints = immunityPoints
-        self.mergeTrackPoints = mergeTrackPoints
-        self.finalThreeTrackPoints = finalThreeTrackPoints
-        self.winnerPoints = winnerPoints
         self.categoryPointsByColumnId = categoryPointsByColumnId
     }
 
@@ -52,9 +43,6 @@ struct UserScoreBreakdown: Identifiable, Hashable, Codable {
         votedOutPoints
             + remainPoints
             + immunityPoints
-            + mergeTrackPoints
-            + finalThreeTrackPoints
-            + winnerPoints
             + categoryPointsByColumnId.values.reduce(0, +)
     }
 

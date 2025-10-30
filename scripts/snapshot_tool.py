@@ -217,13 +217,12 @@ def _walk_docs(col_dump: dict):
             for x in _walk_docs(sub): yield x
 
 def compute_metrics(fs_dump: dict) -> dict:
-    results = season_picks = weekly_picks = 0
+    results = weekly_picks = 0
     per_user_weekly = {}
     for col in fs_dump.get("rootCollections", []):
         for d in _walk_docs(col):
             p = d.get("_path","")
             if "/results/" in p: results += 1
-            if "/seasonPicks/" in p: season_picks += 1
             if "/weeklyPicks/" in p and "/episodes/" in p:
                 weekly_picks += 1
                 # capture user id if present: seasons/<sid>/weeklyPicks/<uid>/episodes/<eid>
@@ -234,7 +233,7 @@ def compute_metrics(fs_dump: dict) -> dict:
                     per_user_weekly[uid] = per_user_weekly.get(uid, 0) + 1
                 except Exception:
                     pass
-    return {"results": results, "seasonPicks": season_picks, "weeklyPicks": weekly_picks, "weeklyPicksByUser": per_user_weekly}
+    return {"results": results, "weeklyPicks": weekly_picks, "weeklyPicksByUser": per_user_weekly}
 
 def write_summary_file(snap_dir: Path, kind: str, metrics: dict):
     lines = []
@@ -244,7 +243,6 @@ def write_summary_file(snap_dir: Path, kind: str, metrics: dict):
     lines.append("")
     lines.append("## Firestore")
     lines.append(f"- Results docs: {metrics.get('results',0)}")
-    lines.append(f"- Season picks docs: {metrics.get('seasonPicks',0)}")
     lines.append(f"- Weekly picks docs: {metrics.get('weeklyPicks',0)}")
     by_user = metrics.get("weeklyPicksByUser") or {}
     if by_user:

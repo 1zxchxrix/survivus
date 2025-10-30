@@ -3,14 +3,12 @@ import Combine
 
 protocol MemoryStoreDelegate: AnyObject {
     func memoryStore(_ store: MemoryStore, didSaveWeeklyPicks picks: WeeklyPicks)
-    func memoryStore(_ store: MemoryStore, didUpdateSeasonPicks picks: SeasonPicks)
 }
 
 final class MemoryStore: ObservableObject {
     @Published var config: SeasonConfig
     @Published var results: [EpisodeResult]
     @Published var users: [UserProfile]
-    @Published var seasonPicks: [String: SeasonPicks]
     @Published var weeklyPicks: [String: [Int: WeeklyPicks]]
 
     weak var delegate: MemoryStoreDelegate?
@@ -19,7 +17,6 @@ final class MemoryStore: ObservableObject {
         self.config = config
         self.results = results
         self.users = users
-        self.seasonPicks = [:]
         self.weeklyPicks = [:]
     }
 
@@ -53,42 +50,10 @@ final class MemoryStore: ObservableObject {
     }
 
     func submitWeeklyPicks(for userId: String, episodeId: Int) {
-        let hasSubmittedPreviously = weeklyPicks[userId]?.values.contains { $0.isSubmitted } ?? false
-
         var picks = weeklyPicks[userId]?[episodeId] ?? WeeklyPicks(userId: userId, episodeId: episodeId)
         guard !picks.isSubmitted else { return }
         picks.isSubmitted = true
         save(picks)
-
-        if !hasSubmittedPreviously {
-            lockMergePicks(for: userId)
-        }
-    }
-
-    func updateSeasonPicks(for userId: String, update: (inout SeasonPicks) -> Void) {
-        var picks = seasonPicks[userId] ?? SeasonPicks(userId: userId)
-        let originalMergePicks = picks.mergePicks
-        let wasLocked = picks.mergePicksLocked
-
-        update(&picks)
-        if wasLocked {
-            picks.mergePicks = originalMergePicks
-        }
-        picks.mergePicksLocked = wasLocked || picks.mergePicksLocked
-
-        seasonPicks[userId] = picks
-        objectWillChange.send()
-        delegate?.memoryStore(self, didUpdateSeasonPicks: picks)
-    }
-
-    func lockMergePicks(for userId: String) {
-        var picks = seasonPicks[userId] ?? SeasonPicks(userId: userId)
-        guard !picks.mergePicksLocked else { return }
-
-        picks.mergePicksLocked = true
-        seasonPicks[userId] = picks
-        objectWillChange.send()
-        delegate?.memoryStore(self, didUpdateSeasonPicks: picks)
     }
 }
 

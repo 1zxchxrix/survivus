@@ -163,31 +163,6 @@ final class FirestoreLeagueRepository {
         })
     }
 
-    func observeSeasonPicks(onChange: @escaping @MainActor ([SeasonPicks]) -> Void) {
-        let reference = database
-            .collection("seasons")
-            .document(seasonId)
-            .collection("seasonPicks")
-
-        register(reference.addSnapshotListener { snapshot, error in
-            if let error {
-                self.logSnapshotError(error, context: "SeasonPicks")
-                return
-            }
-            guard let documents = snapshot?.documents else { return }
-            let picks: [SeasonPicks] = documents.compactMap { document in
-                do {
-                    let payload = try document.data(as: SeasonPicksDocument.self)
-                    return payload.model
-                } catch {
-                    self.logDecodingError(error, context: "SeasonPicksDocument")
-                    return nil
-                }
-            }
-            Task { @MainActor in onChange(picks) }
-        })
-    }
-
     func observeWeeklyPicks(onChange: @escaping @MainActor ([WeeklyPicks]) -> Void) {
         let reference = database
             .collectionGroup("episodes")
@@ -296,21 +271,6 @@ final class FirestoreLeagueRepository {
             if let error {
                 self.logSnapshotError(error, context: "DeletePhase")
             }
-        }
-    }
-
-    func saveSeasonPicks(_ picks: SeasonPicks) {
-        let reference = database
-            .collection("seasons")
-            .document(seasonId)
-            .collection("seasonPicks")
-            .document(picks.userId)
-
-        let payload = SeasonPicksDocument(from: picks)
-        do {
-            try reference.setData(from: payload, merge: true)
-        } catch {
-            logEncodingError(error, context: "SeasonPicks")
         }
     }
 
@@ -437,6 +397,7 @@ struct PhaseCategoryDocument: Codable {
     var columnId: String
     var totalPicks: Int
     var pointsPerCorrectPick: Int?
+    var wagerPoints: Int?
     var isLocked: Bool
 
     init(
@@ -445,6 +406,7 @@ struct PhaseCategoryDocument: Codable {
         columnId: String,
         totalPicks: Int,
         pointsPerCorrectPick: Int?,
+        wagerPoints: Int?,
         isLocked: Bool
     ) {
         self.id = id
@@ -452,6 +414,7 @@ struct PhaseCategoryDocument: Codable {
         self.columnId = columnId
         self.totalPicks = totalPicks
         self.pointsPerCorrectPick = pointsPerCorrectPick
+        self.wagerPoints = wagerPoints
         self.isLocked = isLocked
     }
 
@@ -462,6 +425,7 @@ struct PhaseCategoryDocument: Codable {
             columnId: category.columnId,
             totalPicks: category.totalPicks,
             pointsPerCorrectPick: category.pointsPerCorrectPick,
+            wagerPoints: category.wagerPoints,
             isLocked: category.isLocked
         )
     }
@@ -474,6 +438,7 @@ struct PhaseCategoryDocument: Codable {
             columnId: columnId,
             totalPicks: totalPicks,
             pointsPerCorrectPick: pointsPerCorrectPick,
+            wagerPoints: wagerPoints,
             isLocked: isLocked
         )
     }
@@ -561,33 +526,6 @@ struct UserDocument: Codable {
 
 }
 
-struct SeasonPicksDocument: Codable {
-    @DocumentID var documentId: String?
-    var mergePicks: [String]?
-    var finalThreePicks: [String]?
-    var winnerPick: String?
-    var mergePicksLocked: Bool?
-
-    init() {}
-
-    init(from picks: SeasonPicks) {
-        mergePicks = Array(picks.mergePicks)
-        finalThreePicks = Array(picks.finalThreePicks)
-        winnerPick = picks.winnerPick
-        mergePicksLocked = picks.mergePicksLocked
-    }
-
-    var model: SeasonPicks? {
-        guard let documentId else { return nil }
-        var picks = SeasonPicks(userId: documentId)
-        if let mergePicks { picks.mergePicks = Set(mergePicks) }
-        if let finalThreePicks { picks.finalThreePicks = Set(finalThreePicks) }
-        picks.winnerPick = winnerPick
-        if let mergePicksLocked { picks.mergePicksLocked = mergePicksLocked }
-        return picks
-    }
-}
-
 struct WeeklyPicksDocument: Codable {
     @DocumentID var documentId: String?
     var seasonId: String?
@@ -654,11 +592,7 @@ final class FirestoreLeagueRepository {
 
     func observeUsers(onChange: @escaping @MainActor ([UserProfile]) -> Void) {}
 
-    func observeSeasonPicks(onChange: @escaping @MainActor ([SeasonPicks]) -> Void) {}
-
     func observeWeeklyPicks(onChange: @escaping @MainActor ([WeeklyPicks]) -> Void) {}
-
-    func saveSeasonPicks(_ picks: SeasonPicks) {}
 
     func saveWeeklyPicks(_ picks: WeeklyPicks) {}
 
@@ -814,46 +748,6 @@ struct UserDocument: Codable {
         )
     }
 
-}
-
-struct SeasonPicksDocument: Codable {
-    var documentId: String?
-    var mergePicks: [String]?
-    var finalThreePicks: [String]?
-    var winnerPick: String?
-    var mergePicksLocked: Bool?
-
-    init(
-        documentId: String? = nil,
-        mergePicks: [String]? = nil,
-        finalThreePicks: [String]? = nil,
-        winnerPick: String? = nil,
-        mergePicksLocked: Bool? = nil
-    ) {
-        self.documentId = documentId
-        self.mergePicks = mergePicks
-        self.finalThreePicks = finalThreePicks
-        self.winnerPick = winnerPick
-        self.mergePicksLocked = mergePicksLocked
-    }
-
-    init(from picks: SeasonPicks) {
-        self.documentId = picks.userId
-        mergePicks = Array(picks.mergePicks)
-        finalThreePicks = Array(picks.finalThreePicks)
-        winnerPick = picks.winnerPick
-        mergePicksLocked = picks.mergePicksLocked
-    }
-
-    var model: SeasonPicks? {
-        guard let documentId else { return nil }
-        var picks = SeasonPicks(userId: documentId)
-        if let mergePicks { picks.mergePicks = Set(mergePicks) }
-        if let finalThreePicks { picks.finalThreePicks = Set(finalThreePicks) }
-        picks.winnerPick = winnerPick
-        if let mergePicksLocked { picks.mergePicksLocked = mergePicksLocked }
-        return picks
-    }
 }
 
 struct WeeklyPicksDocument: Codable {

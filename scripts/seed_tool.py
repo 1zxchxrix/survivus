@@ -73,14 +73,13 @@ def compute_metrics_from_snapshot(snap: dict) -> dict:
             yield d
             for sub in d.get("_subcollections", []) or []:
                 for x in _walk(sub): yield x
-    results = season_picks = weekly_picks = 0
+    results = weekly_picks = 0
     for col in fs.get("rootCollections", []):
         for d in _walk(col):
             p = d.get("_path", "")
             if "/results/" in p: results += 1
-            if "/seasonPicks/" in p: season_picks += 1
             if "/weeklyPicks/" in p and "/episodes/" in p: weekly_picks += 1
-    return {"results": results, "seasonPicks": season_picks, "weeklyPicks": weekly_picks}
+    return {"results": results, "weeklyPicks": weekly_picks}
 
 def _clear_bucket_prefixes(client, bucket, prefixes: t.List[str]) -> dict:
     report = {"cleared": {}, "errors": []}

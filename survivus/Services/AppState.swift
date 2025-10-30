@@ -196,14 +196,6 @@ final class AppState: ObservableObject {
             }
         }
 
-        repository.observeSeasonPicks { [weak self] picks in
-            guard let self else { return }
-            self.performRemoteUpdate {
-                let dictionary = Dictionary(uniqueKeysWithValues: picks.map { ($0.userId, $0) })
-                self.store.seasonPicks = dictionary
-            }
-        }
-
         repository.observeWeeklyPicks { [weak self] picks in
             guard let self else { return }
             self.performRemoteUpdate {
@@ -356,10 +348,6 @@ final class AppState: ObservableObject {
 extension AppState: MemoryStoreDelegate {
     func memoryStore(_ store: MemoryStore, didSaveWeeklyPicks picks: WeeklyPicks) {
         repository.saveWeeklyPicks(picks)
-    }
-
-    func memoryStore(_ store: MemoryStore, didUpdateSeasonPicks picks: SeasonPicks) {
-        repository.saveSeasonPicks(picks)
     }
 }
 

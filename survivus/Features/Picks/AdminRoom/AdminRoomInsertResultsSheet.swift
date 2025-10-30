@@ -139,7 +139,11 @@ struct InsertResultsSheet: View {
                 disabled: category.isLocked
             )
 
-            if let points = category.pointsPerCorrectPick {
+            if let wager = category.wagerPoints {
+                Text("Worth ±\(wager) points based on accuracy.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if let points = category.pointsPerCorrectPick {
                 Text("Worth \(points) point\(points == 1 ? "" : "s") per correct pick.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
