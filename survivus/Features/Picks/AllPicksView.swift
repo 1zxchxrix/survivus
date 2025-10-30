@@ -200,7 +200,20 @@ private extension AllPicksView {
 
     func weeklyPicks(for user: UserProfile) -> WeeklyPicks? {
         guard case let .week(episodeId) = selectedWeek else { return nil }
-        return app.store.weeklyPicks[user.id]?[episodeId]
+        if var picks = app.store.weeklyPicks[user.id]?[episodeId] {
+            if app.applyLockedSelections(for: user.id, picks: &picks) {
+                app.store.save(picks)
+            }
+            return picks
+        }
+
+        guard user.id == app.currentUserId else { return nil }
+
+        var picks = WeeklyPicks(userId: user.id, episodeId: episodeId)
+        if app.applyLockedSelections(for: user.id, picks: &picks) {
+            app.store.save(picks)
+        }
+        return picks
     }
 
     func shouldLockPicks(for user: UserProfile) -> Bool {
@@ -349,8 +362,9 @@ private struct UserPicksCard: View {
             switch kind {
             case let .weekly(panel):
                 let canEditWeeklyPicks = !(weeklyPicks?.isSubmitted ?? false)
+                let canNavigate = canEditWeeklyPicks && !category.isLocked
 
-                if let episode = selectedEpisode, canEditWeeklyPicks {
+                if let episode = selectedEpisode, canNavigate {
                     NavigationLink {
                         WeeklyPickEditor(episode: episode, panel: panel)
                     } label: {
@@ -365,6 +379,7 @@ private struct UserPicksCard: View {
                     PickSection(
                         title: title,
                         contestants: contestants,
+                        isInteractive: canNavigate,
                         correctContestantIDs: correctContestantIDs
                     )
                 }
