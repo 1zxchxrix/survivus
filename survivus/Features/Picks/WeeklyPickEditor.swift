@@ -68,7 +68,7 @@ struct WeeklyPickEditor: View {
 
     private func loadPicks(for userId: String) {
         var weeklyPicks = app.store.picks(for: userId, episodeId: episode.id)
-        let didApplyLockedSelections = applyLockedSelections(for: userId, picks: &weeklyPicks)
+        let didApplyLockedSelections = app.applyLockedSelections(for: userId, picks: &weeklyPicks)
         picks = weeklyPicks
 
         if didApplyLockedSelections {
@@ -173,7 +173,7 @@ struct WeeklyPickEditor: View {
     }
 
     private func category(withId id: UUID) -> PickPhase.Category? {
-        if let category = phaseContext()?.phase.categories.first(where: { $0.id == id }) {
+        if let category = phaseContext?.phase.categories.first(where: { $0.id == id }) {
             return category
         }
 
@@ -191,7 +191,7 @@ struct WeeklyPickEditor: View {
     }
 
     private func category(for panel: WeeklyPickPanel) -> PickPhase.Category? {
-        let context = phaseContext()
+        let context = phaseContext
 
         switch panel {
         case .remain:
@@ -208,40 +208,9 @@ struct WeeklyPickEditor: View {
         }
     }
 
-    private func applyLockedSelections(for userId: String, picks: inout WeeklyPicks) -> Bool {
-        guard let context = phaseContext() else { return false }
-        var didChange = false
-
-        for category in context.phase.categories where category.isLocked {
-            guard let lockedSelection = lockedSelections(for: category, userId: userId) else { continue }
-            let current = selections(for: category, in: picks)
-            if current != lockedSelection {
-                setSelections(lockedSelection, for: category, in: &picks)
-                didChange = true
-            }
-        }
-
-        return didChange
-    }
-
-    private func lockedSelections(for category: PickPhase.Category, userId: String) -> Set<String>? {
-        guard let phaseInfo = phaseContext(), let picksByEpisode = app.store.weeklyPicks[userId] else { return nil }
-
-        let episodeIds = phaseEpisodeIds(for: phaseInfo.phaseId)
-        for episodeId in episodeIds {
-            guard let picks = picksByEpisode[episodeId] else { continue }
-            let selection = selections(for: category, in: picks)
-            if !selection.isEmpty {
-                return selection
-            }
-        }
-
-        return nil
-    }
-
     private func isPanelLockedForEditing(_ panel: WeeklyPickPanel, userId: String) -> Bool {
         guard let category = category(for: panel), category.isLocked else { return false }
-        guard let phaseInfo = phaseContext() else { return false }
+        guard let phaseInfo = phaseContext else { return false }
         guard let originEpisodeId = originEpisodeId(for: category, phaseId: phaseInfo.phaseId, userId: userId) else {
             return false
         }
@@ -250,11 +219,11 @@ struct WeeklyPickEditor: View {
 
     private func originEpisodeId(for category: PickPhase.Category, phaseId: PickPhase.ID, userId: String) -> Int? {
         guard let picksByEpisode = app.store.weeklyPicks[userId] else { return nil }
-        let episodeIds = phaseEpisodeIds(for: phaseId)
+        let episodeIds = app.phaseEpisodeIds(for: phaseId)
 
         for episodeId in episodeIds {
             guard let picks = picksByEpisode[episodeId] else { continue }
-            let selection = selections(for: category, in: picks)
+            let selection = app.selections(for: category, in: picks)
             if !selection.isEmpty {
                 return episodeId
             }
@@ -263,49 +232,7 @@ struct WeeklyPickEditor: View {
         return nil
     }
 
-    private func phaseEpisodeIds(for phaseId: PickPhase.ID) -> [Int] {
-        app.store.results
-            .filter { $0.phaseId == phaseId }
-            .map(\.id)
-            .sorted()
-    }
-
-    private func selections(for category: PickPhase.Category, in picks: WeeklyPicks) -> Set<String> {
-        if category.matchesRemainCategory {
-            return picks.remain
-        }
-        if category.matchesVotedOutCategory {
-            return picks.votedOut
-        }
-        if category.matchesImmunityCategory {
-            return picks.immunity
-        }
-        return picks.selections(for: category.id)
-    }
-
-    private func setSelections(_ selections: Set<String>, for category: PickPhase.Category, in picks: inout WeeklyPicks) {
-        if category.matchesRemainCategory {
-            picks.remain = selections
-        } else if category.matchesVotedOutCategory {
-            picks.votedOut = selections
-        } else if category.matchesImmunityCategory {
-            picks.immunity = selections
-        } else {
-            picks.setSelections(selections, for: category.id)
-        }
-    }
-
-    private func phaseContext() -> (phase: PickPhase, phaseId: PickPhase.ID)? {
-        if let result = app.store.resultsByEpisode[episode.id],
-           let phaseId = result.phaseId,
-           let phase = app.phases.first(where: { $0.id == phaseId }) {
-            return (phase, phaseId)
-        }
-
-        if let activePhase = app.activePhase {
-            return (activePhase, activePhase.id)
-        }
-
-        return nil
+    private var phaseContext: (phase: PickPhase, phaseId: PickPhase.ID)? {
+        app.phaseContext(forEpisodeId: episode.id)
     }
 }
