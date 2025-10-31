@@ -123,13 +123,8 @@ struct CreatePhaseSheet: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        categoryBeingEdited = CategoryDraft()
-                    } label: {
-                        Image(systemName: "plus")
-                            .imageScale(.large)
-                    }
-                    .accessibilityLabel("Add category")
+                    Button("Save", action: savePhase)
+                        .fontWeight(.semibold)
                 }
             }
             .sheet(item: $categoryBeingEdited, onDismiss: {
@@ -147,34 +142,23 @@ struct CreatePhaseSheet: View {
                     }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    let trimmedName = phaseName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let phaseNameToSave = trimmedName.isEmpty ? "Untitled Phase" : trimmedName
-                    let newPhase = PickPhase(
-                        id: phase?.id ?? UUID(),
-                        name: phaseNameToSave,
-                        categories: categories.map { PickPhase.Category($0) }
-                    )
-                    onSave(newPhase)
-                    dismiss()
-                } label: {
-                    Text("Save")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .padding(.horizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 24)
-                .background(Color(.systemGroupedBackground))
-            }
         }
     }
 }
 
 private extension CreatePhaseSheet {
+    func savePhase() {
+        let trimmedName = phaseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phaseNameToSave = trimmedName.isEmpty ? "Untitled Phase" : trimmedName
+        let newPhase = PickPhase(
+            id: phase?.id ?? UUID(),
+            name: phaseNameToSave,
+            categories: categories.map { PickPhase.Category($0) }
+        )
+        onSave(newPhase)
+        dismiss()
+    }
+
     func addCategory(from preset: CategoryPreset) {
         let newCategory = preset.makeDraft()
         presetUsageByCategoryID[newCategory.id] = preset.id
