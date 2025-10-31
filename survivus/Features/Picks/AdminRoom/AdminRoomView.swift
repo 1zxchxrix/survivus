@@ -33,17 +33,10 @@ struct AdminRoomView: View {
                 .disabled(!canStartNewWeek)
             }
 
-            Section("Phase") {
+            Section("Season") {
                 Button("Phases") {
                     isPresentingSelectPhase = true
                 }
-                .disabled(!hasPhases)
-                Button("Create New Phase") {
-                    isPresentingNewPhase = true
-                }
-            }
-
-            Section("Season") {
                 Button("Manage Contestants") {
                     isPresentingManageContestants = true
                 }
