@@ -82,7 +82,6 @@ struct AdminRoomView: View {
                 handlePhaseSave(newPhase)
                 isPresentingNewPhase = false
             }
-            .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
             .presentationCornerRadius(28)
         }
         .sheet(isPresented: $isPresentingManageContestants) {
@@ -95,7 +94,6 @@ struct AdminRoomView: View {
                 handlePhaseSave(updatedPhase)
                 phaseBeingEdited = nil
             }
-            .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
             .presentationCornerRadius(28)
         }
         .sheet(item: $phaseForInsertingResults) { phase in
@@ -213,17 +211,3 @@ private struct AdaptiveFractionalSheetDetentModifier: ViewModifier {
     }
 }
 
-extension View {
-    /// Applies a fractional sheet detent that expands to a taller height on iPad devices.
-    /// - Parameters:
-    ///   - defaultFraction: The fractional height to use on iPhone and other idioms.
-    ///   - iPadFraction: The taller fractional height to use when running on iPad.
-    func adaptivePresentationDetents(defaultFraction: CGFloat, iPadFraction: CGFloat) -> some View {
-        modifier(
-            AdaptiveFractionalSheetDetentModifier(
-                defaultFraction: defaultFraction,
-                iPadFraction: iPadFraction
-            )
-        )
-    }
-}

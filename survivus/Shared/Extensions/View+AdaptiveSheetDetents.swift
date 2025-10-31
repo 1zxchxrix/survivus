@@ -21,17 +21,3 @@ private struct AdaptiveFractionalSheetDetentModifier: ViewModifier {
     }
 }
 
-extension View {
-    /// Applies a fractional sheet detent that expands to a taller height on iPad devices.
-    /// - Parameters:
-    ///   - defaultFraction: The fractional height to use on iPhone and other idioms.
-    ///   - iPadFraction: The taller fractional height to use when running on iPad.
-    func adaptivePresentationDetents(defaultFraction: CGFloat, iPadFraction: CGFloat) -> some View {
-        modifier(
-            AdaptiveFractionalSheetDetentModifier(
-                defaultFraction: defaultFraction,
-                iPadFraction: iPadFraction
-            )
-        )
-    }
-}

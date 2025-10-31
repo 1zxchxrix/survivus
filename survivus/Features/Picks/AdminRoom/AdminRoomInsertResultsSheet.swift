@@ -107,7 +107,6 @@ struct InsertResultsSheet: View {
                 secondaryButton: .cancel()
             )
         }
-        .adaptivePresentationDetents(defaultFraction: 0.85, iPadFraction: 0.95)
         .presentationCornerRadius(28)
     }
 
