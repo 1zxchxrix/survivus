@@ -6,6 +6,7 @@ struct CreatePhaseSheet: View {
     @State private var phaseName: String
     @State private var categories: [CategoryDraft]
     @State private var categoryBeingEdited: CategoryDraft?
+    @State private var editMode: EditMode = .inactive
     @State private var isPresetListExpanded = true
     @State private var availablePresets: [CategoryPreset]
     @State private var presetUsageByCategoryID: [CategoryDraft.ID: CategoryPreset.ID]
@@ -49,7 +50,7 @@ struct CreatePhaseSheet: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
-                            }
+                                .editActions(.move)
                         }
                         .onMove(perform: moveCategories)
                     }
