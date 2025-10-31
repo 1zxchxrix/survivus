@@ -66,7 +66,7 @@ private struct PhaseRow: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(phase.name)
-                        .font(.headline)
+                        .font(.title3)
 
                     if isActive {
                         Text("Active")
@@ -145,12 +145,13 @@ private struct CategoryDisclosureRow: View {
                 Text(category.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                      ? "Untitled Category" : category.name)
                     .foregroundStyle(.primary)
+                    .fontWeight(.semibold)
                 Spacer()
                 if category.autoScoresRemainingContestants { MiniTag(text: "Auto-score") }
                 if category.isLocked { MiniTag(text: "Locked") }
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: isExpanded)
+        .animation(nil, value: isExpanded)
     }
 
     private func normalizedColumnId(_ raw: String) -> String {
