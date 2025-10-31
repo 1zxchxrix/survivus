@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct AdminRoomView: View {
     @EnvironmentObject var app: AppState
@@ -79,7 +82,7 @@ struct AdminRoomView: View {
                 handlePhaseSave(newPhase)
                 isPresentingNewPhase = false
             }
-            .presentationDetents([.fraction(0.8)])
+            .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
             .presentationCornerRadius(28)
         }
         .sheet(isPresented: $isPresentingManageContestants) {
@@ -92,7 +95,7 @@ struct AdminRoomView: View {
                 handlePhaseSave(updatedPhase)
                 phaseBeingEdited = nil
             }
-            .presentationDetents([.fraction(0.8)])
+            .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
             .presentationCornerRadius(28)
         }
         .sheet(item: $phaseForInsertingResults) { phase in
@@ -189,5 +192,38 @@ private extension AdminRoomView {
         if app.activePhaseId == phase.id {
             app.activePhaseId = nil
         }
+    }
+}
+
+private struct AdaptiveFractionalSheetDetentModifier: ViewModifier {
+    let defaultFraction: CGFloat
+    let iPadFraction: CGFloat
+
+    private var resolvedFraction: CGFloat {
+#if canImport(UIKit)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return iPadFraction
+        }
+#endif
+        return defaultFraction
+    }
+
+    func body(content: Content) -> some View {
+        content.presentationDetents([.fraction(resolvedFraction)])
+    }
+}
+
+extension View {
+    /// Applies a fractional sheet detent that expands to a taller height on iPad devices.
+    /// - Parameters:
+    ///   - defaultFraction: The fractional height to use on iPhone and other idioms.
+    ///   - iPadFraction: The taller fractional height to use when running on iPad.
+    func adaptivePresentationDetents(defaultFraction: CGFloat, iPadFraction: CGFloat) -> some View {
+        modifier(
+            AdaptiveFractionalSheetDetentModifier(
+                defaultFraction: defaultFraction,
+                iPadFraction: iPadFraction
+            )
+        )
     }
 }
