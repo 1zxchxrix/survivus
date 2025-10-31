@@ -1,13 +1,12 @@
 import SwiftUI
 
 struct SelectPhaseSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
     let phases: [PickPhase]
     let currentPhaseID: PickPhase.ID?
     let lockedPhaseIDs: Set<PickPhase.ID>
     let onModify: (PickPhase) -> Void
     let onDelete: (PickPhase) -> Void
+    let onCreate: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -35,8 +34,13 @@ struct SelectPhaseSheet: View {
             }
             .navigationTitle("Phases")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        onCreate()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Create new phase")
                 }
             }
         }
@@ -61,7 +65,7 @@ private struct PhaseRow: View {
                 HStack {
                     Text(phase.name)
                         .font(.title3)
-                        .fontWeight(.bold)
+                        .fontWeight(.semibold)
 
                     if isActive {
                         Text("Active")
@@ -132,7 +136,7 @@ private struct CategoryDisclosureRow: View {
                 Text(category.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                      ? "Untitled Category" : category.name)
                     .foregroundStyle(.primary)
-                    .fontWeight(.semibold)
+                    .fontWeight(.medium)
                 Spacer()
                 if category.autoScoresRemainingContestants { MiniTag(text: "Auto-score") }
                 if category.isLocked { MiniTag(text: "Locked") }
