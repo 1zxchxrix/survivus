@@ -38,8 +38,17 @@ struct AllPicksView: View {
         Dictionary(uniqueKeysWithValues: app.store.config.contestants.map { ($0.id, $0) })
     }
 
-    private var activePhaseCategories: [PickPhase.Category] {
-        activePhase?.categories ?? []
+    private var selectedPhase: PickPhase? {
+        if case let .week(episodeId) = selectedWeek,
+           let context = app.phaseContext(forEpisodeId: episodeId) {
+            return context.phase
+        }
+
+        return app.activePhase
+    }
+
+    private var selectedPhaseCategories: [PickPhase.Category] {
+        selectedPhase?.categories ?? []
     }
 
     private var usersInDisplayOrder: [UserProfile] {
@@ -54,16 +63,12 @@ struct AllPicksView: View {
     }
 
     private var hasConfiguredPickData: Bool {
-        guard let activePhase else { return false }
-        return !activePhase.categories.isEmpty
+        guard let selectedPhase else { return false }
+        return !selectedPhase.categories.isEmpty
     }
 
-    private var activePhase: PickPhase? {
-        app.activePhase
-    }
-
-    private var activePhaseName: String {
-        activePhase?.name ?? "Phase"
+    private var selectedPhaseName: String {
+        selectedPhase?.name ?? "Phase"
     }
 
     private var selectedEpisode: Episode? {
@@ -91,7 +96,7 @@ struct AllPicksView: View {
                                 isCurrentUser: isCurrentUser,
                                 isLocked: isLocked,
                                 selectedEpisode: selectedEpisode,
-                                categories: activePhaseCategories,
+                                categories: selectedPhaseCategories,
                                 seasonConfig: app.store.config,
                                 scoringEngine: app.scoring,
                                 isCollapsed: isCurrentUser ? false : (isLocked ? false : isCollapsed),
@@ -138,13 +143,13 @@ struct AllPicksView: View {
 
     private var weekPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(activePhaseName)
+            Text(selectedPhaseName)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
 
             HStack(alignment: .firstTextBaseline) {
-                Picker(activePhaseName, selection: $selectedWeek) {
+                Picker(selectedPhaseName, selection: $selectedWeek) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
                             .tag(option.selection)
