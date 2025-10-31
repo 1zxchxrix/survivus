@@ -28,13 +28,14 @@ struct TableView: View {
         let scoredEpisodeIds = recordedResults.map(\.id).sorted()
         let pinnedColumns = columnDefinitions.filter { $0.isPinned }
         let scrollableColumns = columnDefinitions.filter { !$0.isPinned }
-        let nameColumnWidth: CGFloat = 120
+        let nameColumnWidth: CGFloat = 90
+        let pinnedColumnSpacing: CGFloat = 2  // tighter gap between Name
         let columnSpacing: CGFloat = 4
         let tableHorizontalPadding: CGFloat = 12
         let pinnedToScrollableSpacing: CGFloat = tableHorizontalPadding
         let rowContentMinHeight: CGFloat = 32
-        let pinnedSectionWidth = pinnedColumns.reduce(nameColumnWidth) { partialWidth, column in
-            partialWidth + columnSpacing + column.width
+        let pinnedSectionWidth = pinnedColumns.reduce(nameColumnWidth) { acc, col in
+            acc + pinnedColumnSpacing + col.width   // use pinnedColumnSpacing here
         }
 
         let breakdowns: [UserScoreBreakdown] = app.store.users.map { user in
@@ -72,10 +73,13 @@ struct TableView: View {
                                 usersById: usersById,
                                 nameColumnWidth: nameColumnWidth,
                                 pinnedSectionWidth: pinnedSectionWidth,
-                                columnSpacing: columnSpacing,
+                                columnSpacing: pinnedColumnSpacing,     // <- use tighter spacing here
+
+                                //columnSpacing: columnSpacing,
                                 rowContentMinHeight: rowContentMinHeight,
                                 showsTrailingSeparator: false
                             )
+                            
                         } else {
                             HStack(alignment: .top, spacing: pinnedToScrollableSpacing) {
                                 TablePinnedSection(
@@ -448,7 +452,7 @@ struct TableView: View {
         static let totalPoints = TableColumnDefinition(
             id: "Pts",
             title: "Pts",
-            width: 52,
+            width: 50,
             metric: .total,
             legendDescription: "Total points",
             isActive: true,
@@ -476,4 +480,9 @@ struct TableView: View {
             }
         }
     }
+}
+
+#Preview {
+    TableView()
+        .environmentObject(AppState.preview)
 }

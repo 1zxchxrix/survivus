@@ -13,7 +13,7 @@ struct AllPicksView: View {
         let availableEpisodeIds = Set(weeklyEpisodeIds).union(startedEpisodeIds)
 
         guard !availableEpisodeIds.isEmpty else {
-            return [WeekOption(selection: .none, title: "None")]
+            return []
         }
 
         let episodesById = Dictionary(uniqueKeysWithValues: app.store.config.episodes.map { ($0.id, $0) })
@@ -27,7 +27,7 @@ struct AllPicksView: View {
                 return WeekOption(selection: .week(episode.id), title: episode.title)
             }
 
-        return [WeekOption(selection: .none, title: "None")] + episodeOptions
+        return episodeOptions
     }
 
     private var availableWeekSelections: Set<WeekSelection> {
@@ -152,11 +152,13 @@ struct AllPicksView: View {
                 Picker(selectedPhaseName, selection: $selectedWeek) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
+                            .font(.subheadline)
                             .fontWeight(.semibold)
                             .tag(option.selection)
                     }
                 }
                 .pickerStyle(.menu)
+                
                 
                 Spacer()
                 
