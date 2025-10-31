@@ -419,20 +419,13 @@ private struct CategoryEditorSheet: View {
                     Toggle("Lock category", isOn: $draft.isLocked)
                 }
 
-                Section {
-                    Button("Save") {
-                        saveCategory()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                }
             }
             .navigationTitle(isEditingExisting ? "Edit Category" : "Custom Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Save", action: saveCategory)
+                        .fontWeight(.semibold)
                 }
             }
         }
