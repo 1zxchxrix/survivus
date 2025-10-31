@@ -173,3 +173,8 @@ private struct MiniTag: View {
             .clipShape(Capsule())
     }
 }
+
+#Preview {
+    AdminRoomView()
+        .environmentObject(AppState.preview)
+}
