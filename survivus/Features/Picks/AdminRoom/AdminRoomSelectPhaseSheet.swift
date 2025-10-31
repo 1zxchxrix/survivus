@@ -124,9 +124,10 @@ private struct PhaseRow: View {
 
 private struct CategoryDisclosureRow: View {
     let category: PickPhase.Category
+    @State private var isExpanded: Bool = false
 
     var body: some View {
-        DisclosureGroup {
+        DisclosureGroup(isExpanded: $isExpanded) {
             VStack(alignment: .leading, spacing: 8) {
                 KeyValueRow(title: "Column ID", value: normalizedColumnId(category.columnId))
                 KeyValueRow(title: "Total picks", value: String(category.totalPicks))
@@ -137,12 +138,6 @@ private struct CategoryDisclosureRow: View {
                 if let w = category.wagerPoints {
                     KeyValueRow(title: "Wager (±)", value: "±\(w)")
                 }
-
-                HStack(spacing: 8) {
-                    if category.autoScoresRemainingContestants { FlagBadge(text: "Auto-score") }
-                    if category.isLocked { FlagBadge(text: "Locked") }
-                }
-                .padding(.top, (category.autoScoresRemainingContestants || category.isLocked) ? 2 : 0)
             }
             .padding(.vertical, 4)
         } label: {
@@ -155,6 +150,7 @@ private struct CategoryDisclosureRow: View {
                 if category.isLocked { MiniTag(text: "Locked") }
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: isExpanded)
     }
 
     private func normalizedColumnId(_ raw: String) -> String {
@@ -175,18 +171,6 @@ private struct KeyValueRow: View {
             Text(value)
         }
         .font(.subheadline)
-    }
-}
-
-private struct FlagBadge: View {
-    let text: String
-    var body: some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .padding(.vertical, 3)
-            .padding(.horizontal, 8)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(Capsule())
     }
 }
 
