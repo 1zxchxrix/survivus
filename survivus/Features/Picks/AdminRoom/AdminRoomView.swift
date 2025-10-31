@@ -72,6 +72,12 @@ struct AdminRoomView: View {
                 },
                 onDelete: { phase in
                     app.deletePhase(withId: phase.id)
+                },
+                onCreate: {
+                    isPresentingSelectPhase = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        isPresentingNewPhase = true
+                    }
                 }
             )
         }
