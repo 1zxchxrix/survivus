@@ -41,9 +41,7 @@ struct SelectPhaseSheet: View {
             .navigationTitle("Select Phase to Modify")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
-                        dismiss()
-                    }
+                    Button("Close") { dismiss() }
                 }
             }
         }
@@ -85,10 +83,16 @@ private struct PhaseRow: View {
                     }
                 }
 
+                // ⬇️ Replace your "Categories: N" with this
                 if !phase.categories.isEmpty {
-                    Text("Categories: \(phase.categories.count)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(phase.categories) { category in
+                            CategoryDisclosureRow(category: category)
+                                .padding(.vertical, 4)
+                            Divider().opacity(0.15)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -112,5 +116,88 @@ private struct PhaseRow: View {
             }
             .tint(.blue)
         }
+    }
+}
+
+
+// MARK: - Expandable category row
+
+private struct CategoryDisclosureRow: View {
+    let category: PickPhase.Category
+
+    var body: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 8) {
+                KeyValueRow(title: "Column ID", value: normalizedColumnId(category.columnId))
+                KeyValueRow(title: "Total picks", value: String(category.totalPicks))
+
+                if let p = category.pointsPerCorrectPick {
+                    KeyValueRow(title: "Points per pick", value: "\(p)")
+                }
+                if let w = category.wagerPoints {
+                    KeyValueRow(title: "Wager (±)", value: "±\(w)")
+                }
+
+                HStack(spacing: 8) {
+                    if category.autoScoresRemainingContestants { FlagBadge(text: "Auto-score") }
+                    if category.isLocked { FlagBadge(text: "Locked") }
+                }
+                .padding(.top, (category.autoScoresRemainingContestants || category.isLocked) ? 2 : 0)
+            }
+            .padding(.vertical, 4)
+        } label: {
+            HStack(spacing: 8) {
+                Text(category.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                     ? "Untitled Category" : category.name)
+                    .foregroundStyle(.primary)
+                Spacer()
+                if category.autoScoresRemainingContestants { MiniTag(text: "Auto-score") }
+                if category.isLocked { MiniTag(text: "Locked") }
+            }
+        }
+    }
+
+    private func normalizedColumnId(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return trimmed.isEmpty ? "—" : trimmed
+    }
+}
+
+// MARK: - Small UI helpers
+
+private struct KeyValueRow: View {
+    let title: String
+    let value: String
+    var body: some View {
+        HStack {
+            Text(title).foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+        }
+        .font(.subheadline)
+    }
+}
+
+private struct FlagBadge: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .padding(.vertical, 3)
+            .padding(.horizontal, 8)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(Capsule())
+    }
+}
+
+private struct MiniTag: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.caption2)
+            .padding(.vertical, 2)
+            .padding(.horizontal, 6)
+            .background(Color(.tertiarySystemFill))
+            .clipShape(Capsule())
     }
 }

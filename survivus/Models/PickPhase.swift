@@ -155,3 +155,16 @@ struct CategoryDraft: Identifiable, Equatable {
         )
     }
 }
+
+extension PickPhase {
+    /// Categories that require manual result entry (exclude auto-score ones)
+    var manualResultCategories: [Category] {
+        categories.filter { !$0.autoScoresRemainingContestants }
+    }
+
+    /// Categories that are auto-scored (hidden from admin result sheets)
+    var autoScoreCategories: [Category] {
+        categories.filter { $0.autoScoresRemainingContestants }
+    }
+}
+

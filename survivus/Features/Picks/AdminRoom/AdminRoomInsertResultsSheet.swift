@@ -25,7 +25,8 @@ struct InsertResultsSheet: View {
         self.existingResult = existingResult
         self.onSave = onSave
 
-        let insertableCategories = phase.categories.filter { !$0.isLocked }
+        // Only manual-result categories: exclude locked and auto-score
+        let insertableCategories = phase.categories.filter { !$0.isLocked && !$0.autoScoresRemainingContestants }
 
         var initialSelections = Dictionary(
             uniqueKeysWithValues: insertableCategories.map { ($0.id, Set<String>()) }
@@ -110,9 +111,19 @@ struct InsertResultsSheet: View {
         .presentationCornerRadius(28)
     }
 
+    // MARK: - Category sets
+
+    /// Manual-result categories only (shown & editable in this sheet)
     private var insertableCategories: [PickPhase.Category] {
-        phase.categories.filter { !$0.isLocked }
+        phase.categories.filter { !$0.isLocked && !$0.autoScoresRemainingContestants }
     }
+
+    /// Auto-score categories (hidden here; their winners must not be stored)
+    private var autoScoreCategories: [PickPhase.Category] {
+        phase.categories.filter { $0.autoScoresRemainingContestants }
+    }
+
+    // MARK: - UI
 
     @ViewBuilder
     private func categoryCard(for category: PickPhase.Category) -> some View {
@@ -139,11 +150,7 @@ struct InsertResultsSheet: View {
                 disabled: category.isLocked
             )
 
-            if let wager = category.wagerPoints {
-                Text("Worth ±\(wager) points based on accuracy.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else if let points = category.pointsPerCorrectPick {
+            if let points = category.pointsPerCorrectPick {
                 Text("Worth \(points) point\(points == 1 ? "" : "s") per correct pick.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -164,13 +171,21 @@ struct InsertResultsSheet: View {
         )
     }
 
+    // MARK: - Build & Confirm
+
     private func buildEpisodeResult() -> EpisodeResult {
-        var result = existingResult ?? EpisodeResult(id: episodeId, phaseId: phase.id, immunityWinners: [], votedOut: [])
+        var result = existingResult ?? EpisodeResult(
+            id: episodeId,
+            phaseId: phase.id,
+            immunityWinners: [],
+            votedOut: []
+        )
         if result.phaseId == nil {
             result.phaseId = phase.id
         }
 
-        for category in insertableCategories {
+        // 1️⃣ Save results for manual categories only
+        for category in phase.manualResultCategories {
             let winners = sortedSelection(for: category)
             result.setWinners(winners, for: category.id)
 
@@ -181,6 +196,11 @@ struct InsertResultsSheet: View {
             if Self.isVotedOutCategory(category) {
                 result.votedOut = winners
             }
+        }
+
+        // 2️⃣ Explicitly clear any legacy data for auto-score categories
+        for category in phase.autoScoreCategories {
+            result.setWinners([], for: category.id)
         }
 
         return result
@@ -224,6 +244,8 @@ struct InsertResultsSheet: View {
         let displayName = category.name.trimmingCharacters(in: .whitespacesAndNewlines)
         return displayName.isEmpty ? "Untitled Category" : displayName
     }
+
+    // MARK: - Category tags
 
     private static func isImmunityCategory(_ category: PickPhase.Category) -> Bool {
         categoryMatches(category, columnId: "IM", fallbackName: "immunity")
