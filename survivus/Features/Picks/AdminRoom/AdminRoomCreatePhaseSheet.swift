@@ -67,6 +67,15 @@ struct CreatePhaseSheet: View {
                 }
 
                 Section {
+                    Button {
+                        categoryBeingEdited = CategoryDraft()
+                    } label: {
+                        Label("Custom category", systemImage: "plus")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                Section {
                     DisclosureGroup(isExpanded: $isPresetListExpanded) {
                         VStack(spacing: 8) {
                             if availablePresets.isEmpty {

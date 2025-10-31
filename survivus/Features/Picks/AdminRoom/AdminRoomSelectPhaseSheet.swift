@@ -33,6 +33,7 @@ struct SelectPhaseSheet: View {
                 }
             }
             .navigationTitle("Phases")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
