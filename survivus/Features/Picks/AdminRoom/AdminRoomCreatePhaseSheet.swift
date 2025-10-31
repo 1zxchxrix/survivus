@@ -6,7 +6,7 @@ struct CreatePhaseSheet: View {
     @State private var phaseName: String
     @State private var categories: [CategoryDraft]
     @State private var categoryBeingEdited: CategoryDraft?
-    @State private var isPresetListExpanded = false
+    @State private var isPresetListExpanded = true
     @State private var availablePresets: [CategoryPreset]
     @State private var presetUsageByCategoryID: [CategoryDraft.ID: CategoryPreset.ID]
 
@@ -33,14 +33,41 @@ struct CreatePhaseSheet: View {
 
                 if !categories.isEmpty {
                     Section("Categories") {
-                        ForEach(categories) { category in
-                            Button {
-                                categoryBeingEdited = category
-                            } label: {
-                                CategoryRow(category: category)
-                                    .padding(.vertical, 4)
+                        ForEach(Array(categories.enumerated()), id: \.element.id) { index, category in
+                            HStack(alignment: .top, spacing: 12) {
+                                Button {
+                                    categoryBeingEdited = category
+                                } label: {
+                                    CategoryRow(category: category)
+                                        .padding(.vertical, 4)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+
+                                VStack(spacing: 8) {
+                                    Button {
+                                        moveCategoryUp(at: index)
+                                    } label: {
+                                        Image(systemName: "chevron.up")
+                                            .font(.system(size: 14, weight: .semibold))
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .disabled(index == 0)
+                                    .opacity(index == 0 ? 0.3 : 1)
+                                    .accessibilityLabel("Move category up")
+
+                                    Button {
+                                        moveCategoryDown(at: index)
+                                    } label: {
+                                        Image(systemName: "chevron.down")
+                                            .font(.system(size: 14, weight: .semibold))
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .disabled(index == categories.count - 1)
+                                    .opacity(index == categories.count - 1 ? 0.3 : 1)
+                                    .accessibilityLabel("Move category down")
+                                }
                             }
-                            .buttonStyle(.plain)
                             .transition(.move(edge: .top).combined(with: .opacity))
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
@@ -54,12 +81,6 @@ struct CreatePhaseSheet: View {
                 }
 
                 Section {
-                    Button {
-                        categoryBeingEdited = CategoryDraft()
-                    } label: {
-                        Label("Add category", systemImage: "plus.circle.fill")
-                    }
-
                     DisclosureGroup(isExpanded: $isPresetListExpanded) {
                         VStack(spacing: 8) {
                             if availablePresets.isEmpty {
@@ -94,6 +115,17 @@ struct CreatePhaseSheet: View {
             .animation(.easeInOut, value: categories)
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        categoryBeingEdited = CategoryDraft()
+                    } label: {
+                        Image(systemName: "plus")
+                            .imageScale(.large)
+                    }
+                    .accessibilityLabel("Add category")
+                }
+            }
             .sheet(item: $categoryBeingEdited, onDismiss: {
                 categoryBeingEdited = nil
             }) { category in
@@ -143,7 +175,6 @@ private extension CreatePhaseSheet {
         withAnimation(.easeInOut) {
             categories.append(newCategory)
             availablePresets = availablePresets.filter { $0.id != preset.id }
-            isPresetListExpanded = false
         }
     }
 
@@ -207,6 +238,29 @@ private extension CreatePhaseSheet {
     func sortPresets(_ presets: [CategoryPreset]) -> [CategoryPreset] {
         let order = Self.presetOrder
         return presets.sorted { (order[$0.id] ?? 0) < (order[$1.id] ?? 0) }
+    }
+
+    func moveCategoryUp(at index: Int) {
+        moveCategory(from: index, to: index - 1)
+    }
+
+    func moveCategoryDown(at index: Int) {
+        moveCategory(from: index, to: index + 1)
+    }
+
+    func moveCategory(from index: Int, to targetIndex: Int) {
+        guard index != targetIndex,
+              categories.indices.contains(index),
+              (0..<categories.count).contains(targetIndex)
+        else { return }
+
+        var updatedCategories = categories
+        let category = updatedCategories.remove(at: index)
+        updatedCategories.insert(category, at: targetIndex)
+
+        withAnimation(.easeInOut) {
+            categories = updatedCategories
+        }
     }
 
     private static let presetOrder: [CategoryPreset.ID: Int] = {
