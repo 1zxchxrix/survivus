@@ -428,7 +428,7 @@ private struct CategoryEditorSheet: View {
                     .tint(.blue)
                 }
             }
-            .navigationTitle(isEditingExisting ? "Edit Category" : "Add Category")
+            .navigationTitle(isEditingExisting ? "Edit Category" : "Custom Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
