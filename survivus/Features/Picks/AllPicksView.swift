@@ -12,6 +12,10 @@ struct AllPicksView: View {
         let startedEpisodeIds = app.store.results.map(\.id)
         let availableEpisodeIds = Set(weeklyEpisodeIds).union(startedEpisodeIds)
 
+        guard !availableEpisodeIds.isEmpty else {
+            return [WeekOption(selection: .none, title: "None")]
+        }
+
         let episodesById = Dictionary(uniqueKeysWithValues: app.store.config.episodes.map { ($0.id, $0) })
         let episodeOptions = availableEpisodeIds
             .sorted()
@@ -23,7 +27,7 @@ struct AllPicksView: View {
                 return WeekOption(selection: .week(episode.id), title: episode.title)
             }
 
-        return episodeOptions
+        return [WeekOption(selection: .none, title: "None")] + episodeOptions
     }
 
     private var availableWeekSelections: Set<WeekSelection> {
@@ -45,23 +49,6 @@ struct AllPicksView: View {
 
     private var selectedPhaseCategories: [PickPhase.Category] {
         selectedPhase?.categories ?? []
-    }
-
-    private var selectedWeekTitle: String {
-        if let option = weekOptions.first(where: { $0.selection == selectedWeek }) {
-            return option.title
-        }
-
-        if case let .week(episodeId) = selectedWeek {
-            return "Week \(episodeId)"
-        }
-
-        if let latestWeekId = availableWeekSelections.compactMap({ $0.weekId }).max(),
-           let option = weekOptions.first(where: { $0.selection.weekId == latestWeekId }) {
-            return option.title
-        }
-
-        return "Select Week"
     }
 
     private var usersInDisplayOrder: [UserProfile] {
@@ -162,18 +149,13 @@ struct AllPicksView: View {
                 .foregroundStyle(.secondary)
 
             HStack(alignment: .firstTextBaseline) {
-                Picker(selection: $selectedWeek) {
+                Picker(selectedPhaseName, selection: $selectedWeek) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
-                            .fontWeight(.semibold)
                             .tag(option.selection)
                     }
-                } label: {
-                    Text(selectedWeekTitle)
-                        .font(.title3.weight(.semibold))
                 }
                 .pickerStyle(.menu)
-                .disabled(weekOptions.isEmpty)
                 
                 Spacer()
                 
