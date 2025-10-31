@@ -427,9 +427,17 @@ private struct CategoryEditorSheet: View {
                         .keyboardType(.numberPad)
 
                         Toggle("Auto-score", isOn: $draft.autoScoresRemainingContestants)
+                        Text("Will score allotted points for every contestant not voted out.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
                     Toggle("Lock category", isOn: $draft.isLocked)
+                    Text("These picks will not be changeable for the entire phase.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
             }
