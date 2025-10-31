@@ -45,7 +45,7 @@ struct SelectPhaseSheet: View {
                 }
             }
         }
-        .presentationDetents([.fraction(0.8)])
+        .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
         .presentationCornerRadius(28)
     }
 }
