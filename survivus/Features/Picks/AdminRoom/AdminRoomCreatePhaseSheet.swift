@@ -91,6 +91,7 @@ struct CreatePhaseSheet: View {
                                     } label: {
                                         CategoryPresetRow(preset: preset)
                                             .padding(.vertical, 4)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     .buttonStyle(.plain)
 
