@@ -9,6 +9,7 @@ struct CreatePhaseSheet: View {
     @State private var isPresetListExpanded = true
     @State private var availablePresets: [CategoryPreset]
     @State private var presetUsageByCategoryID: [CategoryDraft.ID: CategoryPreset.ID]
+    @State private var editMode: EditMode = .inactive
 
     private let phase: PickPhase?
     var onSave: (PickPhase) -> Void
@@ -35,6 +36,7 @@ struct CreatePhaseSheet: View {
                     Section("Categories") {
                         ForEach(categories) { category in
                             Button {
+                                guard editMode != .active else { return }
                                 categoryBeingEdited = category
                             } label: {
                                 CategoryRow(category: category)
@@ -43,6 +45,15 @@ struct CreatePhaseSheet: View {
                             }
                             .buttonStyle(.plain)
                             .transition(.move(edge: .top).combined(with: .opacity))
+                            .simultaneousGesture(
+                                LongPressGesture(minimumDuration: 1)
+                                    .onEnded { _ in
+                                        guard editMode != .active else { return }
+                                        withAnimation(.easeInOut) {
+                                            editMode = .active
+                                        }
+                                    }
+                            )
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     removeCategory(category)
@@ -88,10 +99,20 @@ struct CreatePhaseSheet: View {
                 }
             }
             .animation(.easeInOut, value: categories)
-            .environment(\.editMode, .constant(.active))
+            .environment(\.editMode, $editMode)
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if editMode == .active {
+                        Button("Done") {
+                            withAnimation(.easeInOut) {
+                                editMode = .inactive
+                            }
+                        }
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         categoryBeingEdited = CategoryDraft()
