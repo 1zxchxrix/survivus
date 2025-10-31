@@ -6,7 +6,6 @@ struct SelectPhaseSheet: View {
     let phases: [PickPhase]
     let currentPhaseID: PickPhase.ID?
     let lockedPhaseIDs: Set<PickPhase.ID>
-    let onActivate: (PickPhase) -> Void
     let onModify: (PickPhase) -> Void
     let onDelete: (PickPhase) -> Void
 
@@ -17,7 +16,7 @@ struct SelectPhaseSheet: View {
                     ContentUnavailableView(
                         "No phases",
                         systemImage: "tray",
-                        description: Text("Create a new phase to activate it here.")
+                        description: Text("Create a new phase to manage it here.")
                     )
                 } else {
                     List {
@@ -26,10 +25,6 @@ struct SelectPhaseSheet: View {
                                 phase: phase,
                                 isActive: phase.id == currentPhaseID,
                                 isEditable: !lockedPhaseIDs.contains(phase.id),
-                                onActivate: {
-                                    onActivate($0)
-                                    dismiss()
-                                },
                                 onModify: onModify,
                                 onDelete: onDelete
                             )
@@ -54,7 +49,6 @@ private struct PhaseRow: View {
     let phase: PickPhase
     let isActive: Bool
     let isEditable: Bool
-    let onActivate: (PickPhase) -> Void
     let onModify: (PickPhase) -> Void
     let onDelete: (PickPhase) -> Void
 
@@ -67,6 +61,7 @@ private struct PhaseRow: View {
                 HStack {
                     Text(phase.name)
                         .font(.title3)
+                        .fontWeight(.bold)
 
                     if isActive {
                         Text("Active")
@@ -107,14 +102,6 @@ private struct PhaseRow: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button {
-                onActivate(phase)
-            } label: {
-                Label("Activate", systemImage: "checkmark.circle")
-            }
-            .tint(.blue)
         }
     }
 }

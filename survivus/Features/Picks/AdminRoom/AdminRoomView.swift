@@ -65,10 +65,6 @@ struct AdminRoomView: View {
                 phases: phases,
                 currentPhaseID: currentPhase?.id,
                 lockedPhaseIDs: app.activatedPhaseIDs,
-                onActivate: { phase in
-                    app.activePhaseId = phase.id
-                    isPresentingSelectPhase = false
-                },
                 onModify: { phase in
                     guard !app.hasPhaseEverBeenActive(phase.id) else { return }
                     phaseBeingEdited = phase
