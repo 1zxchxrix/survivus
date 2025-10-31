@@ -38,7 +38,7 @@ struct SelectPhaseSheet: View {
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Select Phase to Modify")
+            .navigationTitle("Phases")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }

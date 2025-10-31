@@ -34,7 +34,7 @@ struct AdminRoomView: View {
             }
 
             Section("Phase") {
-                Button("Modify Phase") {
+                Button("Phases") {
                     isPresentingSelectPhase = true
                 }
                 .disabled(!hasPhases)
