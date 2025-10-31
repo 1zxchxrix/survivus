@@ -35,32 +35,20 @@ struct CreatePhaseSheet: View {
                 if !categories.isEmpty {
                     Section("Categories") {
                         ForEach(categories) { category in
-                            CategoryRow(category: category)
-                                .padding(.vertical, 4)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    categoryBeingEdited = category
-                                    if editMode == .active {
-                                        withAnimation(.easeInOut) {
-                                            editMode = .inactive
-                                        }
-                                    }
-                                }
-                                .onLongPressGesture(minimumDuration: 1) {
-                                    if editMode != .active {
-                                        withAnimation(.easeInOut) {
-                                            editMode = .active
-                                        }
-                                    }
-                                }
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        removeCategory(category)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
+                            Button {
+                                categoryBeingEdited = category
+                            } label: {
+                                CategoryRow(category: category)
+                                    .padding(.vertical, 4)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    removeCategory(category)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                                 .editActions(.move)
                         }
@@ -101,7 +89,7 @@ struct CreatePhaseSheet: View {
                 }
             }
             .animation(.easeInOut, value: categories)
-            .environment(\.editMode, $editMode)
+            .environment(\.editMode, .constant(.active))
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
