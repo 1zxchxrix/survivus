@@ -436,7 +436,7 @@ private struct CategoryEditorSheet: View {
             .navigationTitle(isEditingExisting ? "Edit Category" : "Custom Category")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Save", action: saveCategory)
                         .fontWeight(.semibold)
                 }

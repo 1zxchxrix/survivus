@@ -37,7 +37,7 @@ struct AdminRoomView: View {
                 Button("Phases") {
                     isPresentingSelectPhase = true
                 }
-                Button("Manage Contestants") {
+                Button("Contestants") {
                     isPresentingManageContestants = true
                 }
             }
