@@ -79,7 +79,7 @@ struct AdminRoomView: View {
                 handlePhaseSave(newPhase)
                 isPresentingNewPhase = false
             }
-            .presentationDetents([.fraction(0.8)])
+            .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
             .presentationCornerRadius(28)
         }
         .sheet(isPresented: $isPresentingManageContestants) {
@@ -92,7 +92,7 @@ struct AdminRoomView: View {
                 handlePhaseSave(updatedPhase)
                 phaseBeingEdited = nil
             }
-            .presentationDetents([.fraction(0.8)])
+            .adaptivePresentationDetents(defaultFraction: 0.8, iPadFraction: 0.9)
             .presentationCornerRadius(28)
         }
         .sheet(item: $phaseForInsertingResults) { phase in
