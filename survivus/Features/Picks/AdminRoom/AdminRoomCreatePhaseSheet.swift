@@ -6,6 +6,7 @@ struct CreatePhaseSheet: View {
     @State private var phaseName: String
     @State private var categories: [CategoryDraft]
     @State private var categoryBeingEdited: CategoryDraft?
+    @State private var editMode: EditMode = .inactive
     @State private var isPresetListExpanded = true
     @State private var availablePresets: [CategoryPreset]
     @State private var presetUsageByCategoryID: [CategoryDraft.ID: CategoryPreset.ID]
@@ -33,50 +34,37 @@ struct CreatePhaseSheet: View {
 
                 if !categories.isEmpty {
                     Section("Categories") {
-                        ForEach(Array(categories.enumerated()), id: \.element.id) { index, category in
-                            HStack(alignment: .top, spacing: 12) {
-                                Button {
+                        ForEach(categories) { category in
+                            CategoryRow(category: category)
+                                .padding(.vertical, 4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
                                     categoryBeingEdited = category
-                                } label: {
-                                    CategoryRow(category: category)
-                                        .padding(.vertical, 4)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-
-                                VStack(spacing: 8) {
-                                    Button {
-                                        moveCategoryUp(at: index)
-                                    } label: {
-                                        Image(systemName: "chevron.up")
-                                            .font(.system(size: 14, weight: .semibold))
+                                    if editMode == .active {
+                                        withAnimation(.easeInOut) {
+                                            editMode = .inactive
+                                        }
                                     }
-                                    .buttonStyle(.borderless)
-                                    .disabled(index == 0)
-                                    .opacity(index == 0 ? 0.3 : 1)
-                                    .accessibilityLabel("Move category up")
-
-                                    Button {
-                                        moveCategoryDown(at: index)
-                                    } label: {
-                                        Image(systemName: "chevron.down")
-                                            .font(.system(size: 14, weight: .semibold))
+                                }
+                                .onLongPressGesture(minimumDuration: 1) {
+                                    if editMode != .active {
+                                        withAnimation(.easeInOut) {
+                                            editMode = .active
+                                        }
                                     }
-                                    .buttonStyle(.borderless)
-                                    .disabled(index == categories.count - 1)
-                                    .opacity(index == categories.count - 1 ? 0.3 : 1)
-                                    .accessibilityLabel("Move category down")
                                 }
-                            }
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    removeCategory(category)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        removeCategory(category)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
-                            }
+                                .editActions(.move)
                         }
+                        .onMove(perform: moveCategories)
                     }
                 }
 
@@ -113,6 +101,7 @@ struct CreatePhaseSheet: View {
                 }
             }
             .animation(.easeInOut, value: categories)
+            .environment(\.editMode, $editMode)
             .navigationTitle(phase == nil ? "Create Phase" : "Modify Phase")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -240,23 +229,9 @@ private extension CreatePhaseSheet {
         return presets.sorted { (order[$0.id] ?? 0) < (order[$1.id] ?? 0) }
     }
 
-    func moveCategoryUp(at index: Int) {
-        moveCategory(from: index, to: index - 1)
-    }
-
-    func moveCategoryDown(at index: Int) {
-        moveCategory(from: index, to: index + 1)
-    }
-
-    func moveCategory(from index: Int, to targetIndex: Int) {
-        guard index != targetIndex,
-              categories.indices.contains(index),
-              (0..<categories.count).contains(targetIndex)
-        else { return }
-
+    func moveCategories(from source: IndexSet, to destination: Int) {
         var updatedCategories = categories
-        let category = updatedCategories.remove(at: index)
-        updatedCategories.insert(category, at: targetIndex)
+        updatedCategories.move(fromOffsets: source, toOffset: destination)
 
         withAnimation(.easeInOut) {
             categories = updatedCategories
