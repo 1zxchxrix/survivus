@@ -152,6 +152,7 @@ struct AllPicksView: View {
                 Picker(selectedPhaseName, selection: $selectedWeek) {
                     ForEach(weekOptions) { option in
                         Text(option.title)
+                            .fontWeight(.semibold)
                             .tag(option.selection)
                     }
                 }
