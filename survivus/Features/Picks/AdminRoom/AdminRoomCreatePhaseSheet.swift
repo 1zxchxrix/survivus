@@ -257,7 +257,7 @@ private struct CategoryRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(displayName)
                 .font(.headline)
 
@@ -275,10 +275,16 @@ private struct CategoryRow: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
 
-            if category.isLocked {
-                Text("Locked")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            if category.autoScoresRemainingContestants || category.isLocked {
+                HStack(spacing: 8) {
+                    if category.autoScoresRemainingContestants {
+                        StatusPill(text: "Auto-score")
+                    }
+
+                    if category.isLocked {
+                        StatusPill(text: "Locked")
+                    }
+                }
             }
         }
     }
@@ -288,7 +294,7 @@ private struct CategoryPresetRow: View {
     let preset: CategoryPreset
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(preset.name)
                 .font(.headline)
 
@@ -308,10 +314,16 @@ private struct CategoryPresetRow: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
 
-            if preset.isLocked {
-                Text("Locked")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            if preset.autoScoresRemainingContestants || preset.isLocked {
+                HStack(spacing: 8) {
+                    if preset.autoScoresRemainingContestants {
+                        StatusPill(text: "Auto-score")
+                    }
+
+                    if preset.isLocked {
+                        StatusPill(text: "Locked")
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -501,5 +513,18 @@ private struct CategoryEditorSheet: View {
         }
 
         return "COL"
+    }
+}
+
+private struct StatusPill: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2)
+            .padding(.vertical, 2)
+            .padding(.horizontal, 6)
+            .background(Color(.tertiarySystemFill))
+            .clipShape(Capsule())
     }
 }
