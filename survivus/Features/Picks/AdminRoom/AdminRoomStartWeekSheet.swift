@@ -37,10 +37,8 @@ struct StartWeekSheet: View {
                 }
             }
             .navigationTitle("Start New Week")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Start") {
                         if let id = selectedPhaseID,
