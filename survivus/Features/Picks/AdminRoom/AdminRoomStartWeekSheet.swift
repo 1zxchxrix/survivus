@@ -53,7 +53,7 @@ struct StartWeekSheet: View {
                 }
             }
         }
-        .presentationDetents([.fraction(0.4)])
+        .adaptivePresentationDetents(defaultFraction: 0.4, iPadFraction: 0.6)
         .presentationCornerRadius(28)
         .onAppear {
             if selectedPhaseID == nil {
