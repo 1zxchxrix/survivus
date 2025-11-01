@@ -425,6 +425,8 @@ private struct CategoryEditorSheet: View {
                     scoringDescription
                 }
 
+                scoringDescription
+
             }
             .navigationTitle(isEditingExisting ? "Edit Category" : "Custom Category")
             .navigationBarTitleDisplayMode(.inline)
@@ -443,12 +445,10 @@ private struct CategoryEditorSheet: View {
             Text("Auto-score will automatically allot points for picks that are still in the game. Lock category will not allow picks of this category to be changed for the entirety of the phase.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             Text("Players will be prompted to input a wager amount when making their picks.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
