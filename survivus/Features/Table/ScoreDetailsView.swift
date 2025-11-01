@@ -549,7 +549,8 @@ private struct ScoreDetailsModel {
                         pointsText: points.text,
                         correctPicksByUser: correctByUser,
                         pointsPerCorrectPick: points.perPick,
-                        wagerPoints: points.wager
+                        wagerPoints: points.wager,
+                        usesWager: category.usesWager
                     )
                 )
             }
