@@ -386,7 +386,7 @@ private struct CategoryEditorSheet: View {
 
                 }
 
-                Section("Scoring") {
+                Section {
                     Picker("Scoring mode", selection: $scoringMode) {
                         Text("Normal").tag(ScoringMode.normal)
                         Text("Wager").tag(ScoringMode.wager)
@@ -404,12 +404,7 @@ private struct CategoryEditorSheet: View {
                             draft.wagerPoints = nil
                         }
                     }
-
                     if scoringMode == .normal {
-                        Text("Auto-score will automatically allot points for picks that are still in the game. Lock category will not allow picks of this category to be changed for the entirety of the phase.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-
                         TextField("Points per correct pick", text: Binding(
                             get: { pointsInput },
                             set: { newValue in
@@ -421,13 +416,13 @@ private struct CategoryEditorSheet: View {
                         .keyboardType(.numberPad)
 
                         Toggle("Auto-score", isOn: $draft.autoScoresRemainingContestants)
-                    } else {
-                        Text("Players will be prompted to input a wager amount when making their picks.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
                     }
 
                     Toggle("Lock category", isOn: $draft.isLocked)
+                } header: {
+                    Text("Scoring")
+                } footer: {
+                    scoringDescription
                 }
 
             }
@@ -439,6 +434,21 @@ private struct CategoryEditorSheet: View {
                         .fontWeight(.semibold)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var scoringDescription: some View {
+        if scoringMode == .normal {
+            Text("Auto-score will automatically allot points for picks that are still in the game. Lock category will not allow picks of this category to be changed for the entirety of the phase.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            Text("Players will be prompted to input a wager amount when making their picks.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
