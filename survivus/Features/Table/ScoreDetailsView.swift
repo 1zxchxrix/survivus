@@ -251,6 +251,18 @@ struct ScoreDetailsView: View {
             }
     }
 
+    private func categoryLabel(for category: ScoreDetailsModel.Week.Category) -> String {
+        if category.isWagerCategory {
+            return "\(category.name) (±)"
+        }
+
+        guard !category.pointsText.isEmpty else {
+            return category.name
+        }
+
+        return "\(category.name) (\(category.pointsText))"
+    }
+
     private func picksText(
         for category: ScoreDetailsModel.Week.Category,
         user: UserProfile,
