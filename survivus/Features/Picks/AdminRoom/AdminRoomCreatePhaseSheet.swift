@@ -399,6 +399,7 @@ private struct CategoryEditorSheet: View {
                             pointsInput = ""
                             draft.pointsPerCorrectPick = nil
                             draft.autoScoresRemainingContestants = false
+                            draft.isLocked = false
                         } else {
                             wagerInput = ""
                             draft.wagerPoints = nil
@@ -416,9 +417,8 @@ private struct CategoryEditorSheet: View {
                         .keyboardType(.numberPad)
 
                         Toggle("Auto-score", isOn: $draft.autoScoresRemainingContestants)
+                        Toggle("Lock category", isOn: $draft.isLocked)
                     }
-
-                    Toggle("Lock category", isOn: $draft.isLocked)
                 } header: {
                     Text("Scoring")
                 } footer: {

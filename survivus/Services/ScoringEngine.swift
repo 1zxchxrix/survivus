@@ -5,7 +5,7 @@ struct WeeklyScoreBreakdown {
 }
 
 /// ScoringEngine v2 — simplified to match Edit Category:
-/// - Only "Normal" scoring (pointsPerCorrectPick).
+/// - Supports "Normal" scoring (pointsPerCorrectPick) and wager-based scoring.
 /// - Optional Auto-score: points for each selection still in the game.
 /// - Lock is enforced elsewhere (editor/locking layer), not here.
 struct ScoringEngine {
@@ -68,12 +68,23 @@ struct ScoringEngine {
             let columnId = category.columnId.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard !columnId.isEmpty else { continue } // ignore misconfigured categories
 
-            // Only "normal" scoring is supported: if pointsPerCorrectPick is nil or zero => no points.
-            guard let pointsPerPick = category.pointsPerCorrectPick, pointsPerPick != 0 else { continue }
-
             // User's selections for this category/week
             let selections = weekly.selections(for: categoryId)
             guard !selections.isEmpty else { continue }
+
+            if category.usesWager {
+                guard let configuredWinners = winnersByCategory[categoryId], !configuredWinners.isEmpty else { continue }
+                let wager = weekly.wager(for: categoryId) ?? category.wagerPoints
+                guard let wager, wager > 0 else { continue }
+
+                let hits = selections.intersection(configuredWinners)
+                let delta = hits.isEmpty ? -wager : wager
+                categoryPoints[columnId, default: 0] += delta
+                continue
+            }
+
+            // Only "normal" scoring is supported: if pointsPerCorrectPick is nil or zero => no points.
+            guard let pointsPerPick = category.pointsPerCorrectPick, pointsPerPick != 0 else { continue }
 
             if category.autoScoresRemainingContestants {
                 // Auto-score → award points for every selection that isn't eliminated yet (prior or this week)

@@ -5,6 +5,7 @@ struct WeeklyPickEditor: View {
     let episode: Episode
     let categoryId: PickPhase.Category.ID
     @State private var picks: WeeklyPicks
+    @State private var wagerInput: String = ""
 
     init(episode: Episode, categoryId: PickPhase.Category.ID) {
         self.episode = episode
@@ -30,6 +31,10 @@ struct WeeklyPickEditor: View {
                     Text(instructionText(for: category, limit: limit))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                }
+
+                if let category, category.usesWager {
+                    wagerField(for: category, locked: locked || categoryLocked, userId: userId)
                 }
 
                 LimitedMultiSelect(
@@ -73,6 +78,7 @@ struct WeeklyPickEditor: View {
         var weeklyPicks = app.store.picks(for: userId, episodeId: episode.id)
         let didApplyLockedSelections = app.applyLockedSelections(for: userId, picks: &weeklyPicks)
         picks = weeklyPicks
+        wagerInput = weeklyPicks.wager(for: categoryId).map(String.init) ?? ""
 
         if didApplyLockedSelections {
             app.store.save(weeklyPicks)
@@ -83,6 +89,17 @@ struct WeeklyPickEditor: View {
         picks.selections(for: categoryId)
     }
 
+    @ViewBuilder
+    private func wagerField(for category: PickPhase.Category, locked: Bool, userId: String) -> some View {
+        TextField("±Wager", text: Binding(
+            get: { wagerInput },
+            set: { newValue in updateWager(newValue, for: category, locked: locked, userId: userId) }
+        ))
+        .keyboardType(.numberPad)
+        .textFieldStyle(.roundedBorder)
+        .disabled(locked)
+    }
+
     private func updateSelection(_ newValue: Set<String>, limit: Int, locked: Bool, userId: String) {
         guard !locked else { return }
         let editingUserId = picks.userId.isEmpty ? userId : picks.userId
@@ -91,6 +108,20 @@ struct WeeklyPickEditor: View {
 
         let limited = Set(newValue.prefix(limit))
         picks.setSelections(limited, for: category.id)
+        picks.isSubmitted = false
+        app.store.save(picks)
+    }
+
+    private func updateWager(_ newValue: String, for category: PickPhase.Category, locked: Bool, userId: String) {
+        let filtered = newValue.filter(\.isNumber)
+        wagerInput = filtered
+
+        guard !locked else { return }
+        let editingUserId = picks.userId.isEmpty ? userId : picks.userId
+        guard !isCategoryLockedForEditing(category, userId: editingUserId) else { return }
+
+        let amount = filtered.isEmpty ? nil : Int(filtered)
+        picks.setWager(amount, for: category.id)
         picks.isSubmitted = false
         app.store.save(picks)
     }

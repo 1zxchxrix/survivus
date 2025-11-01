@@ -329,6 +329,52 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertEqual(breakdown.categoryPointsByColumnId["SS"], -30)
     }
 
+    func testWagerCategoryUsesCustomWagerValue() {
+        let contestants = [Contestant(id: "playerA", name: "Player A")]
+        let episodes = [Episode(id: 1, title: "Finale", isMergeEpisode: true)]
+        let config = SeasonConfig(
+            seasonId: "test",
+            name: "Test Season",
+            contestants: contestants,
+            episodes: episodes,
+            weeklyPickCapsPreMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            weeklyPickCapsPostMerge: .init(remain: nil, votedOut: nil, immunity: nil),
+            lockHourUTC: 0
+        )
+
+        let wagerCategory = PickPhase.Category(
+            name: "Sole Survivor",
+            columnId: "SS",
+            totalPicks: 1,
+            pointsPerCorrectPick: nil,
+            wagerPoints: 30,
+            autoScoresRemainingContestants: false,
+            isLocked: false
+        )
+        let phase = PickPhase(name: "Finals", categories: [wagerCategory])
+        let result = EpisodeResult(
+            id: 1,
+            phaseId: phase.id,
+            immunityWinners: [],
+            votedOut: [],
+            categoryWinners: [wagerCategory.id: ["playerA"]]
+        )
+
+        let engine = ScoringEngine(config: config, resultsByEpisode: [1: result])
+        var weekly = WeeklyPicks(userId: "user", episodeId: 1)
+        weekly.setSelections(["playerA"], for: wagerCategory.id)
+        weekly.setWager(50, for: wagerCategory.id)
+
+        let breakdown = engine.score(
+            weekly: weekly,
+            episode: episodes[0],
+            phaseOverride: phase,
+            categoriesById: [wagerCategory.id: wagerCategory]
+        )
+
+        XCTAssertEqual(breakdown.categoryPointsByColumnId["SS"], 50)
+    }
+
     func testAutoScoreAwardsPointsForRemainingContestants() {
         let contestants = [
             Contestant(id: "playerA", name: "Player A"),

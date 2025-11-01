@@ -400,6 +400,7 @@ struct PhaseCategoryDocument: Codable {
     var wagerPoints: Int?
     var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
+    var usesWager: Bool?
 
     init(
         id: String,
@@ -409,7 +410,8 @@ struct PhaseCategoryDocument: Codable {
         pointsPerCorrectPick: Int?,
         wagerPoints: Int?,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool
+        isLocked: Bool,
+        usesWager: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -419,6 +421,7 @@ struct PhaseCategoryDocument: Codable {
         self.wagerPoints = wagerPoints
         self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
+        self.usesWager = usesWager
     }
 
     init(from category: PickPhase.Category) {
@@ -430,12 +433,14 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
             autoScoresRemainingContestants: category.autoScoresRemainingContestants,
-            isLocked: category.isLocked
+            isLocked: category.isLocked,
+            usesWager: category.usesWager
         )
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
+        let shouldUseWager = usesWager ?? (wagerPoints != nil)
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -444,7 +449,8 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
             autoScoresRemainingContestants: autoScoresRemainingContestants,
-            isLocked: isLocked
+            isLocked: isLocked,
+            usesWager: shouldUseWager
         )
     }
 }
@@ -535,15 +541,21 @@ struct WeeklyPicksDocument: Codable {
     @DocumentID var documentId: String?
     var seasonId: String?
     var categorySelections: [String: [String]]?
+    var categoryWagers: [String: Int]?
     var isSubmitted: Bool?
 
     init() {}
 
     init(from picks: WeeklyPicks, seasonId: String) {
         self.seasonId = seasonId
-        categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
+        let encodedSelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
             partialResult[entry.key.uuidString] = Array(entry.value)
         }
+        categorySelections = encodedSelections.isEmpty ? nil : encodedSelections
+        let encodedWagers = picks.categoryWagers.reduce(into: [String: Int]()) { partialResult, entry in
+            partialResult[entry.key.uuidString] = entry.value
+        }
+        categoryWagers = encodedWagers.isEmpty ? nil : encodedWagers
         isSubmitted = picks.isSubmitted
     }
 
@@ -553,6 +565,11 @@ struct WeeklyPicksDocument: Codable {
         categorySelections?.forEach { key, values in
             if let uuid = UUID(uuidString: key) {
                 picks.setSelections(Set(values), for: uuid)
+            }
+        }
+        categoryWagers?.forEach { key, value in
+            if let uuid = UUID(uuidString: key) {
+                picks.setWager(value, for: uuid)
             }
         }
         picks.isSubmitted = isSubmitted ?? false
@@ -650,6 +667,7 @@ struct PhaseCategoryDocument: Codable {
     var wagerPoints: Int?
     var autoScoresRemainingContestants: Bool = false
     var isLocked: Bool
+    var usesWager: Bool?
 
     init(
         id: String = UUID().uuidString,
@@ -659,7 +677,8 @@ struct PhaseCategoryDocument: Codable {
         pointsPerCorrectPick: Int? = nil,
         wagerPoints: Int? = nil,
         autoScoresRemainingContestants: Bool = false,
-        isLocked: Bool = false
+        isLocked: Bool = false,
+        usesWager: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -669,10 +688,12 @@ struct PhaseCategoryDocument: Codable {
         self.wagerPoints = wagerPoints
         self.autoScoresRemainingContestants = autoScoresRemainingContestants
         self.isLocked = isLocked
+        self.usesWager = usesWager
     }
 
     func model() -> PickPhase.Category? {
         guard let uuid = UUID(uuidString: id) else { return nil }
+        let shouldUseWager = usesWager ?? (wagerPoints != nil)
         return PickPhase.Category(
             id: uuid,
             name: name,
@@ -681,7 +702,8 @@ struct PhaseCategoryDocument: Codable {
             pointsPerCorrectPick: pointsPerCorrectPick,
             wagerPoints: wagerPoints,
             autoScoresRemainingContestants: autoScoresRemainingContestants,
-            isLocked: isLocked
+            isLocked: isLocked,
+            usesWager: shouldUseWager
         )
     }
 }
@@ -758,21 +780,34 @@ struct WeeklyPicksDocument: Codable {
     var documentId: String?
     var seasonId: String?
     var categorySelections: [String: [String]]?
+    var categoryWagers: [String: Int]?
     var isSubmitted: Bool?
 
-    init(documentId: String? = nil, seasonId: String? = nil, categorySelections: [String: [String]]? = nil, isSubmitted: Bool? = nil) {
+    init(
+        documentId: String? = nil,
+        seasonId: String? = nil,
+        categorySelections: [String: [String]]? = nil,
+        categoryWagers: [String: Int]? = nil,
+        isSubmitted: Bool? = nil
+    ) {
         self.documentId = documentId
         self.seasonId = seasonId
         self.categorySelections = categorySelections
+        self.categoryWagers = categoryWagers
         self.isSubmitted = isSubmitted
     }
 
     init(from picks: WeeklyPicks, seasonId: String) {
         self.documentId = String(picks.episodeId)
         self.seasonId = seasonId
-        categorySelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
+        let encodedSelections = picks.categorySelections.reduce(into: [String: [String]]()) { partialResult, entry in
             partialResult[entry.key.uuidString] = Array(entry.value)
         }
+        categorySelections = encodedSelections.isEmpty ? nil : encodedSelections
+        let encodedWagers = picks.categoryWagers.reduce(into: [String: Int]()) { partialResult, entry in
+            partialResult[entry.key.uuidString] = entry.value
+        }
+        categoryWagers = encodedWagers.isEmpty ? nil : encodedWagers
         isSubmitted = picks.isSubmitted
     }
 
@@ -782,6 +817,11 @@ struct WeeklyPicksDocument: Codable {
         categorySelections?.forEach { key, values in
             if let uuid = UUID(uuidString: key) {
                 picks.setSelections(Set(values), for: uuid)
+            }
+        }
+        categoryWagers?.forEach { key, value in
+            if let uuid = UUID(uuidString: key) {
+                picks.setWager(value, for: uuid)
             }
         }
         picks.isSubmitted = isSubmitted ?? false
