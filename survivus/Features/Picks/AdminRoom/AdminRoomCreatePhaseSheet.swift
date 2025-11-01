@@ -405,17 +405,7 @@ private struct CategoryEditorSheet: View {
                         }
                     }
 
-                    if scoringMode == .wager {
-                        TextField("Wager points", text: Binding(
-                            get: { wagerInput },
-                            set: { newValue in
-                                let filtered = newValue.filter(\.isNumber)
-                                wagerInput = filtered
-                                draft.wagerPoints = filtered.isEmpty ? nil : Int(filtered)
-                            }
-                        ))
-                        .keyboardType(.numberPad)
-                    } else {
+                    if scoringMode == .normal {
                         TextField("Points per correct pick", text: Binding(
                             get: { pointsInput },
                             set: { newValue in
@@ -427,17 +417,11 @@ private struct CategoryEditorSheet: View {
                         .keyboardType(.numberPad)
 
                         Toggle("Auto-score", isOn: $draft.autoScoresRemainingContestants)
-                        Text("Will score allotted points for every contestant not voted out.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                }
 
+                Section("Category options") {
                     Toggle("Lock category", isOn: $draft.isLocked)
-                    Text("These picks will not be changeable for the entire phase.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
             }
