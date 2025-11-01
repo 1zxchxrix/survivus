@@ -59,13 +59,22 @@ struct ScoreDetailsView: View {
                         HStack(alignment: .top, spacing: 0) {
                             tableCell(
                                 width: labelWidth,
-                        showTrailingDivider: !model.users.isEmpty
-                    ) {
-                        Text(categoryLabel(for: category))
-                            .font(.subheadline)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(1)
-                    }
+                                showTrailingDivider: !model.users.isEmpty
+                            ) {
+                                let label: String
+                                if category.isWagerCategory {
+                                    label = "\(category.name) (±)"
+                                } else if category.pointsText.isEmpty {
+                                    label = category.name
+                                } else {
+                                    label = "\(category.name) (\(category.pointsText))"
+                                }
+
+                                Text(label)
+                                    .font(.subheadline)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(1)
+                            }
 
                             ForEach(Array(model.users.enumerated()), id: \.element.id) { userIndex, user in
                                 tableCell(
@@ -347,27 +356,8 @@ private struct ScoreDetailsModel {
             let correctPicksByUser: [String: Set<String>]
             let pointsPerCorrectPick: Int?
             let wagerPoints: Int?
-            let usesWager: Bool
 
-            init(
-                categoryId: UUID?,
-                name: String,
-                pointsText: String,
-                correctPicksByUser: [String: Set<String>],
-                pointsPerCorrectPick: Int?,
-                wagerPoints: Int?,
-                usesWager: Bool
-            ) {
-                self.categoryId = categoryId
-                self.name = name
-                self.pointsText = pointsText
-                self.correctPicksByUser = correctPicksByUser
-                self.pointsPerCorrectPick = pointsPerCorrectPick
-                self.wagerPoints = wagerPoints
-                self.usesWager = usesWager
-            }
-
-            var isWagerCategory: Bool { usesWager }
+            var isWagerCategory: Bool { (wagerPoints ?? 0) > 0 }
 
             var id: String { categoryId?.uuidString ?? name }
 
