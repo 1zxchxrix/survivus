@@ -344,9 +344,8 @@ private struct ScoreDetailsModel {
             let correctPicksByUser: [String: Set<String>]
             let pointsPerCorrectPick: Int?
             let wagerPoints: Int?
-            let usesWager: Bool
 
-            var isWagerCategory: Bool { usesWager }
+            var isWagerCategory: Bool { (wagerPoints ?? 0) > 0 }
 
             var id: String { categoryId?.uuidString ?? name }
 
