@@ -406,6 +406,10 @@ private struct CategoryEditorSheet: View {
                     }
 
                     if scoringMode == .normal {
+                        Text("Auto-score will automatically allot points for picks that are still in the game. Lock category will not allow picks of this category to be changed for the entirety of the phase.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+
                         TextField("Points per correct pick", text: Binding(
                             get: { pointsInput },
                             set: { newValue in
@@ -417,10 +421,12 @@ private struct CategoryEditorSheet: View {
                         .keyboardType(.numberPad)
 
                         Toggle("Auto-score", isOn: $draft.autoScoresRemainingContestants)
+                    } else {
+                        Text("Players will be prompted to input a wager amount when making their picks.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
-                }
 
-                Section("Category options") {
                     Toggle("Lock category", isOn: $draft.isLocked)
                 }
 
