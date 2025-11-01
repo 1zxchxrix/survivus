@@ -386,7 +386,7 @@ private struct CategoryEditorSheet: View {
 
                 }
 
-                Section("Scoring") {
+                Section {
                     Picker("Scoring mode", selection: $scoringMode) {
                         Text("Normal").tag(ScoringMode.normal)
                         Text("Wager").tag(ScoringMode.wager)
@@ -419,6 +419,10 @@ private struct CategoryEditorSheet: View {
                     }
 
                     Toggle("Lock category", isOn: $draft.isLocked)
+                } header: {
+                    Text("Scoring")
+                } footer: {
+                    scoringDescription
                 }
 
                 scoringDescription
