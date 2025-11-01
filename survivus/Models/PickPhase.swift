@@ -10,6 +10,7 @@ struct PickPhase: Identifiable, Equatable {
         var wagerPoints: Int?
         var autoScoresRemainingContestants: Bool
         var isLocked: Bool
+        var usesWager: Bool
 
         init(
             id: UUID = UUID(),
@@ -19,7 +20,8 @@ struct PickPhase: Identifiable, Equatable {
             pointsPerCorrectPick: Int?,
             wagerPoints: Int?,
             autoScoresRemainingContestants: Bool,
-            isLocked: Bool
+            isLocked: Bool,
+            usesWager: Bool = false
         ) {
             self.id = id
             self.name = name
@@ -32,8 +34,10 @@ struct PickPhase: Identifiable, Equatable {
             self.totalPicks = totalPicks
             self.pointsPerCorrectPick = pointsPerCorrectPick
             self.wagerPoints = wagerPoints
-            self.autoScoresRemainingContestants = autoScoresRemainingContestants
+            let resolvedUsesWager = usesWager || wagerPoints != nil
+            self.autoScoresRemainingContestants = resolvedUsesWager ? false : autoScoresRemainingContestants
             self.isLocked = isLocked
+            self.usesWager = resolvedUsesWager
         }
     }
 
@@ -99,7 +103,8 @@ extension PickPhase.Category {
             pointsPerCorrectPick: draft.usesWager ? nil : draft.pointsPerCorrectPick,
             wagerPoints: draft.usesWager ? draft.wagerPoints : nil,
             autoScoresRemainingContestants: draft.usesWager ? false : draft.autoScoresRemainingContestants,
-            isLocked: draft.isLocked
+            isLocked: draft.isLocked,
+            usesWager: draft.usesWager
         )
     }
 
@@ -149,7 +154,7 @@ struct CategoryDraft: Identifiable, Equatable {
             totalPicks: category.totalPicks,
             pointsPerCorrectPick: category.pointsPerCorrectPick,
             wagerPoints: category.wagerPoints,
-            usesWager: category.wagerPoints != nil,
+            usesWager: category.usesWager,
             autoScoresRemainingContestants: category.autoScoresRemainingContestants,
             isLocked: category.isLocked
         )

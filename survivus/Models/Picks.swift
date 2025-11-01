@@ -5,6 +5,7 @@ struct WeeklyPicks: Identifiable, Hashable, Codable {
     let userId: String
     let episodeId: Int
     var categorySelections: [UUID: Set<String>] = [:]
+    var categoryWagers: [UUID: Int] = [:]
     var isSubmitted: Bool = false
 
     func selections(for categoryId: UUID) -> Set<String> {
@@ -17,5 +18,18 @@ struct WeeklyPicks: Identifiable, Hashable, Codable {
         } else {
             categorySelections[categoryId] = selections
         }
+    }
+
+    func wager(for categoryId: UUID) -> Int? {
+        categoryWagers[categoryId]
+    }
+
+    mutating func setWager(_ wager: Int?, for categoryId: UUID) {
+        guard let wager else {
+            categoryWagers.removeValue(forKey: categoryId)
+            return
+        }
+
+        categoryWagers[categoryId] = wager
     }
 }

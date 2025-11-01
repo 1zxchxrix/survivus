@@ -16,6 +16,15 @@ extension AppState {
                 setSelections(lockedSelection, for: category, in: &picks)
                 didChange = true
             }
+
+            if category.usesWager {
+                let currentWager = picks.wager(for: category.id)
+                let lockedWager = lockedWager(for: category, phaseId: context.phaseId, userId: userId)
+                if currentWager != lockedWager {
+                    setWager(lockedWager, for: category, in: &picks)
+                    didChange = true
+                }
+            }
         }
 
         return didChange
@@ -50,6 +59,10 @@ extension AppState {
         picks.setSelections(selections, for: category.id)
     }
 
+    func setWager(_ wager: Int?, for category: PickPhase.Category, in picks: inout WeeklyPicks) {
+        picks.setWager(wager, for: category.id)
+    }
+
     private func lockedSelections(
         for category: PickPhase.Category,
         phaseId: PickPhase.ID,
@@ -63,6 +76,24 @@ extension AppState {
             let selection = selections(for: category, in: picks)
             if !selection.isEmpty {
                 return selection
+            }
+        }
+
+        return nil
+    }
+
+    private func lockedWager(
+        for category: PickPhase.Category,
+        phaseId: PickPhase.ID,
+        userId: String
+    ) -> Int? {
+        guard let picksByEpisode = store.weeklyPicks[userId] else { return nil }
+
+        let episodeIds = phaseEpisodeIds(for: phaseId)
+        for episodeId in episodeIds {
+            guard let picks = picksByEpisode[episodeId] else { continue }
+            if let wager = picks.wager(for: category.id) {
+                return wager
             }
         }
 
