@@ -61,9 +61,14 @@ struct ScoreDetailsView: View {
                                 width: labelWidth,
                                 showTrailingDivider: !model.users.isEmpty
                             ) {
-                                let label = category.pointsText.isEmpty
-                                    ? category.name
-                                    : "\(category.name) (\(category.pointsText))"
+                                let label: String
+                                if category.isWagerCategory {
+                                    label = "\(category.name) (±)"
+                                } else if category.pointsText.isEmpty {
+                                    label = category.name
+                                } else {
+                                    label = "\(category.name) (\(category.pointsText))"
+                                }
 
                                 Text(label)
                                     .font(.subheadline)
@@ -256,8 +261,38 @@ struct ScoreDetailsView: View {
         let pointsByPick = category.pointsByPick(for: user.id)
 
         if let categoryId = category.categoryId, let picks = weeklyPicks {
+            let selections = picks.selections(for: categoryId)
+            guard !selections.isEmpty else { return "—" }
+
+            if category.isWagerCategory {
+                let configuredWager = category.wagerPoints ?? 0
+                let appliedWager = abs(picks.wager(for: categoryId) ?? configuredWager)
+                guard appliedWager > 0 else {
+                    return formattedNames(
+                        for: selections,
+                        contestantsById: contestantsById
+                    )
+                }
+                let correctSelections = category.correctPicksByUser[user.id] ?? []
+                let hasCorrectPick = !correctSelections.isEmpty
+
+                let wagerPointsById = Dictionary(uniqueKeysWithValues: selections.map { selection in
+                    let isCorrect = correctSelections.contains(selection)
+                    let delta = hasCorrectPick
+                        ? (isCorrect ? appliedWager : 0)
+                        : -appliedWager
+                    return (selection, delta)
+                })
+
+                return formattedNames(
+                    for: selections,
+                    contestantsById: contestantsById,
+                    pointsById: wagerPointsById
+                )
+            }
+
             return formattedNames(
-                for: picks.selections(for: categoryId),
+                for: selections,
                 contestantsById: contestantsById,
                 pointsById: pointsByPick
             )
@@ -284,7 +319,7 @@ struct ScoreDetailsView: View {
         let entries: [(display: String, sortKey: String)] = ids.map { id in
             let name = contestantsById[id]?.name ?? id
             let shortName = shortenedDisplayName(for: name)
-            if let points = pointsById[id], points > 0 {
+            if let points = pointsById[id], points != 0 {
                 return ("\(shortName) (\(points))", name)
             } else {
                 return (shortName, name)
@@ -300,25 +335,28 @@ struct ScoreDetailsView: View {
 
 }
 
-    private struct ScoreDetailsModel {
-        struct Week: Identifiable {
-            struct Category: Identifiable {
-                let categoryId: UUID?
-                let name: String
-                let pointsText: String
-                let correctPicksByUser: [String: Set<String>]
-                let pointsPerCorrectPick: Int?
-                let wagerPoints: Int?
+private struct ScoreDetailsModel {
+    struct Week: Identifiable {
+        struct Category: Identifiable {
+            let categoryId: UUID?
+            let name: String
+            let pointsText: String
+            let correctPicksByUser: [String: Set<String>]
+            let pointsPerCorrectPick: Int?
+            let wagerPoints: Int?
+            let usesWager: Bool
 
-                var id: String { categoryId?.uuidString ?? name }
+            var isWagerCategory: Bool { usesWager }
 
-                func pointsByPick(for userId: String) -> [String: Int] {
-                    guard let perPick = pointsPerCorrectPick, perPick > 0 else { return [:] }
-                    guard let picks = correctPicksByUser[userId], !picks.isEmpty else { return [:] }
+            var id: String { categoryId?.uuidString ?? name }
 
-                    return Dictionary(uniqueKeysWithValues: picks.map { ($0, perPick) })
-                }
+            func pointsByPick(for userId: String) -> [String: Int] {
+                guard let perPick = pointsPerCorrectPick, perPick > 0 else { return [:] }
+                guard let picks = correctPicksByUser[userId], !picks.isEmpty else { return [:] }
+
+                return Dictionary(uniqueKeysWithValues: picks.map { ($0, perPick) })
             }
+        }
 
         struct SummaryValues {
             let weekly: Int
@@ -512,7 +550,8 @@ struct ScoreDetailsView: View {
                         pointsText: points.text,
                         correctPicksByUser: correctByUser,
                         pointsPerCorrectPick: points.perPick,
-                        wagerPoints: points.wager
+                        wagerPoints: points.wager,
+                        usesWager: category.usesWager
                     )
                 )
             }
@@ -656,7 +695,7 @@ struct ScoreDetailsView: View {
 
     private static func pointsDescription(for category: PickPhase.Category) -> (text: String, perPick: Int?, wager: Int?) {
         if let wager = category.wagerPoints, wager > 0 {
-            return ("±\(wager)", nil, wager)
+            return ("±", nil, wager)
         }
 
         if let configured = category.pointsPerCorrectPick, configured > 0 {
